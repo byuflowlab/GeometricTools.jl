@@ -12,6 +12,141 @@
 
 
 ################################################################################
+# MESHING AND DISCRETIZATION
+################################################################################
+"""
+  `discretize(f, xlow, xhigh, n::Int64, r::Float64; central::Bool=false)`
+
+Discretizes the continuous function `f` between the range `xlow` and `xhigh`
+into `n` intervals, with `r` the ratio between first and last interval if
+`central=false` or between first and central interval if `central=true`.
+
+  # Examples
+  The following lines show the discretization of a semi-circumference perimeter
+  into 100 intervals of uniform length:
+
+  ```julia
+    julia> f(x) = (x, sqrt(1-round(x,8)^2), 0)  # Semi-circunference of radius 1
+    julia> discretize(f, -1, 1, 100, 1.0)
+  ```
+"""
+function discretize(f, xlow, xhigh, n::Int64, r::Float64; central::Bool=false,
+                      check::Bool=true)
+
+  # ERROR CASES
+  if n <= 0
+    error("Invalid number of intervals (n <= 0)")
+  elseif r <= 0
+    error("Invalid expansion ratio (r <= 0)")
+  end
+
+  out = Any[f(xlow)]
+
+  l = xhigh - xlow        # Length of domain to be discretized
+  cumlen = 0              # Cumulative length already walked
+
+  for i in 1:n
+
+    # Case of uniform discretization
+    if r==1.0
+      len = l/n
+
+    # Linear increment discretization (see notebook entry 20170519)
+    # Case of no central expansion
+    elseif !central
+      p = l/( (n*(n-1)/2)*(r+1)/(r-1) )
+      d1 = p*(n-1)/(r-1)
+      len = d1 + p*(i-1)
+      # println("i=$i\tp=$p\td1=$d1\tlen=$len")
+
+    # Case of central expansion
+    else
+      _central = 0.5
+      # Left of the center
+      if i<=floor(n*_central)
+        _l = l*_central
+        _n = floor(n*_central)
+        _r = r
+        _i = i
+      # Right of the center
+      else
+        _l = l*(1-_central)
+        _n = n-floor(n*_central)
+        _r = 1/r
+        _i = i-floor(n*_central)
+      end
+      p = _l/( (_n*(_n-1)/2)*(_r+1)/(_r-1) )
+      d1 = p*(_n-1)/(_r-1)
+      len = d1 + p*(_i-1)
+      # println("$i\t$_r\t$cumlen\t_n=$_n\t_i=$_i")
+    end
+
+    cumlen += len
+    this_x = xlow + (cumlen/l)*(xhigh-xlow)
+    # println("i=$i\tx=$this_x\tlen=$len")
+    this_f = f(this_x)
+    push!(out, this_f)
+  end
+
+  # Verifies correct discretization
+  if check && abs((cumlen-l)/l)>0.0001
+    error("Critical logic error! cumlen!=l ($cumlen!=$l)")
+  end
+
+  return out
+end
+
+"""
+  `multidiscretize(f, xlow, xhigh, sections)`
+
+Discretizes the continuous function `f` between the range `xlow` and `xhigh`
+into multiple sections of refinement as specified in `sections`.
+
+  # Arguments
+  * `f`         : Continuous function of the form `f(x)` to be discretized
+                  between `xlow` and `xhigh`,
+  * `xlow`      : Lower bound.
+  * `xhigh`     : Upper bound.
+  * `sections`  : Array `[sec1, sec2, ...]`specifying the
+                  sections of discretization in the format
+                  `sec = (c::Float64, n::Int64, r::Float64, central::Bool)`,
+                  with `c` the normalized length of this section (the sum of all
+                  c must equal one), `n` the number of intervals in this section
+                  , `r` the increment ratio between first and last interval if
+                  `central=false` or between first and central interval if
+                  `central=true`.
+"""
+function multidiscretize(f, xlow, xhigh,
+                          sections::Array{Tuple{Float64,Int64,Float64,Bool},1};
+                          check::Bool=true)
+  out = Any[f(xlow)]
+  ctot = sum([sec[1] for sec in sections]) # Sum of all `c`s
+
+  # Iterates over sections
+  prev_xhigh = xlow
+  for (c,n,r,central) in sections
+
+    this_c = c/ctot # Makes sure that the sum of `c`s will add 1
+    this_xlow = prev_xhigh
+    this_xhigh = prev_xhigh + this_c*(xhigh-xlow)
+
+    this_out = discretize(f, this_xlow, this_xhigh, n, r; central=central,
+                                  check=check)
+    out = vcat(out, this_out[2:end])
+
+    prev_xhigh = this_xhigh
+  end
+
+  return out
+end
+##### END OF MESHING ###########################################################
+
+
+
+
+
+
+################################################################################
 # LINEAR ALGEBRA TRANSFORMATIONS
 ################################################################################
 """
