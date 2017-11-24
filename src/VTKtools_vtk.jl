@@ -70,13 +70,9 @@ end
 function generateVTK(filename::String, points;
                     lines=nothing, cells=nothing,
                     point_data=nothing, line_n_cell_data=nothing,
-                    path="", comments="", num=nothing)
-  if num!=nothing
-    nt = ".$(num)"
-  else
-    nt = ""
-  end
-  ext = "$(nt).vtk"
+                    path="", comments="",
+                    time=nothing)
+  ext = ".vtk"
   if path !=""
     _path = string(path, (path[end]!="/" ? "/" : ""))
   else
@@ -90,6 +86,14 @@ function generateVTK(filename::String, points;
   header = string(header, "\n", "ASCII") # File format
   header = string(header, "\n", "DATASET UNSTRUCTURED_GRID")
   write(f, header)
+
+  # TIME
+  if time!=nothing
+    line0 = "\nFIELD FieldData 1"
+    line1 = "\nSIM_TIME 1 1 double"
+    line2 = "\n$(time)"
+    write(f, line0*line1*line2)
+  end
 
 
   np = size(points)[1]
@@ -129,7 +133,6 @@ function generateVTK(filename::String, points;
   end
   write(f, "\n\nCELLS $(np+nl+nc) $(2*np+auxl+auxc)")
 
-  # println("$np, $nl, $nc")
   for i in 1:np+nl+nc
     if i<=np
       pts = [i-1]

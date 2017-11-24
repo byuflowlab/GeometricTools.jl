@@ -8,5 +8,5 @@ Methods for the manipulation of geometric data and formatting into VTK format.
 # Authorship
   * Author    : Eduardo J Alvarez
   * Email     : Edo.AlvarezR@gmail.com
-  * Created   : Aug 2017
+  * Created   : Nov 2017
   * License   : MIT License
