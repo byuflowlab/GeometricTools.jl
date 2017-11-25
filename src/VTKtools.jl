@@ -15,6 +15,7 @@
 module VTKtools
 
 # ------------ GENERIC MODULES -------------------------------------------------
+using PyCall
 # using PyPlot
 # using CSV
 

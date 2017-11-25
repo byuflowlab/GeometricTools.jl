@@ -1,6 +1,6 @@
 ################################################################################
 # # DESCRIPTION
-#     Python function for the manipulation of Paraview.
+#     Python functions for the manipulation of Paraview.
 # # AUTHORSHIP
 #   * Author    : Eduardo J Alvarez
 #   * Email     : Edo.AlvarezR@gmail.com

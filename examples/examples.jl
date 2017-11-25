@@ -9,7 +9,7 @@
 =###############################################################################
 
 include("../src/VTKtools.jl")
-const vtk = VTKtools
+vtk = VTKtools
 
 """
   Example of using lines2vtk with generateVTK. Generates a simple 6-sided box.
@@ -82,3 +82,140 @@ function simple_box(; prompt=true)
   if y=="y"; run(`rm -f $(file_name1).vtk $(file_name2).vtk`); end;
 
 end
+
+"""
+  Example of using a parametrically meshed surface using `discretize()`,
+  `lines2vtkcells()`, and `generateVTK()`.
+"""
+function parametric_mesh(; prompt=true)
+  file_name = "temp_mesh_example"
+
+  # Helicoid function
+  revs = 2                        # Number of revolutions
+  rho1 = 8                        # Outer radius
+  rho2 = rho1/4                   # Inner radius
+  k = 1                           # Period
+  f1(z) = [rho1*cos(k*z), rho1*sin(k*z), z] # Outer edge
+  f2(z) = [rho2*cos(k*z), rho2*sin(k*z), z] # Inner edge
+
+  # Discretize edges
+  xlow, xhigh = 0, revs*2*pi      # Bounds of parametric edges
+  n = 100                         # Number of cells
+  r = 1.0                         # Expansion ratio
+  line1 = vtk.discretize(f1, xlow, xhigh, n, r)
+  line2 = vtk.discretize(f2, xlow, xhigh, n, r)
+
+  # Dummy point data for good looking visuals
+  pd1 = [i for i in 1:size(line1)[1]]
+  pd2 = size(line1)[1]+[i for i in 1:size(line2)[1]]
+
+  # Generates cells in VTK Legacy format
+  out = vtk.lines2vtkcells(line1, line2; point_data1=pd1, point_data2=pd2)
+  points, vtk_cells, point_data = out
+
+
+  # Formats the point data for generateVTK
+  data = []
+  push!(data, Dict(
+                  "field_name" => "Point_index",
+                  "field_type" => "scalar",
+                  "field_data" => point_data
+                  )
+       )
+
+
+   # Generates the vtk file
+   vtk.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
+
+   # Calls paraview
+  #  run(`paraview --data="$(file_name).vtk;"`)
+
+   # Deletes files
+   if prompt
+     print("Delete vtk files? ([y]/n) ")
+     y = readline()
+   else
+     y = "y"
+   end
+   if y=="y"; run(`rm -f $(file_name).vtk`); end;
+end
+
+
+"""
+  Example of using a parametrically meshed surface using `discretize()`,
+  `lines2vtkmulticells()`, and `generateVTK()`.
+"""
+function parametric_mesh2(; prompt=true)
+  file_name = "temp_mesh_example2"
+
+  # Helicoid function
+  revs = 2                        # Number of revolutions
+  rho1 = 8                        # Outer radius
+  rho2 = rho1/4                   # Inner radius
+  k = 1                           # Period
+  f1(z) = [rho1*cos(k*z), rho1*sin(k*z), z] # Outer edge
+  f2(z) = [rho2*cos(k*z), rho2*sin(k*z), z] # Inner edge
+
+  # Discretize edges
+  xlow, xhigh = 0, revs*2*pi      # Bounds of parametric edges
+  n = 100                         # Number of cells
+  r = 1.0                         # Expansion ratio
+  line1 = vtk.discretize(f1, xlow, xhigh, n, r)
+  line2 = vtk.discretize(f2, xlow, xhigh, n, r)
+
+  # Discretize width between lines
+  nwidth = 25                     # Number of rows between edges
+  rwidth = 10.0                   # Expansion ratio
+  central = true                  # Expands about center between edges
+  sections = [(1.0, nwidth, rwidth, central)]   # Discretization sections
+
+  # Dummy point data for good looking visuals
+  pd1 = [i for i in 1:size(line1)[1]]
+  pd2 = size(line1)[1]+[i for i in 1:size(line2)[1]]
+
+  # Generates cells in VTK Legacy format
+  out = vtk.lines2vtkmulticells(line1, line2, sections;
+                                            point_data1=pd1, point_data2=pd2)
+  points, vtk_cells, point_data = out
+
+  println(point_data)
+
+
+  # Formats the point data for generateVTK
+  data = []
+  push!(data, Dict(
+                  "field_name" => "Point_index",
+                  "field_type" => "scalar",
+                  "field_data" => point_data
+                  )
+       )
+
+
+   # Generates the vtk file
+   vtk.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
+
+   # Calls paraview
+  #  run(`paraview --data="$(file_name).vtk;"`)
+
+   # Deletes files
+   if prompt
+     print("Delete vtk files? ([y]/n) ")
+     y = readline()
+   else
+     y = "y"
+   end
+   if y=="y"; run(`rm -f $(file_name).vtk`); end;
+end
+
+
+
+
+
+
+
+
+
+
+
+
+#

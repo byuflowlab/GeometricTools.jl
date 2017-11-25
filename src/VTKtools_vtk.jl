@@ -49,6 +49,195 @@ function lines2vtk(lines; values=nothing)
 end
 
 
+"""
+  `generateCells(line1::Array{Array{Float64,1}},line2::Array{Array{Float64,1}};
+                    point_data1, point_data2)`
+
+Given two lines with the same amount of points, it generate cells by matching
+the points between lines. For instance:
+
+  ```julia
+  julia> line1 = [p11,p12,p13,p14,p15,p16,p17]
+  julia> line2 = [p21,p22,p23,p24,p25,p26,p27]
+  julia> generateCells(line1, line2)
+  ([cell1, cell2, ...], point_data)
+  ```
+where `cell1=[p11, p12, p22, p21]`, `cell2=[p12,p13,p23,p22]`, etc.
+
+Give it point data corresponding to points in each line through `point_data1`
+and `point_data2`, and it return it through `point_data` formatted for
+`lines2vtk`'s `values` input.
+"""
+function generateCells(line1, line2; point_data1=nothing, point_data2=nothing)
+  # Error case
+  if size(line1)!=size(line2)
+    error("Cells can't be generated from lines of unequal divisions!")
+  end
+
+  ncells = size(line1)[1]-1   # Number of cells
+  cells = Array{Float64,1}[]  # Cells
+                              # Point data on each cell
+  point_data = (nothing in [point_data1, point_data2]) ? nothing : []
+
+  # Builds cells
+  for i in 1:ncells
+    push!(cells, [line1[i], line1[i+1], line2[i+1], line2[i]])
+    if point_data!=nothing
+      push!(point_data, [point_data1[i], point_data1[i+1], point_data2[i+1],
+                        point_data2[i]])
+    end
+  end
+
+  return cells, point_data
+end
+
+
+"""
+  `lines2vtkcells(line1::Array{Array{Float64,1}},line2::Array{Array{Float64,1}};
+                    point_data1, point_data2)`
+
+Given two lines with the same amount of points, it generate cells in VTK format
+by matching the points between lines. For instance:
+
+  ```julia
+  julia> line1 = [p11,p12,p13]
+  julia> line2 = [p21,p22,p23]
+  julia> lines2vtkcells(line1, line2)
+  (points, vtk_cells, point_data)
+  ```
+where `points=[p11,p12,p13,p21,p22,p23]`, and `vtk_cells=[[0,1,4,3],[1,2,5,4]]`.
+
+Give it point data corresponding to points in each line through `point_data1`
+and `point_data2`, and it return it through `point_data` formatted for
+`generateVTK`'s `point_data` input.
+
+Prefer this method over `generateCells()` since it will store the data
+efficiently when generating the VTK.
+"""
+function lines2vtkcells(line1, line2; point_data1=nothing, point_data2=nothing)
+  # Error case
+  if size(line1)!=size(line2)
+    error("Cells can't be generated from lines of unequal divisions!")
+  end
+
+  npoints = size(line1)[1]        # Number of points per line
+  ncells = npoints-1              # Number of cells
+  points = vcat(line1, line2)     # Points
+  vtk_cells = Array{Int64,1}[]    # Cells
+  # Point data
+  if !(nothing in [point_data1, point_data2])
+    if size(point_data1)!=size(point_data2)
+      error("Invalid point data! "*
+            "$(size(point_data1))!=$(size(point_data2))"*
+            "(size(point_data1)!=size(point_data2))")
+    else
+      point_data = vcat(point_data1, point_data2)
+    end
+  else
+    point_data = nothing
+  end
+
+  # Builds cells
+  for i in 1:ncells
+    point_index = i-1
+    push!(vtk_cells, [point_index, point_index+1,
+                        npoints+point_index+1, npoints+point_index])
+  end
+
+  return points, vtk_cells, point_data
+end
+
+"""
+  `lines2vtkmulticells(line1, line2,
+                          sections::Array{Tuple{Float64,Int64,Float64,Bool},1},
+                          point_data1=nothing, point_data2=nothing)`
+
+Like `lines2vtkcells()` it generates cells between two lines, but allows to
+define multiple rows of cells in between. The rows are given by `sections`,
+which is the same variable `sections` defined in `VTKtools_geometry.jl`'s
+`multidiscretize()` function, which divides the space in between the lines.
+For more details see docstring of `lines2vtkcells()` and `multidiscretize()`.
+"""
+function lines2vtkmulticells(line1, line2,
+                          sections::Array{Tuple{Float64,Int64,Float64,Bool},1};
+                          point_data1=nothing, point_data2=nothing)
+  # ERROR CASES
+  if size(line1)!=size(line2)
+    error("Cells can't be generated from lines of unequal divisions!")
+  end
+  if !(nothing in [point_data1, point_data2])
+    if size(point_data1)!=size(point_data2)
+      error("Invalid point data! "*
+            "$(size(point_data1))!=$(size(point_data2))"*
+            "(size(point_data1)!=size(point_data2))")
+    else
+      point_data = []
+    end
+  else
+    point_data = nothing
+  end
+
+
+  npoints = size(line1)[1]        # Number of points per line
+  points = []                     # Points
+  vtk_cells = Array{Int64,1}[]    # Cells
+
+  # Discretize the space between the lines
+  f(x) = x              # Function to discretize
+  xlow, xhigh = 0, 1    # The space is parameterized between 0 and 1
+  row_pos = multidiscretize(f, xlow, xhigh, sections) # Position of each row
+                                                      # between the lines
+
+  # Iterates over each row
+  prev_line2 = line1
+  prev_point_data2 = point_data1
+  for (i,this_pos) in enumerate(row_pos[2:end])
+
+    # Creates the upper and lower lines of this row
+    this_line1 = prev_line2
+    this_line2 = [line1[j] + this_pos*(line2[j]-line1[j]) for j in 1:npoints]
+
+    # Linearly interpolates point data
+      this_point_data1 = prev_point_data2
+    if point_data!=nothing
+      this_point_data2 = [point_data1[j] + this_pos*(point_data2[j]-point_data1[j]) for j in 1:npoints]
+    else
+      this_point_data2 = nothing
+    end
+
+
+    # Discretizes this row
+    row = lines2vtkcells(this_line1, this_line2; point_data1=this_point_data1,
+                                                  point_data2=this_point_data2)
+    row_points, row_vtk_cells, row_point_data = row
+
+    # Adds this row to the overall mesh
+    if i==1 # Case of the first row of cells (adds both upper and lower bound)
+      # Adds points
+      points = vcat(points, row_points)
+      # Adds point data
+      if point_data!=nothing
+        point_data = vcat(point_data, row_point_data)
+      end
+    else # Case of other rows (only adds upper bound)
+      # Adds points
+      points = vcat(points, row_points[npoints+1:end])
+      # Adds point data
+      if point_data!=nothing
+        point_data = vcat(point_data, row_point_data[npoints+1:end])
+      end
+    end
+    # Adds point indexing of cells
+    vtk_cells = vcat(vtk_cells,
+                            [cells+(i-1)*npoints for cells in row_vtk_cells])
+
+    prev_line2 = this_line2
+    prev_point_data2 = this_point_data2
+  end
+
+  return points, vtk_cells, point_data
+end
+
 
 """
   `generateVTK(filename, points; lines, cells, point_data, path, num, time)`
