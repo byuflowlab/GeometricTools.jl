@@ -11,7 +11,7 @@
 
 """
   `create_path(save_path::String, prompt::Bool)`
-  
+
 Create folder `save_path`. `prompt` prompts the user if true.
 """
 function create_path(save_path::String, prompt::Bool)
@@ -22,7 +22,7 @@ function create_path(save_path::String, prompt::Bool)
       opts1 = ["y", "n"]
       while false==(inp1 in opts1)
         print("\n\nFolder $save_path already exists. Remove? (y/n) ")
-        inp1 = readline()[1:end-1]
+        inp1 = readline()[1:end]
       end
       if inp1=="y"
         run(`rm $save_path -rf`)

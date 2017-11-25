@@ -21,7 +21,8 @@ Discretizes the continuous function `f` between the range `xlow` and `xhigh`
 into `n` intervals, with `r` the ratio between first and last interval if
 `central=false` or between first and central interval if `central=true`.
 
-  # Examples
+  **Examples**
+
   The following lines show the discretization of a semi-circumference perimeter
   into 100 intervals of uniform length:
 
@@ -102,7 +103,7 @@ end
 Discretizes the continuous function `f` between the range `xlow` and `xhigh`
 into multiple sections of refinement as specified in `sections`.
 
-  # Arguments
+  ** Arguments **
   * `f`         : Continuous function of the form `f(x)` to be discretized
                   between `xlow` and `xhigh`,
   * `xlow`      : Lower bound.
@@ -115,6 +116,17 @@ into multiple sections of refinement as specified in `sections`.
                   , `r` the increment ratio between first and last interval if
                   `central=false` or between first and central interval if
                   `central=true`.
+
+  **Examples**
+
+  The following lines show the discretization of a semi-circumference perimeter
+  into 90 intervals done in three sections of discretization:
+
+  ```julia
+    julia> f(theta) = (cos(theta), sin(theta), 0)
+    julia> sec = (1/3, 30, 1/8, true)
+    julia> points = vtk.multidiscretize(f, 0, pi, [sec, sec, sec])
+  ```
 """
 function multidiscretize(f, xlow, xhigh,
                           sections::Array{Tuple{Float64,Int64,Float64,Bool},1};

@@ -8,16 +8,15 @@
 #   * License   : MIT License
 =###############################################################################
 
-module_path,_ = splitdir(@__FILE__);   # Path to this module
-push!(LOAD_PATH, joinpath(module_path,"../src/"))
-
-import VTKtools
+include("../src/VTKtools.jl")
 const vtk = VTKtools
 
 """
   Example of using lines2vtk with generateVTK. Generates a simple 6-sided box.
 """
-function main()
+function simple_box(; prompt=true)
+  file_name1 = "temp_vtk_example"
+  file_name2 = "temp_vtk_example_w_data"
   # Defining points
   p0 = [0,0,0]
   p1 = [1,0,0]
@@ -40,10 +39,10 @@ function main()
   points, vtk_cells = vtk.lines2vtk([c0,c1,c2,c3,c4,c5])
 
   # Generates the vtk file
-  vtk.generateVTK("vtk_example", points; cells=vtk_cells)
+  vtk.generateVTK(file_name1, points; cells=vtk_cells)
 
   # Calls paraview
-  run(`paraview --data="temp_vtk_example.vtk;"`)
+  run(`paraview --data="$(file_name1).vtk;"`)
 
 
   # ------ Example of outputting a data field ----------------------------------
@@ -68,9 +67,18 @@ function main()
                   )
        )
   # Generates the vtk file
-  vtk.generateVTK("vtk_example_w_data", points;
+  vtk.generateVTK(file_name2, points;
                cells=vtk_cells, point_data=data)
   # Calls paraview
-  run(`paraview --data="temp_vtk_example_w_data.vtk;"`)
+  run(`paraview --data="$(file_name2).vtk;"`)
+
+  # Deletes files
+  if prompt
+    print("Delete vtk files? ([y]/n) ")
+    y = readline()
+  else
+    y = "y"
+  end
+  if y=="y"; run(`rm -f $(file_name1).vtk $(file_name2).vtk`); end;
 
 end

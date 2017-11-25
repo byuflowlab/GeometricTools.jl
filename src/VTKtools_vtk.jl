@@ -10,16 +10,20 @@
 
 
 """
-  Receives an array of lines as lines[i] with the i-th line and lines[i][j] the
-  j-th point in the i-th line, and formats them in vtk format.
+  Receives an array of lines, with lines[i] the i-th line, and lines[i][j] the
+  j-th point in the i-th line, and formats them in vtk format. Give it point
+  data through `values` in the same format, and it will output the data formated
+  as corresponding to the vtk lines.
 
-  returns (points, vtk_lines)
-    where `points` is an array with all points in all lines, and `lines` contains
-    is an array of arrays containing the indexes of every point in each line.
+  ** Output **
+  * (points, vtk_lines, vtk_values) where `points` is an array with all points
+    in all lines, `lines` is an array of arrays containing the indices of
+    every point in each line, and `vtk_values` is an array with the point data
+    of each point in `points`.
 """
 function lines2vtk(lines; values=nothing)
-  points = []
-  vtk_lines = []
+  points = Array{Float64,1}[]
+  vtk_lines = Array{Int64,1}[]
 
   if values!=nothing
     vtk_values = []
@@ -47,36 +51,40 @@ end
 
 
 """
-    `generateVTK(filename, points [, lines, cells, point_data, line_n_cell_data,
-                  path, comments])`
-  Generates a vtk file with the given data.
+  `generateVTK(filename, points; lines, cells, point_data, path, num, time)`
 
-  # Arguments
-  *   `points`        :   ([float[]]) array of points.
-  * (KEYWORDS)
-  *   `lines`         :   ([float[]]) lines definition. lines[i] contains the
-                            index of all the points in the i-th line.
-  *   `cells`         :   ([float[]]) polygons definiton. cells[i] contains the
-                            index of all the points in the i-th polygon
-  *   `data`          :   ([Dict]) collection of data fields in the following
-                            format:
+Generates a vtk file with the given data.
+
+  **Arguments**
+  * `points::Array{Array{Float64,1},1}`     : Points to output.
+
+  **Optional Arguments**
+  * `lines::Array{Array{Int64,1},1}`  : line definitions. lines[i] contains the
+                            indices of points in the i-th line.
+  * `cells::Array{Array{Int64,1},1}`  : VTK polygons definiton. cells[i]
+                            contains the indices of points in the i-th polygon.
+  * `data::Array{Dict{String,Any},1}` : Collection of data point fields in the
+                            following format:
                               data[i] = Dict(
-                                "field_name" => field_name
+                                "field_name" => field_name::String
                                 "field_type" => "scalar" or "vector"
-                                "field_data" => data
+                                "field_data" => point_data
                               )
-                            where data[i] is the data at the i-th point.
+                            where point_data[i] is the data at the i-th point.
+
+See `examples.jl` for an example on how to use this function.
 """
 function generateVTK(filename::String, points;
-                    lines=nothing, cells=nothing,
-                    point_data=nothing, line_n_cell_data=nothing,
-                    path="", comments="",
-                    time=nothing)
-  ext = ".vtk"
+                    lines::Array{Array{Int64,1},1}=Array{Int64,1}[],
+                    cells::Array{Array{Int64,1},1}=Array{Int64,1}[],
+                    point_data=nothing, num=nothing, time=nothing,
+                    path="", comments="")
+  aux = num!=nothing ? ".$num" : ""
+  ext = aux*".vtk"
   if path !=""
     _path = string(path, (path[end]!="/" ? "/" : ""))
   else
-    _path = ""
+    _path = path
   end
   f = open(string(_path, filename, ext), "w")
 
@@ -95,10 +103,9 @@ function generateVTK(filename::String, points;
     write(f, line0*line1*line2)
   end
 
-
   np = size(points)[1]
-  nl = lines!=nothing ? size(lines)[1] : 0
-  nc = cells!=nothing ? size(cells)[1] : 0
+  nl = size(lines)[1]
+  nc = size(cells)[1]
 
   # POINTS
   write(f, string("\n", "POINTS ", np, " float"))
@@ -115,21 +122,13 @@ function generateVTK(filename::String, points;
   end
 
   # CELLS
-  if lines!=nothing
-    auxl = size(lines)[1]
-    for line in lines
-      auxl += size(line)[1]
-    end
-  else
-    auxl = 0
+  auxl = size(lines)[1]
+  for line in lines
+    auxl += size(line)[1]
   end
-  if cells!=nothing
-    auxc = size(cells)[1]
-    for cell in cells
-      auxc += size(cell)[1]
-    end
-  else
-    auxc = 0
+  auxc = size(cells)[1]
+  for cell in cells
+    auxc += size(cell)[1]
   end
   write(f, "\n\nCELLS $(np+nl+nc) $(2*np+auxl+auxc)")
 
@@ -194,41 +193,5 @@ function generateVTK(filename::String, points;
     end
   end
 
-  # # CELL DATA
-  # if line_n_cell_data!=nothing
-  #   write(f, "\n\nCELL_DATA $(nl+nc)")
-  #   _c_data = line_n_cell_data
-  # else
-  #   _c_data = []
-  # end
-  # for field in _c_data
-  #   field_name = field["field_name"]
-  #   field_type = field["field_type"]
-  #   data = field["field_data"]
-  #   if size(data)[1]!=nl+nc
-  #     warn("Corrupted field $(field_name)!"*
-  #           " Field size != number of lines + cells.")
-  #   end
-  #   if field_type=="scalar"
-  #     write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
-  #     for entry in data
-  #       write(f, "\n$entry")
-  #     end
-  #   elseif field_type=="vector"
-  #     write(f, "\n\nVECTORS $field_name float")
-  #     for entry in data
-  #       line = ""
-  #       for (j,coor) in enumerate(entry)
-  #         line *= "$coor"
-  #         if j!=size(p)[1]
-  #           line *= " "
-  #         end
-  #       end
-  #       write(f, "\n"*line)
-  #     end
-  #   else
-  #     error("Unknown field type $(field_type).")
-  #   end
-  # end
   close(f)
 end
