@@ -1,7 +1,7 @@
 # VTKtools
 Methods for the manipulation of geometric data and formatting into VTK format.
 
-<img src="docs/img/helicoid02.tif" alt="Pic here" style="width: 600px;"/>
+<img src="docs/img/helicoid02.png" alt="Pic here" style="width: 600px;"/>
 
 # Dependencies
   * Paraview  : Not needed, but examples call Paraview for visualization of
