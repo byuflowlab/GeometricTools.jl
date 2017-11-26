@@ -1,6 +1,8 @@
 # VTKtools
 Methods for the manipulation of geometric data and formatting into VTK format.
 
+<img src="docs/img/helicoid02.eps" alt="Pic here" style="width: 600px;"/>
+
 # Dependencies
   * Paraview  : Not needed, but examples call Paraview for visualization of
       outputs. Installing through `apt-get install paraview` is not recommended
