@@ -157,7 +157,7 @@ end
 # PARAMETRIZATION
 ################################################################################
 """
-  `parameterize(x,y)`
+  `parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false)`
 
 Receives a contour (line) and returns a parametrization function f(s) of the
 contour. The parametrization is done on the path of the splined
@@ -167,12 +167,12 @@ perform this parametrization, the contour must be injective in least one of the
 variables (x, y, or z) (i.e., all values of the variable are unique), and that
 variable must be given in increasing order.
 
-  # Arguments
+  **Arguments**
   * `x::Array{Float64,1}`    : x-coordinates of the contour.
   * `y::Array{Float64,1}`    : y-coordinates of the contour.
   * `z::Array{Float64,1}`    : z-coordinates of the contour.
 
-  # Optional Arguments
+  **Optional Arguments**
   * `inj_var::Int64`         : Indicates the variable that is injective, with
                                   1=x, 2=y, and 3=z.
   * `s::Float64`             : Spline smoothness.

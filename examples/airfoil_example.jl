@@ -66,7 +66,8 @@ end
 ### INTERNAL FUNCTIONS #########################################################
 "Plots the contour of an airfoil given in x,y"
 function plot_airfoil(x::Array{Float64,1}, y::Array{Float64,1};
-                      label="Airfoil", style="-k", figfactor=1.0)
+                      label="Airfoil", style="-k", figfactor=1.0,
+                      title_str="Airfoil geometry")
   # Sizes the figure
   figsize = [7*1.5,5*0.5]*figfactor
   xmin, xmax = -0.05, 1.05
@@ -80,7 +81,7 @@ function plot_airfoil(x::Array{Float64,1}, y::Array{Float64,1};
   xlabel("x")
   ylabel("y")
   grid(true, color="0.8", linestyle="--")
-  title("Airfoil geometry")
+  title(title_str)
 end
 
 "Receives a .dat file as pulled from airfoiltools.com containing the x and y
