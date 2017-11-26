@@ -164,7 +164,8 @@ contour. The parametrization is done on the path of the splined
 contour such that f(0.5) returns the point (x,y,z) where half of the entire
 contour has been walked, and f(1.0) returns the last point in the contour. To
 perform this parametrization, the contour must be injective in least one of the
-variables (x, y, or z) (i.e., all values of the variable are unique).
+variables (x, y, or z) (i.e., all values of the variable are unique), and that
+variable must be given in increasing order.
 
   # Arguments
   * `x::Array{Float64,1}`    : x-coordinates of the contour.
