@@ -125,7 +125,7 @@ into multiple sections of refinement as specified in `sections`.
   ```julia
     julia> f(theta) = (cos(theta), sin(theta), 0)
     julia> sec = (1/3, 30, 1/8, true)
-    julia> points = vtk.multidiscretize(f, 0, pi, [sec, sec, sec])
+    julia> points = multidiscretize(f, 0, pi, [sec, sec, sec])
   ```
 """
 function multidiscretize(f, xlow, xhigh,
@@ -153,9 +153,116 @@ function multidiscretize(f, xlow, xhigh,
 end
 ##### END OF MESHING ###########################################################
 
+################################################################################
+# PARAMETRIZATION
+################################################################################
+"""
+  `parameterize(x,y)`
 
+Receives a contour (line) and returns a parametrization function f(s) of the
+contour. The parametrization is done on the path of the splined
+contour such that f(0.5) returns the point (x,y,z) where half of the entire
+contour has been walked, and f(1.0) returns the last point in the contour. To
+perform this parametrization, the contour must be injective in least one of the
+variables (x, y, or z) (i.e., all values of the variable are unique).
 
+  # Arguments
+  * `x::Array{Float64,1}`    : x-coordinates of the contour.
+  * `y::Array{Float64,1}`    : y-coordinates of the contour.
+  * `z::Array{Float64,1}`    : z-coordinates of the contour.
 
+  # Optional Arguments
+  * `inj_var::Int64`         : Indicates the variable that is injective, with
+                                  1=x, 2=y, and 3=z.
+  * `s::Float64`             : Spline smoothness.
+
+See Parametrization section in documentation for more details.
+"""
+function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false)
+  # ERROR CASES
+  if size(x)!=size(y)!=size(z)  # Invalid contour
+    error("Invalid contour. "*
+              "$(size(x))!=$(size(y))!=$(size(z)) (size(x)!=size(y)!=size(z))")
+  elseif !(inj_var in [1,2,3])  # Invalid input
+    error("Invalid `inj_var`=$inj_var (!(inj_var in [1,2,3]))")
+  end
+
+  # Identifies injective and dependant variables
+  inj = nothing   # Injective variable
+  dep = []        # Dependant variables
+  for (i,var) in enumerate([x, y, z])
+    if i==inj_var
+      inj = var
+    else
+      push!(dep, var)
+    end
+  end
+
+  # Splines
+  bc="extrapolate"           # Out of boundary case
+  # s=0.0001                 # Spline smoothness
+  k = min(size(x)[1]-1, 3)   # Spline order
+  spl = []                   # Spline of each variable respect the injective
+  for var in dep
+    this_spl = Dierckx.Spline1D(inj, var; k=k, bc=bc, s=s)
+    push!(spl, this_spl)
+  end
+
+  # Defines the path function
+  dfdx1(x) = Dierckx.derivative(spl[1], x)    # Derivative of f respect x1
+  dfdx2(x) = Dierckx.derivative(spl[2], x)    # Derivative of f respect x2
+  fun(x) = sqrt.(1+(dfdx1(x)).^2+(dfdx2(x)).^2)   # Integrand
+                                                  # Integral between xmin and x
+  fun_s(this_x) = QuadGK.quadgk(fun, inj[1], this_x)[1]
+
+  # Defines the normalized path function
+  stot = fun_s(inj[end])      # Total length of the path
+  norm_s(x) = fun_s(x)/stot         # Normalized path function
+
+  # Defines the inverse normalized function
+  function inv_norm_s(sstar; debug=false)
+      # ERROR CASES
+      if sstar<-0.001 || sstar>1.001 # Outside of domain
+          error("Invalid normalized path length $(sstar) (sstar<0 || sstar>1)")
+      end
+
+      # Finds the x that matches the target (sstar)
+      this_fun(x) = sstar - norm_s(x)   # Zeroed function
+      bracket = [ inj[1]*(1-0.01*sign(inj[1])),# Bracket of the zero
+                  inj[end]*(1+0.01*sign(inj[end]))]
+
+      if debug
+          println("sstar=$sstar\tbracket=$bracket")
+          println("flow=$(this_fun(bracket[1]))")
+          println("fup=$(this_fun(bracket[2]))")
+      end
+
+      # Zero
+      this_x = Roots.find_zero(this_fun, bracket, Roots.Bisection())
+
+      return this_x
+  end
+
+  # Redefine the original function in terms of the new parametrization s*
+  function fstar(sstar)
+      x = inv_norm_s(sstar; debug=debug)       # Finds the x that matches the path
+      out = []                    # Output
+      dep_i = 1                   # Next spline to evaluate
+      for i in 1:3
+        if i==inj_var
+          push!(out, x)           # Injective variable
+        else
+          push!(out, spl[dep_i](x))   # Dependant variables
+          dep_i += 1
+        end
+      end
+      return out
+  end
+
+  return fstar
+end
+
+##### END OF MESHING ###########################################################
 
 
 ################################################################################

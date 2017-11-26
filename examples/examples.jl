@@ -128,7 +128,7 @@ function parametric_mesh(; prompt=true)
    vtk.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
 
    # Calls paraview
-  #  run(`paraview --data="$(file_name).vtk;"`)
+   run(`paraview --data="$(file_name).vtk;"`)
 
    # Deletes files
    if prompt
@@ -178,9 +178,6 @@ function parametric_mesh2(; prompt=true)
                                             point_data1=pd1, point_data2=pd2)
   points, vtk_cells, point_data = out
 
-  println(point_data)
-
-
   # Formats the point data for generateVTK
   data = []
   push!(data, Dict(
@@ -195,7 +192,7 @@ function parametric_mesh2(; prompt=true)
    vtk.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
 
    # Calls paraview
-  #  run(`paraview --data="$(file_name).vtk;"`)
+   run(`paraview --data="$(file_name).vtk;"`)
 
    # Deletes files
    if prompt

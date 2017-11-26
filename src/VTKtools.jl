@@ -16,8 +16,9 @@ module VTKtools
 
 # ------------ GENERIC MODULES -------------------------------------------------
 using PyCall
-# using PyPlot
-# using CSV
+using Dierckx
+using Roots
+using QuadGK
 
 # ------------ GLOBAL VARIABLES ------------------------------------------------
 global module_path; module_path,_ = splitdir(@__FILE__);   # Path to this module
