@@ -8,11 +8,9 @@
 #   * License   : MIT License
 =###############################################################################
 
-include("airfoil_example.jl")
-
-function blade_example(; prompt=true)
+function blade_example(; prompt=true, file_name="temp_blade00")
   airfoil_files = ["Cyl1.txt", "Cyl1.txt", "S815.txt", "S809.txt", "S826.txt"]
-  file_name = "temp_blade00"    # Name for vtk outpout file
+  # file_name = "temp_blade00"    # Name for vtk outpout file
 
 
   # PARAMETERS

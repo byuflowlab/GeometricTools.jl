@@ -8,11 +8,6 @@
 #   * License   : MIT License
 =###############################################################################
 
-include("../src/VTKtools.jl")
-vtk = VTKtools
-
-using PyPlot
-
 function airfoil_example()
   x,y = readcontour(vtk.data_path*"S809.txt"; header_len=2)
   plot_airfoil(x,y; style="--.k")

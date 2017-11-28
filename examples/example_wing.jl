@@ -8,9 +8,7 @@
 #   * License   : MIT License
 =###############################################################################
 
-include("airfoil_example.jl")
-
-function wing_example(; prompt=true)
+function wing_example(; prompt=true, file_name="temp_wing00")
 
   # PARAMETERS
   n_up = 40             # Number of sections in upper surface of wing
@@ -19,7 +17,7 @@ function wing_example(; prompt=true)
   z2 = 10.0             # Position of second airfoil
   c1 = 2.5              # Chord of first airfoil
   c2 = 1.0              # Chord of second airfoil
-  file_name = "temp_wing00"    # Name for vtk outpout file
+  # file_name = "temp_wing00"    # Name for vtk outpout file
 
   # Reads the original airfoil geometry from airfoiltools.com
   org_x1, org_y1 = readcontour(vtk.data_path*"naca6412.dat"; header_len=1)
