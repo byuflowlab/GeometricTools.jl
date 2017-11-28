@@ -8,7 +8,7 @@
 #   * License   : MIT License
 =###############################################################################
 
-include("../examples/airfoil_example.jl")
+include("airfoil_example.jl")
 
 function wing_example(; prompt=true)
 

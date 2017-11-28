@@ -73,7 +73,7 @@ function plot_airfoil(x::Array{Float64,1}, y::Array{Float64,1};
   xmin, xmax = -0.05, 1.05
   yrange = (xmax-xmin)/figsize[1] * figsize[2]
   ymin, ymax = -yrange/2, yrange/2
-  fig1 = figure("airfoil_geometry", figsize=(figsize[1], figsize[2]))
+  fig1 = figure(title_str, figsize=(figsize[1], figsize[2]))
   xlim([xmin, xmax])
   ylim([ymin, ymax])
 
@@ -82,6 +82,8 @@ function plot_airfoil(x::Array{Float64,1}, y::Array{Float64,1};
   ylabel("y")
   grid(true, color="0.8", linestyle="--")
   title(title_str)
+
+  if label!="Airfoil"; legend(loc="best"); end;
 end
 
 "Receives a .dat file as pulled from airfoiltools.com containing the x and y

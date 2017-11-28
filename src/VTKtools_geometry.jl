@@ -151,6 +151,64 @@ function multidiscretize(f, xlow, xhigh,
 
   return out
 end
+
+
+
+"""
+  Receives a closed 2D contour and splits it up in upper and lower surfaces as
+  divided by lowest and highest x values. It returns `(upper, lower)` with
+  `upper=(x,y)` the points of the upper surface, ditto for `lower`. Both `upper`
+  and `lower` are given in increasing order in x. This function is useful for
+  splitting up a closed contour into two sections that are injective in x, and
+  that can be received by `parameterize()`.
+"""
+function splitcontour(x,y)
+
+  # Flag indicating whether the contour start at the trailing or leading edge
+  start_TE = x[1]==max(x)
+
+  # Find the opposite end of the contour
+  end_i = -1
+  for (i, xi) in enumerate(x)
+    if i==1
+      nothing
+    # Case of starting from the trailing edge
+    elseif start_TE && xi > x[i-1]
+      end_i = i-1
+      break
+    # Case of leading edge
+    elseif !start_TE  && xi < x[i-1]
+      end_i = i-1
+      break
+    end
+  end
+
+  # ERROR CASE
+  if end_i==-1
+    error("Logic error! End of contour not found!")
+  end
+
+  # Splits them up
+  x_sec1, y_sec1 = x[1:end_i], y[1:end_i]
+  x_sec2, y_sec2 = x[end_i:end], y[end_i:end]
+
+  # Sorts them from LE to TE
+  if x_sec1[1] > min(x); reverse!(x_sec1); reverse!(y_sec1); end;
+  if x_sec2[1] > min(x); reverse!(x_sec2); reverse!(y_sec2); end;
+
+  # Determines upper and lower surfaces
+  if mean(y_sec1) > mean(y_sec2)
+    upper = [x_sec1, y_sec1]
+    lower = [x_sec2, y_sec2]
+  else
+    upper = [x_sec2, y_sec2]
+    lower = [x_sec1, y_sec1]
+  end
+
+  return upper, lower
+end
+
+
 ##### END OF MESHING ###########################################################
 
 ################################################################################
@@ -263,7 +321,7 @@ function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false)
   return fstar
 end
 
-##### END OF MESHING ###########################################################
+##### END OF PARAMETRIZATION ###################################################
 
 
 ################################################################################
@@ -373,5 +431,18 @@ function axis_rotation(r::Array{Float64, 1}, angle_deg::Float64)
         t*ux*uy+S*uz t*uy^2+C t*uy*uz-S*ux;
         t*ux*uz-S*uy t*uy*uz+S*ux t*uz^2+C]
   return M
+end
+
+"""
+  Receives yaw, pitch, and roll angles (in degrees) and return the rotation
+  matrix corresponding to this rotation.
+  (see http://planning.cs.uiuc.edu/node102.html)
+"""
+function rotation_matrix(yaw::Float64, pitch::Float64, roll::Float64)
+  a, b, g = yaw*pi/180, pitch*pi/180, roll*pi/180
+  Rz = [cos(a) -sin(a) 0; sin(a) cos(a) 0; 0 0 1]
+  Ry = [cos(b) 0 sin(b); 0 1 0; -sin(b) 0 cos(b)]
+  Rx = [1 0 0; 0 cos(g) -sin(g); 0 sin(g) cos(g)]
+  return Rz*Ry*Rz
 end
 ##### END OF ALGEBRA ###########################################################

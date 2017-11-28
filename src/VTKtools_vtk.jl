@@ -238,6 +238,89 @@ function lines2vtkmulticells(line1, line2,
   return points, vtk_cells, point_data
 end
 
+"""
+  `multilines2vtkmulticells(lines::Array{Array{Array{Float64,1 },1},1},
+                  sections::Array{Array{Tuple{Float64,Int64,Float64,Bool},1},1};
+                  point_datas=nothing)`
+
+Expanding `lines2vtkmulticells()` it generates cells in multiple rows of cells
+in between multiple lines. The rows in between each line are given by `sections`
+which is an array of `sections` defined in `lines2vtkmulticells()` which divides
+the space in between the lines.
+
+For more details see docstring of `lines2vtkmulticells()`.
+"""
+function multilines2vtkmulticells(lines,
+                  sections::Array{Array{Tuple{Float64,Int64,Float64,Bool},1},1};
+                  point_datas=nothing)
+  nlines = size(lines)[1]         # Number of lines
+  npoints = size(lines[1])[1]     # Number of points on each line
+  pflag = point_datas!=nothing     # Flag for point data
+
+  # Outputs
+  points = []
+  vtk_cells = Array{Int64,1}[]
+  point_data = pflag ? [] : nothing
+
+
+  # ERROR CASES
+  if nlines<=1
+    error("Two or more lines are required. Received $nlines.")
+  elseif pflag && size(point_datas)[1]!=nlines
+    error("Invalid point data. "*
+            "$(size(point_datas)[1])!=$(nlines) (size(point_datas)[1]!=nlines)")
+  elseif size(sections)[1]!=(nlines-1)
+    error("Invalid number of sections."*
+            " Expected $(nlines-1), received $(size(sections)[1])")
+  else
+    for line in lines
+      if size(line)[1]!=npoints
+        error("All lines must have the same number of points."*
+            " Expected $npoints, found $(size(line)[1]).")
+      end
+    end
+  end
+
+  for (i,line) in enumerate(lines)
+    if i==1
+      nothing
+    else
+
+      cur_npoints = size(points)[1]   # Current number of points
+
+      # Meshes this section
+      out = lines2vtkmulticells(lines[i-1], line,
+                              sections[i-1];
+                              point_data1=pflag ? point_datas[i-1] : nothing,
+                              point_data2=pflag ? point_datas[i] : nothing)
+
+      this_points, this_vtk_cells, this_point_data = out
+
+      # Adds this section to the overall mesh
+      if i==2 # Case of the first section (adds both upper and lower bound)
+        # Adds points
+        points = vcat(points, this_points)
+        # Adds point data
+        if pflag
+          point_data = vcat(point_data, this_point_data)
+        end
+      else # Case of any other section (only adds upper bound)
+        # Adds points
+        points = vcat(points, this_points[npoints+1:end])
+        # Adds point data
+        if point_data!=nothing
+          point_data = vcat(point_data, this_point_data[npoints+1:end])
+        end
+      end
+      # Adds point indexing of cells
+      this_zero = cur_npoints - npoints*(i!=2) # Point index corresponding to
+                                               # this cell's zero
+      vtk_cells = vcat(vtk_cells, [cells+this_zero for cells in this_vtk_cells])
+    end
+  end
+
+  return points, vtk_cells, point_data
+end
 
 """
   `generateVTK(filename, points; lines, cells, point_data, path, num, time)`
