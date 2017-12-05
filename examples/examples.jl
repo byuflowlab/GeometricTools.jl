@@ -15,6 +15,7 @@ module_path,_ = splitdir(@__FILE__);   # Path to this module
 push!(LOAD_PATH, joinpath(module_path,"../src/"))    # Point to VTKtools source
 
 using VTKtools
+# include("../src/VTKtools.jl")
 vtk = VTKtools
 
 # ------------ HEADERS ---------------------------------------------------------

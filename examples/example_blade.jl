@@ -12,6 +12,8 @@ function blade_example(; prompt=true, file_name="temp_blade00")
   airfoil_files = ["Cyl1.txt", "Cyl1.txt", "S815.txt", "S809.txt", "S826.txt"]
   # file_name = "temp_blade00"    # Name for vtk outpout file
 
+  println("Defining variables...")
+  prev_time = time()
 
   # PARAMETERS
   n_upper = 20             # Number of sections in upper surface of blade
@@ -46,6 +48,10 @@ function blade_example(; prompt=true, file_name="temp_blade00")
   crosssections = []        # It will store here the cross sections for lofting
   point_datas = []          # Dummy point data for good looking visuals
 
+  println("\t Runtime: $(round(time()-prev_time,1)) (s)")
+  println("Processing airfoils...")
+  prev_time = time()
+
   # Processes each airfoil geometry
   styles = ["--k", "--r", "--g", "--b", "--y", "--c"]
   org_points = []
@@ -54,6 +60,7 @@ function blade_example(; prompt=true, file_name="temp_blade00")
       # Read airfoil file
       x,y = readcontour(vtk.data_path*airfoil_file; header_len=2)
       push!(org_points, [x,y])
+
 
       # Separate upper and lower sides to make the contour injective in x
       upper, lower = splitcontour(x, y)
@@ -94,6 +101,10 @@ function blade_example(; prompt=true, file_name="temp_blade00")
       push!(point_datas, [j for j in npoints*(i-1)+1:npoints*i])
   end
 
+  println("\t Runtime: $(round(time()-prev_time,1)) (s)")
+  println("Lofting and generating VTK files...")
+  prev_time = time()
+
   # Generates cells in VTK Legacy format
   out = vtk.multilines2vtkmulticells(crosssections, sections;
                                         point_datas=point_datas)
@@ -109,9 +120,10 @@ function blade_example(; prompt=true, file_name="temp_blade00")
               )
    )
 
-
   # Generates the vtk file
   vtk.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
+
+  println("\t Runtime: $(round(time()-prev_time,1)) (s)")
 
   # Calls paraview
   run(`paraview --data="$(file_name).vtk;"`)

@@ -257,11 +257,6 @@ function multilines2vtkmulticells(lines,
   npoints = size(lines[1])[1]     # Number of points on each line
   pflag = point_datas!=nothing     # Flag for point data
 
-  # Outputs
-  points = []
-  vtk_cells = Array{Int64,1}[]
-  point_data = pflag ? [] : nothing
-
 
   # ERROR CASES
   if nlines<=1
@@ -280,6 +275,11 @@ function multilines2vtkmulticells(lines,
       end
     end
   end
+
+  # Outputs
+  points = []
+  vtk_cells = Array{Int64,1}[]
+  point_data = pflag ? [] : nothing
 
   for (i,line) in enumerate(lines)
     if i==1
