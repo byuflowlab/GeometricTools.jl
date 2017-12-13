@@ -443,6 +443,6 @@ function rotation_matrix(yaw::Float64, pitch::Float64, roll::Float64)
   Rz = [cos(a) -sin(a) 0; sin(a) cos(a) 0; 0 0 1]
   Ry = [cos(b) 0 sin(b); 0 1 0; -sin(b) 0 cos(b)]
   Rx = [1 0 0; 0 cos(g) -sin(g); 0 sin(g) cos(g)]
-  return Rz*Ry*Rz
+  return Rz*Ry*Rx
 end
 ##### END OF ALGEBRA ###########################################################

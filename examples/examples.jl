@@ -19,6 +19,6 @@ using VTKtools
 vtk = VTKtools
 
 # ------------ HEADERS ---------------------------------------------------------
-for header_name in ["simple", "airfoil", "wing", "blade"]
+for header_name in ["simple", "airfoil", "wing", "blade", "taylor_wing"]
   include("example_"*header_name*".jl")
 end
