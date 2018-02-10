@@ -438,7 +438,7 @@ end
   matrix corresponding to this rotation.
   (see http://planning.cs.uiuc.edu/node102.html)
 """
-function rotation_matrix(yaw::Float64, pitch::Float64, roll::Float64)
+function rotation_matrix(yaw::Real, pitch::Real, roll::Real)
   a, b, g = yaw*pi/180, pitch*pi/180, roll*pi/180
   Rz = [cos(a) -sin(a) 0; sin(a) cos(a) 0; 0 0 1]
   Ry = [cos(b) 0 sin(b); 0 1 0; -sin(b) 0 cos(b)]
