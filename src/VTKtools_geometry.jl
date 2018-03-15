@@ -237,7 +237,8 @@ variable must be given in increasing order.
 
 See Parametrization section in documentation for more details.
 """
-function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false)
+function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false,
+                                                              kspl="automatic")
   # ERROR CASES
   if size(x)!=size(y)!=size(z)  # Invalid contour
     error("Invalid contour. "*
@@ -260,7 +261,7 @@ function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false)
   # Splines
   bc="extrapolate"           # Out of boundary case
   # s=0.0001                 # Spline smoothness
-  k = min(size(x)[1]-1, 3)   # Spline order
+  k = kspl=="automatic" ? min(size(x)[1]-1, 3) : kspl  # Spline order
   spl = []                   # Spline of each variable respect the injective
   for var in dep
     this_spl = Dierckx.Spline1D(inj, var; k=k, bc=bc, s=s)
