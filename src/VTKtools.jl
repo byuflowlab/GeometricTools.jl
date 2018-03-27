@@ -25,7 +25,7 @@ global module_path; module_path,_ = splitdir(@__FILE__);   # Path to this module
 global data_path = module_path*"/../data/"       # Path to data folder
 
 # ------------ HEADERS ---------------------------------------------------------
-for header_name in ["vtk", "geometry", "misc"]
+for header_name in ["vtk", "geometry", "misc", "grid"]
   include("VTKtools_"*header_name*".jl")
 end
 

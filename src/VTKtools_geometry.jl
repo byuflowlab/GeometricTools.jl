@@ -447,3 +447,70 @@ function rotation_matrix(yaw::Real, pitch::Real, roll::Real)
   return Rz*Ry*Rx
 end
 ##### END OF ALGEBRA ###########################################################
+
+
+
+
+
+################################################################################
+# ORTHOGONAL SPACE TRANSFORMATIONS
+################################################################################
+
+# ORTHOGONAL SYSTEMS (See https://en.wikipedia.org/wiki/Orthogonal_coordinates)
+function cylindrical3D(X)
+    r, theta, z = X
+    return [ r*cos(theta), r*sin(theta), z ]
+end
+function cylindrical2D(X)
+    r, theta = X
+    return [ r*cos(theta),  r*sin(theta)]
+end
+function spherical3D(X)
+    r, theta, phi = X
+    return [  r*sin(theta)*cos(phi),
+              r*sin(theta)*sin(phi),
+              r*cos(theta) ]
+end
+function parabolic3D(X)
+    u,v,z = X
+    return [ 1/2*(u^2-v^2), u*v, z ]
+end
+function paraboloidal3D(X)
+    u,v,phi = X
+    return [u*v*cos(phi), u*v*sin(phi), 1/2*(u^2-v^2)]
+end
+function elliptic3D(X; a=1)
+    u,v,z = X
+    return [a*cosh(u)*cos(v), a*sinh(u)*sin(v), z]
+end
+function prolate3D(X; a=1)
+    xi,etha,phi = X
+    return [a*sinh(xi)*sin(etha)*cos(phi),
+            a*sinh(xi)*sin(etha)*sin(phi),
+            a*cosh(xi)*cos(etha)]
+end
+function oblate3D(X; a=1)
+    xi,etha,phi = X
+    return [a*cosh(xi)*cos(etha)*cos(phi),
+            a*cosh(xi)*cos(etha)*sin(phi),
+            a*sinh(xi)*sin(etha)]
+end
+function bipolar3D(X; a=1)
+    u,v,z = X
+    return [a*sinh(v)/(cosh(v)-cos(u)),
+            a*sin(u)/(cosh(v)-cos(u)),
+            z]
+end
+function toroidal3D(X; a=1)
+    u,v,phi = X
+    return [a*sinh(v)*cos(phi)/( cosh(v)-cos(u) ),
+            a*sinh(v)*sin(phi)/( cosh(v)-cos(u) ),
+            a*sin(u)/( cosh(v)-cos(u) )]
+end
+function conical3D(X; b=2, c=1)
+    r,mu,nu = X
+    return [r*mu*nu/(b*c),
+            r/b*sqrt( (mu^2-b^2)*(nu^2-b^2) / (b^2-c^2) ),
+            r/c*sqrt( (mu^2-c^2)*(nu^2-c^2) / (c^2-b^2) )]
+end
+##### END OF SPACE TRANSFORMATIONS #############################################

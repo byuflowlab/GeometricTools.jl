@@ -350,7 +350,7 @@ function generateVTK(filename::String, points;
                     lines::Array{Array{Int64,1},1}=Array{Int64,1}[],
                     cells::Array{Array{Int64,1},1}=Array{Int64,1}[],
                     point_data=nothing, num=nothing, time=nothing,
-                    path="", comments="")
+                    path="", comments="", _griddims::Int64=-1)
   aux = num!=nothing ? ".$num" : ""
   ext = aux*".vtk"
   if path !=""
@@ -393,6 +393,12 @@ function generateVTK(filename::String, points;
     write(f, "\n"*line)
   end
 
+  # We do this to avoid outputting points as cells if outputting a Grid
+  if _griddims!=-1
+    auxnp = np
+    np = 0
+  end
+
   # CELLS
   auxl = size(lines)[1]
   for line in lines
@@ -426,9 +432,25 @@ function generateVTK(filename::String, points;
     elseif i<=np+nl
       tpe = 4
     else
-      tpe = 7
+      if _griddims!=-1
+        if _griddims==1
+          tpe = 3
+        elseif _griddims==2
+          tpe = 9
+        elseif _griddims==3
+          tpe = 12
+        else
+          error("Generation of VTK cells of $_griddims dimensions not implemented")
+        end
+      else
+        tpe = 7
+      end
     end
     write(f, "\n"*"$tpe")
+  end
+
+  if _griddims!=-1
+    np = auxnp
   end
 
   # POINT DATA
