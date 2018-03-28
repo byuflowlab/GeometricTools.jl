@@ -207,8 +207,9 @@ function lintransform!(grid::Grid, M::Array{Float64,2}, T::Array{Float64,1};
 
   if reset_fields; grid.field = Dict{String, Dict{String, Any}}(); end;
 
+  invM = inv(M)
   for i in 1:grid.nnodes
-    grid.nodes[i,:] = transform(grid.nodes[i,:], M, T)
+    grid.nodes[i,:] = countertransform(grid.nodes[i,:], invM, T)
   end
 end
 
@@ -248,8 +249,9 @@ function save(grid::Grid, filename::String; args...)
 end
 
 ##### INTERNAL FUNCTIONS  ######################################################
-function _check(P_min::Array{Float64,1}, P_max::Array{Float64,1},
-                                              NDIVS::Array{T,1} where {T<:Any})
+function _check(P_min::Array{T,1} where {T<:Real},
+                P_max::Array{T,1} where {T<:Real} ,
+                NDIVS::Array{T,1} where {T<:Any})
   # Error cases
   if size(P_min)!=size(P_max)
     error("`P_min` and `P_max` must have the same dimensions "*
