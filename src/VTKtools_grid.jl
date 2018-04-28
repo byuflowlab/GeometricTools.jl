@@ -149,6 +149,31 @@ function get_cell(self::Grid, coor::Array{Int64,1})
 end
 
 """
+  `get_fieldval(grid, field_name, coor)`
+
+Returns the value of node of coordinates `coor` (1-indexed) in the field
+'field_name'.
+"""
+function get_fieldval(self::Grid, field_name::String, coor::Array{Int64,1})
+  return get_fieldval(self, field_name, sub2ind(self._ndivsnodes, coor...))
+end
+
+
+"""
+  `get_fieldval(grid, field_name, i)`
+
+Returns the value of i-th node (1-indexed) in the field 'field_name'.
+"""
+function get_fieldval(self::Grid, field_name::String, i::Int64)
+  if !(field_name in keys(self.field))
+    error("Field $field_name doesn't exist."*
+          " Available fields: $(keys(self.field))")
+  end
+
+  return self.field[field_name]["field_data"][i]
+end
+
+"""
   `add_field(grid::Grid, field_name::String, field_type::String, field_data)`
 
 Adds a field of data associated to each node.
