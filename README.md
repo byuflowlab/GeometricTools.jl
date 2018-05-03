@@ -13,12 +13,12 @@ See `docs` for code documentation and `examples` for usage examples.
       since it may have troubles linking the python libraries, instead follow
       the official [Paraview](https://www.paraview.org/Wiki/ParaView:Build_And_Install).
 
-# Extra Instructions for MacOS
-  * The examples call Paraview from the command line as a Julia command wrapper
-    of the form `run(`paraview`)`, requiring Paraview to be accessible from
+# Extra Setup Instructions for MacOS
+  * Every example in `examples/` call Paraview from the command line as a Julia command wrapper
+    of the form `run(``paraview``)`, requiring Paraview to be accessible from
     the command line. If you installed Paraview as a precompiled application,
     Paraview is not accessible from the command line unless you add it into the
-    system path. To do so, add this line to the `.bash_profile` file:
+    system path. To do so, add this line to your `.bash_profile`:
     ```bash
     export PATH=$PATH:/Applications/ParaView-5.4.0.app/Contents/MacOS/
     ```
