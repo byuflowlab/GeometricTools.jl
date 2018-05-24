@@ -351,7 +351,8 @@ function generateVTK(filename::String, points;
                     cells::Array{Array{Int64,1},1}=Array{Int64,1}[],
                     point_data=nothing, num=nothing, time=nothing,
                     path="", comments="", _griddims::Int64=-1,
-                    keep_points::Bool=true)
+                    keep_points::Bool=false)
+
   aux = num!=nothing ? ".$num" : ""
   ext = aux*".vtk"
   if path !=""
@@ -380,6 +381,8 @@ function generateVTK(filename::String, points;
   nl = size(lines)[1]
   nc = size(cells)[1]
 
+  _keep_points = keep_points || (nl==0 && nc==0)
+
   # POINTS
   write(f, string("\n", "POINTS ", np, " float"))
   for i in 1:np
@@ -396,7 +399,7 @@ function generateVTK(filename::String, points;
 
   # We do this to avoid outputting points as cells if outputting a Grid
   # or if we simply want to ignore points
-  if _griddims!=-1 || !keep_points
+  if _griddims!=-1 || !_keep_points
     auxnp = np
     np = 0
   end
@@ -451,7 +454,7 @@ function generateVTK(filename::String, points;
     write(f, "\n"*"$tpe")
   end
 
-  if _griddims!=-1 || !keep_points
+  if _griddims!=-1 || !_keep_points
     np = auxnp
   end
 
