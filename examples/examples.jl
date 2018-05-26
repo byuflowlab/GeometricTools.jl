@@ -8,17 +8,21 @@
 #   * License   : MIT License
 =###############################################################################
 
-# ------------ MODULE IMPORTS --------------------------------------------------
-using PyPlot
+module VTKtools_examples
 
-module_path,_ = splitdir(@__FILE__);   # Path to this module
-push!(LOAD_PATH, joinpath(module_path,"../src/"))    # Point to VTKtools source
+  # ------------ MODULE IMPORTS ------------------------------------------------
+  using PyPlot
 
-using VTKtools
-# include("../src/VTKtools.jl")
-vtk = VTKtools
+  module_path,_ = splitdir(@__FILE__);   # Path to this module
+  push!(LOAD_PATH, joinpath(module_path,"../src/"))   # Point to VTKtools source
 
-# ------------ HEADERS ---------------------------------------------------------
-for header_name in ["simple", "airfoil", "wing", "blade", "taylor_wing"]
-  include("example_"*header_name*".jl")
+  using VTKtools
+  # include("../src/VTKtools.jl")
+  vtk = VTKtools
+
+  # ------------ HEADERS -------------------------------------------------------
+  for header_name in ["simple", "airfoil", "wing", "blade", "taylor_wing"]
+    include("example_"*header_name*".jl")
+  end
+
 end
