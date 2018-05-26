@@ -15,10 +15,11 @@
 module VTKtools
 
 # ------------ GENERIC MODULES -------------------------------------------------
-using PyCall
-using Dierckx
-using Roots
-using QuadGK
+import PyCall
+import PyPlot
+import Dierckx
+import Roots
+import QuadGK
 
 # ------------ GLOBAL VARIABLES ------------------------------------------------
 global module_path; module_path,_ = splitdir(@__FILE__);   # Path to this module
