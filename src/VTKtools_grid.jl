@@ -47,6 +47,8 @@ type Grid
   P_min::Array{T,1} where {T<:Real}   # Minimum point of the domain
   P_max::Array{T,1} where {T<:Real}   # Maximum point of the domain
   NDIVS::Array{T,1} where {T<:Any}    # Number of divisions in each coordinate
+  # Optional inputs
+  loop_dim::Int64                     # Index of dimension to close in loop
 
   # Properties
   dims::Int64                         # Number of dimensions
@@ -59,15 +61,16 @@ type Grid
   _ndivsnodes::Tuple                  # Number of nodes in each coordinate
   _ndivscells::Tuple                  # Number of cells in each coordinate
 
-  Grid(P_min, P_max, NDIVS,
+  Grid(P_min, P_max, NDIVS, loop_dim=0,
               dims=_calc_dims(P_min),
-                nnodes=_calc_nnodes(NDIVS),
+                nnodes=_calc_nnodes(NDIVS, loop_dim),
                 ncells=_calc_ncells(NDIVS),
-                nodes=_generate_grid(P_min, P_max, NDIVS),
+                nodes=_generate_grid(P_min, P_max, NDIVS, loop_dim),
                 field=Dict{String, Dict{String, Any}}(),
-              _ndivsnodes=Tuple(_calc_ndivs(NDIVS)+1),
+              _ndivsnodes=Tuple(_calc_ndivsnodes(NDIVS, loop_dim)),
                 _ndivscells=Tuple(_calc_ndivs(NDIVS))
-      ) = _check(P_min, P_max, NDIVS) ? new(P_min, P_max, NDIVS,
+      ) = _check(P_min, P_max, NDIVS, loop_dim) ? new(P_min, P_max, NDIVS,
+              loop_dim,
               dims,
                 nnodes,
                 ncells,
@@ -123,25 +126,40 @@ in 2D, or VTK_LINE (=3) in 1D---except that points are 1-indexed instead of
 """
 function get_cell(self::Grid, coor::Array{Int64,1})
 
+  for (dim, i) in enumerate(coor)
+    if i>self._ndivscells[dim]
+      error("Requested cell $coor but max cell in"*
+              " $dim-dimension is $(self._ndivscells[dim])")
+    end
+  end
+
+  # Displacements according to VTK convention, or closed loop
+  disps = ones(Int64, self.dims)
+  lpdm = self.loop_dim
+  if lpdm!=0 && coor[lpdm]==self._ndivscells[lpdm]
+    disps[lpdm] = -self._ndivscells[lpdm] + 1
+  end
+  d1, d2, d3 = vcat(disps, ones(Int64, 3-self.dims))
+
   if self.dims==1
     return [sub2ind(self._ndivsnodes, (coor+[0])...),
-            sub2ind(self._ndivsnodes, (coor+[1])...)]
+            sub2ind(self._ndivsnodes, (coor+[d1])...)]
 
   elseif self.dims==2
     return [sub2ind(self._ndivsnodes, (coor+[0,0])...),
-            sub2ind(self._ndivsnodes, (coor+[1,0])...),
-            sub2ind(self._ndivsnodes, (coor+[1,1])...),
-            sub2ind(self._ndivsnodes, (coor+[0,1])...)]
+            sub2ind(self._ndivsnodes, (coor+[d1,0])...),
+            sub2ind(self._ndivsnodes, (coor+[d1,d2])...),
+            sub2ind(self._ndivsnodes, (coor+[0,d2])...)]
 
   elseif self.dims==3
     return [sub2ind(self._ndivsnodes, (coor+[0,0,0])...),
-            sub2ind(self._ndivsnodes, (coor+[1,0,0])...),
-            sub2ind(self._ndivsnodes, (coor+[1,1,0])...),
-            sub2ind(self._ndivsnodes, (coor+[0,1,0])...),
-            sub2ind(self._ndivsnodes, (coor+[0,0,1])...),
-            sub2ind(self._ndivsnodes, (coor+[1,0,1])...),
-            sub2ind(self._ndivsnodes, (coor+[1,1,1])...),
-            sub2ind(self._ndivsnodes, (coor+[0,1,1])...)]
+            sub2ind(self._ndivsnodes, (coor+[d1,0,0])...),
+            sub2ind(self._ndivsnodes, (coor+[d1,d2,0])...),
+            sub2ind(self._ndivsnodes, (coor+[0,d2,0])...),
+            sub2ind(self._ndivsnodes, (coor+[0,0,d3])...),
+            sub2ind(self._ndivsnodes, (coor+[d1,0,d3])...),
+            sub2ind(self._ndivsnodes, (coor+[d1,d2,d3])...),
+            sub2ind(self._ndivsnodes, (coor+[0,d2,d3])...)]
 
   else
     error("Definition of $(self.ndims)-dimensional cells not implemented yet!")
@@ -341,11 +359,15 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
   # Iterates over every dimension labeling the subdivision
   if labelndivs
     for i in 1:grid.dims
-      for j in 1:grid._ndivsnodes[i]-1
+      for j in 1:grid._ndivscells[i]
         coor = ones(Int64, grid.dims)
         coor[i] = j
         p1 = get_node(grid, coor)
-        coor[i] += 1
+        if grid.loop_dim==i && j==grid._ndivscells[i]
+          coor[i] = 1
+        else
+          coor[i] += 1
+        end
         p2 = get_node(grid, coor)
         center = vcat((p1+p2)/2, zeros(3-grid.dims))
         PyPlot.text3D(center[1], center[2], center[3], "$j", fontsize=fontsize,
@@ -393,19 +415,25 @@ end
 ##### INTERNAL FUNCTIONS  ######################################################
 function _check(P_min::Array{T,1} where {T<:Real},
                 P_max::Array{T,1} where {T<:Real} ,
-                NDIVS::Array{T,1} where {T<:Any})
+                NDIVS::Array{T,1} where {T<:Any},
+                loop_dim::Int64)
+
   # Error cases
   if size(P_min)!=size(P_max)
     error("`P_min` and `P_max` must have the same dimensions "*
                                           "($(size(P_min))!=$(size(P_max)))")
+  elseif loop_dim>size(P_min,1) || loop_dim<0
+    error("Invalid loop dimension $loop_dim"*
+                                      " in $(size(P_min,1))-dimensional grid.")
+
   elseif typeof(NDIVS)==Array{Int64,1}
     if _calc_dims(P_min)!=length(NDIVS)
       error("Division for each dimension must be given "*
                                           "$(length(P_min))!=$(length(NDIVS))")
     end
-    for this_div in NDIVS
+    for (i, this_div) in enumerate(NDIVS)
       if this_div<=0
-        error("Invalid division $this_div")
+        error("Invalid division $this_div in $i-dimension.")
       end
     end
   end
@@ -421,7 +449,7 @@ end
 
 function _calc_ndivs(NDIVS::Array{T,1} where {T<:Any})
   if typeof(NDIVS)==Array{Int64,1}
-    return NDIVS
+    return deepcopy(NDIVS)
 
   elseif typeof(NDIVS)==Array{Array{Tuple{Float64,Int64,Float64,Bool},1},1}
     return [ sum([sec[2] for sec in secs]) for secs in NDIVS ]
@@ -435,9 +463,19 @@ function _calc_ndivs(NDIVS::Array{T,1} where {T<:Any})
 end
 
 
-"Calculates number of nodes given NDIVS"
-function _calc_nnodes(NDIVS::Array{T,1} where {T<:Any})
-  return prod(_calc_ndivs(NDIVS)+1)
+"Calculates total number of nodes given NDIVS"
+function _calc_nnodes(NDIVS::Array{T,1} where {T<:Any}, loop_dim::Int64)
+  ndivs = _calc_ndivsnodes(NDIVS, loop_dim)
+  return prod(ndivs)
+end
+
+"Calculates number of nodes in each dimension"
+function _calc_ndivsnodes(NDIVS::Array{T,1} where {T<:Any}, loop_dim::Int64)
+  ndivs = _calc_ndivs(NDIVS)
+  if loop_dim!=0
+    ndivs[loop_dim] -= 1
+  end
+  return ndivs+1
 end
 
 "Calculates the number of cells given NDIVS"
@@ -451,13 +489,13 @@ end
 
 function _generate_grid(P_min::Array{T,1} where {T<:Real},
                         P_max::Array{T,1} where {T<:Real},
-                        NDIVS::Array{T,1} where {T<:Any})
+                        NDIVS::Array{T,1} where {T<:Any},
+                        loop_dim::Int64)
 
   dims = _calc_dims(P_min)
-  nnodes = _calc_nnodes(NDIVS)
+  nnodes = _calc_nnodes(NDIVS, loop_dim)
   nodes = zeros(nnodes, dims)
   ndivs = Tuple(_calc_ndivs(NDIVS))
-  ndivsnodes = Tuple(_calc_ndivs(NDIVS)+1)
 
   # Discretizes each coordinate according to NDIVS
   if typeof(NDIVS)==Array{Int64,1}
@@ -470,11 +508,17 @@ function _generate_grid(P_min::Array{T,1} where {T<:Real},
     error("Not implemented yet")
   end
 
-  # Creats the grid
-  for ind in 1:nnodes
+  # Creates the grid
+  ind2 = 1
+  ndivsnodes = Tuple(_calc_ndivsnodes(NDIVS, 0))
+  for ind in 1:_calc_nnodes(NDIVS, 0)
     sub = ind2sub(ndivsnodes, ind)
-    p = [spacing[dim][sub[dim]] for dim in 1:dims]
-    nodes[ind, :] = p
+
+    if loop_dim==0 || sub[loop_dim]!=ndivsnodes[loop_dim]
+      p = [spacing[dim][sub[dim]] for dim in 1:dims]
+      nodes[ind2, :] = p
+      ind2 += 1
+    end
   end
 
   return nodes
