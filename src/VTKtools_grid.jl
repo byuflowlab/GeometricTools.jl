@@ -124,12 +124,24 @@ Returns the node indices of the cell with subscript coordinates `coor`
 in 2D, or VTK_LINE (=3) in 1D---except that points are 1-indexed instead of
 0-indexed.
 """
-function get_cell(self::Grid, coor::Array{Int64,1})
+function get_cell(self::Grid, coor_in::Array{Int64,1})
 
+  # Correct 0 coordinate in quasi-dimensions
+  coor = [ self._ndivscells[i]==0 && coor_in[i]==0 ? 1 : coor_in[i]
+                                                    for i in 1:length(coor_in) ]
+  # ERROR CASES
+  if length(coor)!=self.dims
+    error("$(self.dims)-dimensional grid requires $(self.dims) coordinates,"*
+            " got $(length(coor)).")
+  end
   for (dim, i) in enumerate(coor)
     if i>self._ndivscells[dim]
-      error("Requested cell $coor but max cell in"*
+      if i==1 && self._ndivscells[dim]==0
+        nothing
+      else
+        error("Requested cell $coor but max cell in"*
               " $dim-dimension is $(self._ndivscells[dim])")
+      end
     end
   end
 
@@ -141,25 +153,31 @@ function get_cell(self::Grid, coor::Array{Int64,1})
   end
   d1, d2, d3 = vcat(disps, ones(Int64, 3-self.dims))
 
-  if self.dims==1
-    return [sub2ind(self._ndivsnodes, (coor+[0])...),
-            sub2ind(self._ndivsnodes, (coor+[d1])...)]
+  # Checks for quasi-dimensions (NDIVS[i]==0)
+  qdims = length( [1 for ndiv in self._ndivscells if ndiv==0] )
+  cdims = length(coor)
+  dims = self.dims - qdims
+  aux1 = zeros(Int64, qdims)
 
-  elseif self.dims==2
-    return [sub2ind(self._ndivsnodes, (coor+[0,0])...),
-            sub2ind(self._ndivsnodes, (coor+[d1,0])...),
-            sub2ind(self._ndivsnodes, (coor+[d1,d2])...),
-            sub2ind(self._ndivsnodes, (coor+[0,d2])...)]
+  if dims==1
+    return [sub2ind(self._ndivsnodes, (coor+vcat([0], aux1))...),
+            sub2ind(self._ndivsnodes, (coor+vcat([d1], aux1))...)]
 
-  elseif self.dims==3
-    return [sub2ind(self._ndivsnodes, (coor+[0,0,0])...),
-            sub2ind(self._ndivsnodes, (coor+[d1,0,0])...),
-            sub2ind(self._ndivsnodes, (coor+[d1,d2,0])...),
-            sub2ind(self._ndivsnodes, (coor+[0,d2,0])...),
-            sub2ind(self._ndivsnodes, (coor+[0,0,d3])...),
-            sub2ind(self._ndivsnodes, (coor+[d1,0,d3])...),
-            sub2ind(self._ndivsnodes, (coor+[d1,d2,d3])...),
-            sub2ind(self._ndivsnodes, (coor+[0,d2,d3])...)]
+  elseif dims==2
+    return [sub2ind(self._ndivsnodes, (coor+vcat([0,0], aux1))...),
+            sub2ind(self._ndivsnodes, (coor+vcat([d1,0], aux1))...),
+            sub2ind(self._ndivsnodes, (coor+vcat([d1,d2], aux1))...),
+            sub2ind(self._ndivsnodes, (coor+vcat([0,d2], aux1))...)]
+
+  elseif dims==3
+    return [sub2ind(self._ndivsnodes, (coor+vcat([0,0,0], aux1))...),
+            sub2ind(self._ndivsnodes, (coor+vcat([d1,0,0], aux1))...),
+            sub2ind(self._ndivsnodes, (coor+vcat([d1,d2,0], aux1))...),
+            sub2ind(self._ndivsnodes, (coor+vcat([0,d2,0], aux1))...),
+            sub2ind(self._ndivsnodes, (coor+vcat([0,0,d3], aux1))...),
+            sub2ind(self._ndivsnodes, (coor+vcat([d1,0,d3], aux1))...),
+            sub2ind(self._ndivsnodes, (coor+vcat([d1,d2,d3], aux1))...),
+            sub2ind(self._ndivsnodes, (coor+vcat([0,d2,d3], aux1))...)]
 
   else
     error("Definition of $(self.ndims)-dimensional cells not implemented yet!")
@@ -293,14 +311,19 @@ function save(grid::Grid, filename::String; args...)
   cells = [get_cell(grid, i)-1 for i in 1:grid.ncells]
   point_data = length(grid.field)==0 ? nothing : values(grid.field)
 
+  # Checks for quasi-dimensions (NDIVS[i]==0)
+  qdims = length( [1 for ndiv in grid._ndivscells if ndiv==0] )
+  dims = grid.dims - qdims
+
   generateVTK(filename, points; cells=cells, point_data=point_data,
-                                                  _griddims=grid.dims, args...)
+                                                  _griddims=dims, args...)
 end
 
 "Plots the grid on PyPlot"
 function plot(grid::Grid; fig_name="gridplot", fontsize=15,
                           xlims=nothing, ylims=nothing, zlims=nothing,
-                          labelcells=true, labelnodes=false, labelndivs=true)
+                          labelcells=true, labelnodes=false, labelndivs=true,
+                          title_str=nothing)
 
   if grid.dims>3
     error("There is no plotting method for $(grid.dims)-dimensional grids")
@@ -308,21 +331,9 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
 
   fig = PyPlot.figure(fig_name)
   ax = fig[:gca](projection="3d")
-
-  # d = 2                       # Number of dimensions
-  # l = [1.0 for i in 1:d]
-  # u = l+1.0
-  # n = [2, 3]
-  # L = [[1/2, 1/2], [1/3, 1/3, 1/3]]
-  #
-  # nc = 1                      # Number of children
-  # for ni in n
-  #     nc = nc*ni
-  # end
+  vectors_to_plot = []
 
   nc = grid.ncells
-
-  vectors_to_plot = []
 
   # Iterates over every child plotting them
   for i in 1:nc
@@ -336,7 +347,8 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
 
 
     # Connects the nodes for visualization
-    if grid.dims==3
+    dims = grid.dims - length( [1 for ndiv in grid._ndivscells if ndiv==0] )
+    if dims==3
       for j in 1:3
         push!(vectors_to_plot, [nodes[j], -nodes[j]+nodes[j+1]])
         push!(vectors_to_plot, [nodes[4+j], -nodes[4+j]+nodes[4+j+1]])
@@ -346,7 +358,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
       for j in 1:4
         push!(vectors_to_plot, [nodes[0+j], -nodes[0+j]+nodes[4+j]])
       end
-    elseif grid.dims==2
+    elseif dims==2
       for j in 1:3
         push!(vectors_to_plot, [nodes[j], -nodes[j]+nodes[j+1]])
       end
@@ -416,6 +428,8 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
   end
   if size(handles,1)>0; PyPlot.legend(handles=handles); end;
 
+  if title_str!=nothing; PyPlot.title(title_str); end;
+
 end
 
 
@@ -441,15 +455,22 @@ function _check(P_min::Array{T,1} where {T<:Real},
                                           "$(length(P_min))!=$(length(NDIVS))")
     end
     for (i, this_div) in enumerate(NDIVS)
-      if this_div<=0
+      if this_div<0
         error("Invalid division $this_div in $i-dimension.")
       end
     end
   end
   for i in 1:_calc_dims(P_min)
-    if P_min[i]>=P_max[i]
-      error("Values in `P_min` must be less than values in `P_max` "*"
-                                          ($(P_min[i])>=$(P_max[i]))")
+    if NDIVS[i]==0
+      if P_min[i]!=P_max[i]
+        error("Value in `P_min` must be equal to `P_max` in quasi-dimension $i"*
+                                            "($(P_min[i])!=$(P_max[i]))")
+      end
+    else
+      if P_min[i]>=P_max[i]
+        error("Values in `P_min` must be less than values in `P_max` "*"
+                                            ($(P_min[i])>=$(P_max[i]))")
+      end
     end
   end
 
@@ -475,7 +496,7 @@ end
 "Calculates total number of nodes given NDIVS"
 function _calc_nnodes(NDIVS::Array{T,1} where {T<:Any}, loop_dim::Int64)
   ndivs = _calc_ndivsnodes(NDIVS, loop_dim)
-  return prod(ndivs)
+  return prod([ elem==0 ? 1 : elem for elem in ndivs])
 end
 
 "Calculates number of nodes in each dimension"
@@ -489,7 +510,7 @@ end
 
 "Calculates the number of cells given NDIVS"
 function _calc_ncells(NDIVS::Array{T,1} where {T<:Any})
-  return prod(_calc_ndivs(NDIVS))
+  return prod([ elem==0 ? 1 : elem for elem in _calc_ndivs(NDIVS)])
 end
 
 function _calc_dims(P::Array{T,1} where {T<:Real})
