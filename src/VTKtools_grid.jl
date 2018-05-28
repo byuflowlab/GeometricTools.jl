@@ -387,7 +387,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
       end
   end
   x,y,z,u,v,w = [coor for coor in xyzuvw]
-  ax[:quiver](x,y,z, u,v,w);
+  ax[:quiver](x,y,z, u,v,w, arrow_length_ratio=0.0);
 
   # Labels nodes
   if labelnodes
@@ -406,6 +406,15 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
     label(lbl)
 
   end
+
+  # Legend
+  handles = []
+  for (flag, clr, lbl) in [(labelnodes, "k", "Node"),
+                            (labelcells, "g", "Cell"),
+                            (labelndivs, "r", "Coordinate")]
+    if flag; push!(handles, patch.Patch(color=clr, label=lbl)); end;
+  end
+  if size(handles,1)>0; PyPlot.legend(handles=handles); end;
 
 end
 

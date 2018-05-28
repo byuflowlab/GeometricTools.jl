@@ -21,6 +21,8 @@ import Dierckx
 import Roots
 import QuadGK
 
+@PyCall.pyimport matplotlib.patches as patch
+
 # ------------ GLOBAL VARIABLES ------------------------------------------------
 global module_path; module_path,_ = splitdir(@__FILE__);   # Path to this module
 global data_path = module_path*"/../data/"       # Path to data folder
