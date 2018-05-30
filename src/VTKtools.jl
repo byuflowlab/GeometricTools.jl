@@ -24,11 +24,11 @@ import QuadGK
 @PyCall.pyimport matplotlib.patches as patch
 
 # ------------ GLOBAL VARIABLES ------------------------------------------------
-global module_path; module_path,_ = splitdir(@__FILE__);   # Path to this module
-global data_path = module_path*"/../data/"       # Path to data folder
+const module_path = splitdir(@__FILE__)[1]      # Path to this module
+const data_path = module_path*"/../data/"       # Path to data folder
 
 # ------------ HEADERS ---------------------------------------------------------
-for header_name in ["vtk", "geometry", "misc", "grid"]
+for header_name in ["vtk", "geometry", "misc", "abstractgrid", "grid"]
   include("VTKtools_"*header_name*".jl")
 end
 

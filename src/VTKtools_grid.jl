@@ -8,6 +8,7 @@
   * License   : MIT License
 =###############################################################################
 
+
 ################################################################################
 # GRID
 ################################################################################
@@ -24,7 +25,7 @@ Generates an n-dimensional grid.
   **Properties**
   * `dims::Int64`               : Number of dimensions.
   * `nnodes::Int64`             : Number of nodes in the grid.
-  * `nodes::Array{Float64,2}`   : Matrix size (`nnodes`, 3) of node position.
+  * `nodes::Array{Float64,2}`   : Matrix size (`nnodes`, `dims`) of node position.
   * `field` : Contains calculated fields formated as field[field_name] = Dict(
                             "field_name" => field_name::String,
                             "field_type" => "scalar" or "vector",
@@ -41,7 +42,7 @@ NOTE2: `NDIVS` can either be an array of integers with NDIVS[i] indicating the
       sections (see `multidiscretize()` doc) with NDIVS[i] = [sec1, sec2, ...]
       indicating the discretization into sections in the i-th coordinate.
 """
-type Grid
+type Grid <: AbstractGrid
 
   # User inputs
   P_min::Array{T,1} where {T<:Real}   # Minimum point of the domain
@@ -55,6 +56,7 @@ type Grid
   nnodes::Int64                       # Number of nodes
   ncells::Int64                       # Number of cells
   nodes::Array{T,2} where{T<:Real}    # Position of each node
+  bbox::Array{Int64, 1}               # Bounding box (cells in each dimension)
   field::Dict{String, Dict{String, Any}}  # Calculated fields
 
   # Internal data
@@ -66,6 +68,7 @@ type Grid
                 nnodes=_calc_nnodes(NDIVS, loop_dim),
                 ncells=_calc_ncells(NDIVS),
                 nodes=_generate_grid(P_min, P_max, NDIVS, loop_dim),
+                bbox=_calc_ndivs(NDIVS),
                 field=Dict{String, Dict{String, Any}}(),
               _ndivsnodes=Tuple(_calc_ndivsnodes(NDIVS, loop_dim)),
                 _ndivscells=Tuple(_calc_ndivs(NDIVS))
@@ -75,6 +78,7 @@ type Grid
                 nnodes,
                 ncells,
                 nodes,
+                bbox,
                 field,
               _ndivsnodes,
                 _ndivscells
@@ -184,6 +188,7 @@ function get_cell(self::Grid, coor_in::Array{Int64,1})
   end
 end
 
+"Returns the centroid of the cell"
 function get_cellcenter(self::Grid, args...)
   nodes = get_cell(self, args...)
   C = sum([get_node(self, node) for node in nodes])/size(nodes, 1)
