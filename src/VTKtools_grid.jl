@@ -56,7 +56,7 @@ type Grid <: AbstractGrid
   nnodes::Int64                       # Number of nodes
   ncells::Int64                       # Number of cells
   nodes::Array{T,2} where{T<:Real}    # Position of each node
-  bbox::Array{Int64, 1}               # Bounding box (cells in each dimension)
+  # bbox::Array{Int64, 1}               # Bounding box (cells in each dimension)
   field::Dict{String, Dict{String, Any}}  # Calculated fields
 
   # Internal data
@@ -68,7 +68,7 @@ type Grid <: AbstractGrid
                 nnodes=_calc_nnodes(NDIVS, loop_dim),
                 ncells=_calc_ncells(NDIVS),
                 nodes=_generate_grid(P_min, P_max, NDIVS, loop_dim),
-                bbox=_calc_ndivs(NDIVS),
+                # bbox=_calc_ndivs(NDIVS),
                 field=Dict{String, Dict{String, Any}}(),
               _ndivsnodes=Tuple(_calc_ndivsnodes(NDIVS, loop_dim)),
                 _ndivscells=Tuple(_calc_ndivs(NDIVS))
@@ -78,7 +78,7 @@ type Grid <: AbstractGrid
                 nnodes,
                 ncells,
                 nodes,
-                bbox,
+                # bbox,
                 field,
               _ndivsnodes,
                 _ndivscells
@@ -186,13 +186,6 @@ function get_cell(self::Grid, coor_in::Array{Int64,1})
   else
     error("Definition of $(self.ndims)-dimensional cells not implemented yet!")
   end
-end
-
-"Returns the centroid of the cell"
-function get_cellcenter(self::Grid, args...)
-  nodes = get_cell(self, args...)
-  C = sum([get_node(self, node) for node in nodes])/size(nodes, 1)
-  return C
 end
 
 """
