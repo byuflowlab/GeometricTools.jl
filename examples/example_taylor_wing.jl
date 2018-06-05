@@ -66,7 +66,7 @@ function taylor_wing(; prompt=true, file_name="temp_taylor00")
   for (i,airfoil_file) in enumerate(airfoil_files)
 
       # Read airfoil file
-      x,y = readcontour(vtk.data_path*airfoil_file; header_len=0)
+      x,y = readcontour(data_path*airfoil_file; header_len=0)
       push!(org_points, [x,y])
 
 

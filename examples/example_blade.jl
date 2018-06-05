@@ -58,7 +58,7 @@ function blade_example(; prompt=true, file_name="temp_blade00")
   for (i,airfoil_file) in enumerate(airfoil_files)
 
       # Read airfoil file
-      x,y = readcontour(vtk.data_path*airfoil_file; header_len=2)
+      x,y = readcontour(data_path*airfoil_file; header_len=2)
       push!(org_points, [x,y])
 
 

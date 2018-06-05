@@ -9,7 +9,7 @@
 =###############################################################################
 
 function airfoil_example()
-  x,y = readcontour(vtk.data_path*"S809.txt"; header_len=2)
+  x,y = readcontour(data_path*"S809.txt"; header_len=2)
   plot_airfoil(x,y; style="--.k")
 
   println("Close figure and press ENTER")

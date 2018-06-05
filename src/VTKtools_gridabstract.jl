@@ -80,7 +80,7 @@
 abstract type AbstractGrid end
 
 
-for header_name in ["grid", "multigrid"]
+for header_name in ["grid", "gridmulti"]#, "gridspecials"]
   include("VTKtools_"*header_name*".jl")
 end
 

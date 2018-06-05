@@ -13,7 +13,8 @@ module VTKtools_examples
   # ------------ MODULE IMPORTS ------------------------------------------------
   using PyPlot
 
-  module_path,_ = splitdir(@__FILE__);   # Path to this module
+  const module_path,_ = splitdir(@__FILE__);      # Path to this module
+  const data_path = module_path*"/../docs/data/"       # Path to data folder
   push!(LOAD_PATH, joinpath(module_path,"../src/"))   # Point to VTKtools source
 
   using VTKtools

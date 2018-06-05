@@ -20,8 +20,8 @@ function wing_example(; prompt=true, file_name="temp_wing00")
   # file_name = "temp_wing00"    # Name for vtk outpout file
 
   # Reads the original airfoil geometry from airfoiltools.com
-  org_x1, org_y1 = readcontour(vtk.data_path*"naca6412.dat"; header_len=1)
-  org_x2, org_y2 = readcontour(vtk.data_path*"naca0006.dat"; header_len=1)
+  org_x1, org_y1 = readcontour(data_path*"naca6412.dat"; header_len=1)
+  org_x2, org_y2 = readcontour(data_path*"naca0006.dat"; header_len=1)
 
   # Separate upper and lower sides to make the contour injective in x
   upper1, lower1 = splitcontour(org_x1, org_y1)
