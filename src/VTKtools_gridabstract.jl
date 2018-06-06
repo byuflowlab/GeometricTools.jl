@@ -79,13 +79,23 @@
 """
 abstract type AbstractGrid end
 
-
-for header_name in ["grid", "gridmulti"]#, "gridspecials"]
+# Implementations
+for header_name in ["grid", "gridmulti", "gridspecials"]
   include("VTKtools_"*header_name*".jl")
 end
 
 # Implementations of AbstractGrid
-GridTypes = Union{Grid, MultiGrid}
+GridTypes = Union{Grid, MultiGrid, GridTriangleSurface}
+
+#= Extension of the Grid type
+(extensions are any type that have properties `_ndivsnodes` and `_ndivsnodes`)
+=#
+GridExtentions = Union{Grid, GridTriangleSurface}
+
+# Extensions
+for header_name in ["gridextensions"]
+  include("VTKtools_"*header_name*".jl")
+end
 
 
 

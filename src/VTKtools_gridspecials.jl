@@ -9,93 +9,118 @@
 =###############################################################################
 
 ################################################################################
-# TRIANGULAR GRID TYPE
+# TRIANGULAR SURFACE GRID TYPE
 ################################################################################
+
 """
-  Implementations of AbstractGrid are expected to have the following fields:
+  `GridTriangleSurface(orggrid, dimsplit)`
 
-  * `dims::Int64`               : Number of dimensions.
-  * `nnodes::Int64`             : Number of nodes in the grid.
-  * `ncells::Int64`             : Number of cells in the grid.
-  <!-- * `bbox::Array{Int64, 1}`     : Bounding box of the grid (cells in each dim). -->
+Receives a 3D surface grid (like the one in `Paneled Wing Example` in the
+documentation), which by construction is made of nonplanar quadrilateral panels,
+and creates a surface grid of planar triangular panels by splitting every
+original quadrilateral panel into triangles.
 
-  and the following functions
-  ```julia
-  function get_node(self::MyGrid, i::Int64)
-    # Returns the position of the i-th node (1-indexed) in the grid
-  end
-  function get_node(self::MyGrid, coor::Array{Int64,1})
-    # Returns the position of the node of subscript coordinates `coor`
-    # (1-indexed)
-  end
-  function get_cell(self::MyGrid, i::Int64)
-    # Returns the nodes indices of i-th cell in the grid (1-indexed)
-  end
-  function get_cell(self::MyGrid, coor::Array{Int64,1})
-    # Returns the node indices of the cell with subscript coordinates `coor`
-    # (1-indexed). The format corresponds to VTK_HEXAHEDRON (=12) in 3D,
-    # VTK_QUAD (=9) in 2D, or VTK_LINE (=3) in 1D---except that points are
-    # 1-indexed instead of 0-indexed.
-  end
-  function get_fieldval(self::MyGrid, field_name::String, coor::Array{Int64,1})
-    # Returns the value of node of coordinates `coor` (1-indexed) in the field
-    # 'field_name'.
-  end
-  function get_fieldval(self::MyGrid, field_name::String, i::Int64)
-    # Returns the value of i-th node (1-indexed) in the field 'field_name'.
-  end
-  function add_field(self::MyGrid, field_name::String, field_type::String,
-                                                                  field_data)
-    # Adds a field of data associated to each node.
-    #
-    # NOTE: each data entry must be a single value if `field_type==scalar`, or a
-    #       3-element array if `field_type==vector`.
-  end
-  function calculate_field(self::MyGrid, f, field_name::String, field_type::String)
-    # Evaluates the function `f` at each nodes and stores the values as a new
-    # field.
-    #
-    # NOTE: f must return a single value if `field_type==scalar`, or a 3-element
-    #       array if `field_type==vector`.
-  end
-  function lintransform!(self::MyGrid, M::Array{Float64,2}, T::Array{Float64,1};
-                          reset_fields::Bool=true)
-    # Rotates and translates the grid by the rotation matrix `M` and translation
-    # vector `T` (linear transformation).
-  end
-  function transform!(self::MyGrid, f; reset_fields::Bool=true)
-    # Applies the space transformation given by function `f` to the grid.
-  end
-  function save(self::MyGrid, filename::String; args...)
-    # Outputs a vtk file of this grid
-  end
-  function plot(self::MyGrid; fig_name="gridplot", fontsize=15,
-                            xlims=nothing, ylims=nothing, zlims=nothing,
-                            labelcells=true, labelnodes=false, labelndivs=true,
-                            title_str=nothing)
-    # Plots the grid on PyPlot
-  end
-  ```
+  **Arguments**
+  * `orggrid`         : Original quadrilateral surface grid.
+  * `dimsplit`        : Dimension along which to split the quadrilaterals.
 """
-abstract type AbstractGrid end
+type GridTriangleSurface <: AbstractGrid
 
+  # User inputs
+  orggrid::Grid                       # Original quadrilateral surface grid
+  dimsplit::Int64                     # Dimension to split
 
-for header_name in ["grid", "multigrid"]
-  include("VTKtools_"*header_name*".jl")
-end
+  # Properties
+  dims::Int64                         # Number of dimensions
+  nnodes::Int64                       # Number of nodes
+  ncells::Int64                       # Number of cells
+  field::Dict{String, Dict{String, Any}}  # Calculated fields
 
-# Implementations of AbstractGrid
-GridTypes = Union{Grid, MultiGrid}
+  # Internal data
+  _ndivsnodes::Tuple                  # Number of nodes in each coordinate
+  _ndivscells::Tuple                  # Number of cells in each coordinate
 
-
-
-##### GENERIC FUNCTIONS  #######################################################
-"Returns the centroid of the cell"
-function get_cellcenter(self::GridTypes, args...)
-  nodes = get_cell(self, args...)
-  C = sum([get_node(self, node) for node in nodes])/size(nodes, 1)
-  return C
+  GridTriangleSurface(orggrid, dimsplit,
+                      dims=orggrid.dims,
+                        nnodes=orggrid.nnodes,
+                        ncells=2*orggrid.ncells,
+                        field=Dict{String, Dict{String, Any}}(),
+                      _ndivsnodes=orggrid._ndivsnodes,
+                        _ndivscells=_ndivscells(orggrid, dimsplit)
+      ) = _checkGridTriangleSurface(orggrid, dimsplit) ? new(orggrid, dimsplit,
+                      dims,
+                        nnodes,
+                        ncells,
+                        field,
+                      _ndivsnodes,
+                        _ndivscells
+      ) : error("Logic error!")
 end
 
 
-##### END OF ABSTRACT GRID #####################################################
+get_node(self::GridTriangleSurface, i::Int64) = get_node(self.orggrid, i)
+get_node(self::GridTriangleSurface, coor::Array{Int64,1}) = get_node(self.orggrid, coor)
+
+function get_cell(self::GridTriangleSurface, i::Int64)
+  if i>self.ncells
+    error("Requested invalid cell index $i; max is $(self.ncells).")
+  end
+  return get_cell(self, collect(ind2sub(self._ndivscells, i)))
+end
+
+function get_cell(self::GridTriangleSurface, coor::Array{Int64,1})
+  # ERROR CASES
+  if length(coor)!=self.dims
+    error("$(self.dims)-dimensional grid requires $(self.dims) coordinates,"*
+            " got $(length(coor)).")
+  end
+  for (dim, i) in enumerate(coor)
+    if i>self._ndivscells[dim]
+      if i==1 && self._ndivscells[dim]==0
+        nothing
+      else
+        error("Requested cell $coor but max cell in"*
+              " $dim-dimension is $(self._ndivscells[dim])")
+      end
+    end
+  end
+
+  # Converts this coordinates to the coordinates of the quadrilateral panel
+  quadcoor = Int64[ceil(ind/2^(i==self.dimsplit)) for (i,ind) in enumerate(coor)]
+
+  # Gets the nodes of the quadrilateral panel
+  quadnodes = get_cell(self.orggrid, quadcoor)
+
+  # Splits the quadrilateral into a triangle
+  if coor[self.dimsplit]%2!=0
+    return [quadnodes[1], quadnodes[2], quadnodes[3]]
+  else
+    return [quadnodes[1], quadnodes[3], quadnodes[4]]
+  end
+end
+
+##### INTERNAL FUNCTIONS  ######################################################
+function _checkGridTriangleSurface(orggrid::Grid, dimsplit::Int64)
+  # Number of quasi-dimensions
+  qdims = length( [1 for ndiv in orggrid._ndivscells if ndiv==0] )
+
+  if qdims!=1
+    error("Expected one quasi-dimension, found $qdims.")
+
+  elseif orggrid.dims!=3
+    error("Expected a three-dimensional grid, got $(orggrid.dims)-dimensional.")
+
+  elseif !(dimsplit in [1,2])
+    error("Invalid split dimension $dimsplit")
+
+  end
+
+  return true
+end
+
+function _ndivscells(orggrid::Grid, dimsplit::Int64)
+  return Tuple([
+            2^(i==dimsplit)*divs for (i,divs) in enumerate(orggrid._ndivscells)
+              ])
+end
+##### END OF TRIANGULAR GRID ###################################################

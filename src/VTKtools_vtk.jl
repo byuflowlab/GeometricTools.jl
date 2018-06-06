@@ -349,7 +349,8 @@ See `examples.jl` for an example on how to use this function.
 function generateVTK(filename::String, points;
                     lines::Array{Array{Int64,1},1}=Array{Int64,1}[],
                     cells::Array{Array{Int64,1},1}=Array{Int64,1}[],
-                    point_data=nothing, num=nothing, time=nothing,
+                    point_data=nothing, cell_data=nothing,
+                    num=nothing, time=nothing,
                     path="", comments="", _griddims::Int64=-1,
                     keep_points::Bool=false)
 
@@ -491,6 +492,41 @@ function generateVTK(filename::String, points;
       error("Unknown field type $(field_type).")
     end
   end
+
+
+    # CELL DATA
+    if cell_data!=nothing
+        write(f, "\n\nCELL_DATA $nc")
+    end
+    _c_data = cell_data!=nothing ? cell_data : []
+    for field in _c_data
+      field_name = field["field_name"]
+      field_type = field["field_type"]
+      data = field["field_data"]
+      if size(data)[1]!=nc
+        warn("Corrupted field $(field_name)! Field size != number of cells.")
+      end
+      if field_type=="scalar"
+        write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
+        for entry in data
+          write(f, "\n$entry")
+        end
+      elseif field_type=="vector"
+        write(f, "\n\nVECTORS $field_name float")
+        for entry in data
+          line = ""
+          for (j,coor) in enumerate(entry)
+            line *= "$coor"
+            if j!=size(entry)[1]
+              line *= " "
+            end
+          end
+          write(f, "\n"*line)
+        end
+      else
+        error("Unknown field type $(field_type).")
+      end
+    end
 
   close(f)
 end
