@@ -27,7 +27,7 @@ import QuadGK
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
 
 # ------------ HEADERS ---------------------------------------------------------
-for header_name in ["vtk", "geometry", "misc", "gridabstract"]
+for header_name in ["vtk", "geometry", "misc", "gridabstract", "DEPRECATED"]
   include("VTKtools_"*header_name*".jl")
 end
 
