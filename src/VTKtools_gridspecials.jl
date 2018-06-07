@@ -39,6 +39,7 @@ type GridTriangleSurface <: AbstractGrid
   # Internal data
   _ndivsnodes::Tuple                  # Number of nodes in each coordinate
   _ndivscells::Tuple                  # Number of cells in each coordinate
+  _override_vtkcelltype::Int64        # Option for overriding vtk outputs
 
   GridTriangleSurface(orggrid, dimsplit,
                       dims=orggrid.dims,
@@ -46,14 +47,16 @@ type GridTriangleSurface <: AbstractGrid
                         ncells=2*orggrid.ncells,
                         field=Dict{String, Dict{String, Any}}(),
                       _ndivsnodes=orggrid._ndivsnodes,
-                        _ndivscells=_ndivscells(orggrid, dimsplit)
+                        _ndivscells=_ndivscells(orggrid, dimsplit),
+                        _override_vtkcelltype=5
       ) = _checkGridTriangleSurface(orggrid, dimsplit) ? new(orggrid, dimsplit,
                       dims,
                         nnodes,
                         ncells,
                         field,
                       _ndivsnodes,
-                        _ndivscells
+                        _ndivscells,
+                        _override_vtkcelltype
       ) : error("Logic error!")
 end
 
@@ -95,9 +98,39 @@ function get_cell(self::GridTriangleSurface, coor::Array{Int64,1})
   if coor[self.dimsplit]%2!=0
     return [quadnodes[1], quadnodes[2], quadnodes[3]]
   else
-    return [quadnodes[1], quadnodes[3], quadnodes[4]]
+    return [quadnodes[3], quadnodes[4], quadnodes[1]]
   end
 end
+
+"""
+  `get_normal(self::GridTriangleSurface, i::Int64)`
+
+Returns the normal vector of the i-th panel.
+"""
+function get_normal(self::GridTriangleSurface, i::Int64)
+  nodes = [get_node(self, n) for n in get_cell(self, i)]
+  n = cross(nodes[2]-nodes[1], nodes[3]-nodes[1])
+  return n/norm(n)
+end
+function get_normal(self::GridTriangleSurface, coor::Array{Int64,1})
+  return get_normal(self, sub2ind(self._ndivsnodes, coor...))
+end
+
+
+"""
+  `get_tangent(self::GridTriangleSurface, i::Int64)`
+
+Returns the tangential vector of the i-th panel.
+"""
+function get_tangent(self::GridTriangleSurface, i::Int64)
+  nodes = [get_node(self, n) for n in get_cell(self, i)]
+  t = nodes[2] - nodes[1]
+  return t/norm(t)
+end
+function get_tangent(self::GridTriangleSurface, coor::Array{Int64,1})
+  return get_tangent(self, sub2ind(self._ndivsnodes, coor...))
+end
+
 
 ##### INTERNAL FUNCTIONS  ######################################################
 function _checkGridTriangleSurface(orggrid::Grid, dimsplit::Int64)

@@ -1,7 +1,7 @@
 #=##############################################################################
 # DESCRIPTION
-    Functions common to all grids that have the properties `_ndivsnodes` and
-    `_ndivsnodes`.
+    Functions common to all grids that have the properties `_ndivsnodes`,
+    `_ndivsnodes`, and `_override_vtkcelltype`.
 # AUTHORSHIP
   * Author    : Eduardo J Alvarez
   * Email     : Edo.AlvarezR@gmail.com
@@ -173,8 +173,12 @@ function save(grid::GridExtentions, filename::String; args...)
   qdims = length( [1 for ndiv in grid._ndivscells if ndiv==0] )
   dims = grid.dims - qdims
 
+  ctype = grid._override_vtkcelltype
+
   generateVTK(filename, points; cells=cells,
                       point_data=size(point_data,1)!=0 ? point_data : nothing,
                       cell_data=size(cell_data,1)!=0 ? cell_data : nothing,
-                      _griddims=dims, args...)
+                      _griddims=dims,
+                      override_cell_type=ctype,
+                      args...)
 end

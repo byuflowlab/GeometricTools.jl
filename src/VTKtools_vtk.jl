@@ -10,6 +10,8 @@
 
 
 """
+  `lines2vtk(lines; values=nothing)`
+  
   Receives an array of lines, with lines[i] the i-th line, and lines[i][j] the
   j-th point in the i-th line, and formats them in vtk format. Give it point
   data through `values` in the same format, and it will output the data formated
@@ -352,7 +354,8 @@ function generateVTK(filename::String, points;
                     point_data=nothing, cell_data=nothing,
                     num=nothing, time=nothing,
                     path="", comments="", _griddims::Int64=-1,
-                    keep_points::Bool=false)
+                    keep_points::Bool=false,
+                    override_cell_type::Int64=-1)
 
   aux = num!=nothing ? ".$num" : ""
   ext = aux*".vtk"
@@ -438,18 +441,22 @@ function generateVTK(filename::String, points;
     elseif i<=np+nl
       tpe = 4
     else
-      if _griddims!=-1
-        if _griddims==1
-          tpe = 3
-        elseif _griddims==2
-          tpe = 9
-        elseif _griddims==3
-          tpe = 12
+      if override_cell_type==-1
+        if _griddims!=-1
+          if _griddims==1
+            tpe = 3
+          elseif _griddims==2
+            tpe = 9
+          elseif _griddims==3
+            tpe = 12
+          else
+            error("Generation of VTK cells of $_griddims dimensions not implemented")
+          end
         else
-          error("Generation of VTK cells of $_griddims dimensions not implemented")
+          tpe = 7
         end
       else
-        tpe = 7
+        tpe = override_cell_type
       end
     end
     write(f, "\n"*"$tpe")

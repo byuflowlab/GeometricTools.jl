@@ -63,6 +63,7 @@ type Grid <: AbstractGrid
   # Internal data
   _ndivsnodes::Tuple                  # Number of nodes in each coordinate
   _ndivscells::Tuple                  # Number of cells in each coordinate
+  _override_vtkcelltype::Int64        # Option for overriding vtk outputs
 
   Grid(P_min, P_max, NDIVS, loop_dim=0,
               dims=_calc_dims(P_min),
@@ -72,7 +73,8 @@ type Grid <: AbstractGrid
                 # bbox=_calc_ndivs(NDIVS),
                 field=Dict{String, Dict{String, Any}}(),
               _ndivsnodes=Tuple(_calc_ndivsnodes(NDIVS, loop_dim)),
-                _ndivscells=Tuple(_calc_ndivs(NDIVS))
+                _ndivscells=Tuple(_calc_ndivs(NDIVS)),
+                _override_vtkcelltype=-1
       ) = _check(P_min, P_max, NDIVS, loop_dim) ? new(P_min, P_max, NDIVS,
               loop_dim,
               dims,
@@ -82,7 +84,8 @@ type Grid <: AbstractGrid
                 # bbox,
                 field,
               _ndivsnodes,
-                _ndivscells
+                _ndivscells,
+                _override_vtkcelltype
       ) : error("Logic error!")
 end
 
