@@ -16,7 +16,7 @@ module VTKtools
 
 # ------------ GENERIC MODULES -------------------------------------------------
 import PyCall
-import PyPlot
+# import PyPlot
 import Dierckx
 import Roots
 import QuadGK
