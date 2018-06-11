@@ -21,7 +21,7 @@ import Dierckx
 import Roots
 import QuadGK
 
-@PyCall.pyimport matplotlib.patches as patch
+# @PyCall.pyimport matplotlib.patches as patch
 
 # ------------ GLOBAL VARIABLES ------------------------------------------------
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
