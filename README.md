@@ -1,5 +1,6 @@
-# VTKtools
-Methods for the manipulation of geometric data and formatting into VTK format.
+# GeometricTools
+Methods for the manipulation of geometric data, grid generation, and visualization
+formatting.
 
 <img src="docs/img/helicoid01.png" alt="Pic here" style="width: 200px;"/>
 <img src="docs/img/blade00.png" alt="Pic here" style="width: 200px;"/>
