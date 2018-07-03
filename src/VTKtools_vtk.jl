@@ -11,7 +11,7 @@
 
 """
   `lines2vtk(lines; values=nothing)`
-  
+
   Receives an array of lines, with lines[i] the i-th line, and lines[i][j] the
   j-th point in the i-th line, and formats them in vtk format. Give it point
   data through `values` in the same format, and it will output the data formated
@@ -390,15 +390,7 @@ function generateVTK(filename::String, points;
   # POINTS
   write(f, string("\n", "POINTS ", np, " float"))
   for i in 1:np
-    p = points[i]
-    line = ""
-    for (j,coor) in enumerate(p)
-      line *= "$coor"
-      if j!=size(p)[1]
-        line *= " "
-      end
-    end
-    write(f, "\n"*line)
+    print(f, "\n", points[i][1], " ", points[i][2], " ", points[i][3])
   end
 
   # We do this to avoid outputting points as cells if outputting a Grid
@@ -427,11 +419,10 @@ function generateVTK(filename::String, points;
     else
       pts = cells[i-(nl+np)]
     end
-    line = "$(size(pts)[1])"
+    print(f, "\n", size(pts,1))
     for pt in pts
-      line *=" $(pt)"
+      print(f, " ", pt)
     end
-    write(f, "\n"*line)
   end
 
   write(f, "\n\nCELL_TYPES $(np+nl+nc)")
@@ -459,7 +450,7 @@ function generateVTK(filename::String, points;
         tpe = override_cell_type
       end
     end
-    write(f, "\n"*"$tpe")
+    print(f, "\n", tpe)
   end
 
   if _griddims!=-1 || !_keep_points
@@ -481,19 +472,12 @@ function generateVTK(filename::String, points;
     if field_type=="scalar"
       write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
       for entry in data
-        write(f, "\n$entry")
+        print(f, "\n", entry)
       end
     elseif field_type=="vector"
       write(f, "\n\nVECTORS $field_name float")
       for entry in data
-        line = ""
-        for (j,coor) in enumerate(entry)
-          line *= "$coor"
-          if j!=size(entry)[1]
-            line *= " "
-          end
-        end
-        write(f, "\n"*line)
+        print(f, "\n", entry[1], " ", entry[2], " ", entry[3])
       end
     else
       error("Unknown field type $(field_type).")
@@ -516,19 +500,12 @@ function generateVTK(filename::String, points;
       if field_type=="scalar"
         write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
         for entry in data
-          write(f, "\n$entry")
+          print(f, "\n", entry)
         end
       elseif field_type=="vector"
         write(f, "\n\nVECTORS $field_name float")
         for entry in data
-          line = ""
-          for (j,coor) in enumerate(entry)
-            line *= "$coor"
-            if j!=size(entry)[1]
-              line *= " "
-            end
-          end
-          write(f, "\n"*line)
+          print(f, "\n", entry[1], " ", entry[2], " ", entry[3])
         end
       else
         error("Unknown field type $(field_type).")
