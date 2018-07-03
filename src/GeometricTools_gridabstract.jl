@@ -81,7 +81,7 @@ abstract type AbstractGrid end
 
 # Implementations
 for header_name in ["grid", "gridmulti", "gridspecials"]
-  include("VTKtools_"*header_name*".jl")
+  include("GeometricTools_"*header_name*".jl")
 end
 
 # Implementations of AbstractGrid
@@ -94,7 +94,7 @@ GridExtentions = Union{Grid, GridTriangleSurface}
 
 # Extensions
 for header_name in ["gridextensions"]
-  include("VTKtools_"*header_name*".jl")
+  include("GeometricTools_"*header_name*".jl")
 end
 
 
