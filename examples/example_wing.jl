@@ -28,10 +28,10 @@ function wing_example(; prompt=true, file_name="temp_wing00")
   upper2, lower2 = splitcontour(org_x2, org_y2)
 
   # Parameterize both sides independently
-  fun_upper1 = vtk.parameterize(upper1[1], upper1[2], zeros(upper1[1]); inj_var=1)
-  fun_lower1 = vtk.parameterize(lower1[1], lower1[2], zeros(lower1[1]); inj_var=1)
-  fun_upper2 = vtk.parameterize(upper2[1], upper2[2], zeros(upper2[1]); inj_var=1)
-  fun_lower2 = vtk.parameterize(lower2[1], lower2[2], zeros(lower2[1]); inj_var=1)
+  fun_upper1 = gt.parameterize(upper1[1], upper1[2], zeros(upper1[1]); inj_var=1)
+  fun_lower1 = gt.parameterize(lower1[1], lower1[2], zeros(lower1[1]); inj_var=1)
+  fun_upper2 = gt.parameterize(upper2[1], upper2[2], zeros(upper2[1]); inj_var=1)
+  fun_lower2 = gt.parameterize(lower2[1], lower2[2], zeros(lower2[1]); inj_var=1)
 
   # Upper surface sections
   aux1 = Int(floor(20/53*n_up))
@@ -39,10 +39,10 @@ function wing_example(; prompt=true, file_name="temp_wing00")
   sec2 = (0.65, n_up-aux1, 3.0, true) # 65% of the line has 33 sections in ratio 3.0 around center
 
   # New discretization for both surfaces
-  upper_points1 = vtk.multidiscretize(fun_upper1, 0, 1, [sec1,sec2])
-  lower_points1 = vtk.discretize(fun_lower1, 0, 1, n_lower, 8.0; central=true)
-  upper_points2 = vtk.multidiscretize(fun_upper2, 0, 1, [sec1,sec2])
-  lower_points2 = vtk.discretize(fun_lower2, 0, 1, n_lower, 8.0; central=true)
+  upper_points1 = gt.multidiscretize(fun_upper1, 0, 1, [sec1,sec2])
+  lower_points1 = gt.discretize(fun_lower1, 0, 1, n_lower, 8.0; central=true)
+  upper_points2 = gt.multidiscretize(fun_upper2, 0, 1, [sec1,sec2])
+  lower_points2 = gt.discretize(fun_lower2, 0, 1, n_lower, 8.0; central=true)
 
   # Put both surfaces back together from TE over the top and from LE over the bottom.
   reverse!(upper_points1)                           # Trailing edge over the top
@@ -79,7 +79,7 @@ function wing_example(; prompt=true, file_name="temp_wing00")
   pd2 = size(airfoil1)[1]+[i for i in 1:size(airfoil2)[1]]
 
   # Generates cells in VTK Legacy format
-  out = vtk.lines2vtkmulticells(airfoil1, airfoil2, sections;
+  out = gt.lines2vtkmulticells(airfoil1, airfoil2, sections;
                                           point_data1=pd1, point_data2=pd2)
   points, vtk_cells, point_data = out
 
@@ -95,7 +95,7 @@ function wing_example(; prompt=true, file_name="temp_wing00")
 
 
   # Generates the vtk file
-  vtk.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
+  gt.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
 
   # Calls paraview
   run(`paraview --data="$(file_name).vtk;"`)

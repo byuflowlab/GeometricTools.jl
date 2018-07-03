@@ -19,12 +19,12 @@ function airfoil_example()
   upper, lower = splitcontour(x,y)
 
   # Parameterize both surfaces independently
-  fun_upper = vtk.parameterize(upper[1], upper[2], zeros(upper[1]); inj_var=1)
-  fun_lower = vtk.parameterize(lower[1], lower[2], zeros(lower[1]); inj_var=1)
+  fun_upper = gt.parameterize(upper[1], upper[2], zeros(upper[1]); inj_var=1)
+  fun_lower = gt.parameterize(lower[1], lower[2], zeros(lower[1]); inj_var=1)
 
   # New discretization for both surfaces
-  upper_points = vtk.discretize(fun_upper, 0, 1, 50, 1.0)
-  lower_points = vtk.discretize(fun_lower, 0, 1, 50, 1.0)
+  upper_points = gt.discretize(fun_upper, 0, 1, 50, 1.0)
+  lower_points = gt.discretize(fun_lower, 0, 1, 50, 1.0)
 
   # Put both surfaces back together from TE over the top and from LE over the bottom.
   reverse!(upper_points)                           # Trailing edge over the top
@@ -45,8 +45,8 @@ function airfoil_example()
   sec2 = (0.65, 33, 3.0, true) # 65% of the line has 33 sections in ratio 3.0 around center
 
   # New discretization for both surfaces
-  upper_points = vtk.multidiscretize(fun_upper, 0, 1, [sec1,sec2])
-  lower_points = vtk.discretize(fun_lower, 0, 1, 50, 8.0; central=true)
+  upper_points = gt.multidiscretize(fun_upper, 0, 1, [sec1,sec2])
+  lower_points = gt.discretize(fun_lower, 0, 1, 50, 8.0; central=true)
 
   # Put both surfaces back together from TE over the top and from LE over the bottom.
   reverse!(upper_points)                           # Trailing edge over the top
