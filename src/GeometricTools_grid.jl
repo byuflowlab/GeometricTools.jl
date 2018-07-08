@@ -100,7 +100,7 @@ function get_node(self::Grid, i::Int64)
     error("Requested invalid node index $i; max is $(self.nnodes).")
   end
 
-  return self.nodes[i, :]
+  return self.nodes[:, i]
 end
 
 """
@@ -396,7 +396,7 @@ function _generate_grid(P_min::Array{T,1} where {T<:Real},
 
   dims = _calc_dims(P_min)
   nnodes = _calc_nnodes(NDIVS, loop_dim)
-  nodes = zeros(nnodes, dims)
+  nodes = zeros(dims, nnodes)
   ndivs = Tuple(_calc_ndivs(NDIVS))
 
   # Discretizes each coordinate according to NDIVS
@@ -418,7 +418,7 @@ function _generate_grid(P_min::Array{T,1} where {T<:Real},
 
     if loop_dim==0 || sub[loop_dim]!=ndivsnodes[loop_dim]
       p = [spacing[dim][sub[dim]] for dim in 1:dims]
-      nodes[ind2, :] = p
+      nodes[:, ind2] = p
       ind2 += 1
     end
   end

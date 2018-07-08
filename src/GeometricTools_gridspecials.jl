@@ -102,15 +102,14 @@ function get_cell(self::GridTriangleSurface, coor::Array{Int64,1})
   end
 end
 
+
 """
   `get_normal(self::GridTriangleSurface, i::Int64)`
 
 Returns the normal vector of the i-th panel.
 """
 function get_normal(self::GridTriangleSurface, i::Int64)
-  nodes = [get_node(self, n) for n in get_cell(self, i)]
-  n = cross(nodes[2]-nodes[1], nodes[3]-nodes[1])
-  return n/norm(n)
+  return _calc_normal(get_cellnodes(self, i))
 end
 function get_normal(self::GridTriangleSurface, coor::Array{Int64,1})
   return get_normal(self, sub2ind(self._ndivsnodes, coor...))
@@ -123,12 +122,24 @@ end
 Returns the tangential vector of the i-th panel.
 """
 function get_tangent(self::GridTriangleSurface, i::Int64)
-  nodes = [get_node(self, n) for n in get_cell(self, i)]
-  t = nodes[2] - nodes[1]
-  return t/norm(t)
+  return _calc_tangent(get_cellnodes(self, i))
 end
 function get_tangent(self::GridTriangleSurface, coor::Array{Int64,1})
   return get_tangent(self, sub2ind(self._ndivsnodes, coor...))
+end
+
+"""
+  `get_unitvectors(self::GridTriangleSurface, i::Int64)`
+
+Returns the orthogonal system `(t, o, n)` of the i-th panel, with `t` the
+tangent vector, `o` the oblique vector (which is also tangent), and `n` the
+normal vector.
+"""
+function get_unitvectors(self::GridTriangleSurface, i::Int64)
+  return _calc_unitvectors(get_cellnodes(self, i))
+end
+function get_unitvectors(self::GridTriangleSurface, coor::Array{Int64,1})
+  return get_unitvectors(self, sub2ind(self._ndivsnodes, coor...))
 end
 
 
@@ -155,5 +166,22 @@ function _ndivscells(orggrid::Grid, dimsplit::Int64)
   return Tuple([
             2^(i==dimsplit)*divs for (i,divs) in enumerate(orggrid._ndivscells)
               ])
+end
+
+function _calc_tangent(nodes::Array{Array{T,1},1}) where{T<:Real}
+  t = nodes[2] - nodes[1]
+  return t/norm(t)
+end
+
+function _calc_normal(nodes::Array{Array{T,1},1}) where{T<:Real}
+  n = cross(nodes[2]-nodes[1], nodes[3]-nodes[1])
+  return n/norm(n)
+end
+
+function _calc_unitvectors(nodes::Array{Array{T,1},1}) where{T<:Real}
+  t = _calc_tangent(nodes)
+  n = _calc_normal(nodes)
+  o = cross(n,t)
+  return t, o, n
 end
 ##### END OF TRIANGULAR GRID ###################################################

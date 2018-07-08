@@ -9,6 +9,13 @@
   * License   : MIT License
 =###############################################################################
 
+function get_cellnodes(self::GridExtentions, i::Int64)
+  return [get_node(self, n) for n in get_cell(self, i)]
+end
+function get_cellnodes(self::GridExtentions, coor::Array{Int64,1})
+  return get_cellnodes(self, sub2ind(self._ndivsnodes, coor...))
+end
+
 """
   `get_fieldval(grid, field_name, coor)`
 
@@ -123,7 +130,7 @@ function lintransform!(grid::GridExtentions, M::Array{Float64,2}, T::Array{Float
 
   invM = inv(M)
   for i in 1:grid.nnodes
-    grid.nodes[i,:] = countertransform(grid.nodes[i,:], invM, T)
+    grid.nodes[:,i] = countertransform(grid.nodes[:,i], invM, T)
   end
 end
 
@@ -137,7 +144,7 @@ function transform!(grid::GridExtentions, f; reset_fields::Bool=true)
     if reset_fields; grid.field = Dict{String, Dict{String, Any}}(); end;
 
     for i in 1:grid.nnodes
-      grid.nodes[i,:] = f(grid.nodes[i,:])
+      grid.nodes[:,i] = f(grid.nodes[:,i])
     end
 end
 
