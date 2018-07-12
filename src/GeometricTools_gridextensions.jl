@@ -9,6 +9,9 @@
   * License   : MIT License
 =###############################################################################
 
+get_ndivsnodes(self::GridExtentions) = self._ndivsnodes
+get_ndivscells(self::GridExtentions) = self._ndivscells
+
 function get_cellnodes(self::GridExtentions, i::Int64)
   return [get_node(self, n) for n in get_cell(self, i)]
 end
@@ -137,7 +140,8 @@ end
 """
   `transform!(grid::Grid, f)`
 
-Applies the space transformation given by function `f` to the grid.
+Applies the space transformation given by function `f` to the grid, where the
+position of every node is given to the function `f`.
 """
 function transform!(grid::GridExtentions, f; reset_fields::Bool=true)
 
@@ -145,6 +149,37 @@ function transform!(grid::GridExtentions, f; reset_fields::Bool=true)
 
     for i in 1:grid.nnodes
       grid.nodes[:,i] = f(grid.nodes[:,i])
+    end
+end
+
+
+"""
+  `transform2!(grid::Grid, f)`
+
+Applies the space transformation given by function `f` to the grid, where the
+indices of every node is given to the function `f`.
+"""
+function transform2!(grid::GridExtentions, f; reset_fields::Bool=true)
+
+    if reset_fields; grid.field = Dict{String, Dict{String, Any}}(); end;
+
+    for i in 1:grid.nnodes
+      grid.nodes[:,i] = f(ind2sub(grid._ndivsnodes, i))
+    end
+end
+
+"""
+  `transform3!(grid::Grid, f)`
+
+Applies the space transformation given by function `f` to the grid, where the
+both the position and indices of every node is given to the function `f`.
+"""
+function transform3!(grid::GridExtentions, f; reset_fields::Bool=true)
+
+    if reset_fields; grid.field = Dict{String, Dict{String, Any}}(); end;
+
+    for i in 1:grid.nnodes
+      grid.nodes[:,i] = f(grid.nodes[:,i], ind2sub(grid._ndivsnodes, i))
     end
 end
 

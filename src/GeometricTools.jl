@@ -19,11 +19,14 @@ import QuadGK
 
 @PyCall.pyimport matplotlib.patches as patch
 
+plt = PyPlot
+
 # ------------ GLOBAL VARIABLES ------------------------------------------------
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
 
 # ------------ HEADERS ---------------------------------------------------------
-for header_name in ["vtk", "geometry", "misc", "gridabstract", "DEPRECATED"]
+for header_name in ["vtk", "geometry", "misc", "gridabstract", "airfoil",
+                    "DEPRECATED"]
   include("GeometricTools_"*header_name*".jl")
 end
 

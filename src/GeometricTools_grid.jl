@@ -98,6 +98,8 @@ Returns the position of the i-th node (1-indexed) in the grid
 function get_node(self::Grid, i::Int64)
   if i>self.nnodes
     error("Requested invalid node index $i; max is $(self.nnodes).")
+  elseif i<1
+    error("Invalid index $i (it must be greater than 0).")
   end
 
   return self.nodes[:, i]
@@ -120,6 +122,8 @@ Returns the nodes indices of i-th cell in the grid (1-indexed)
 function get_cell(self::Grid, i::Int64)
   if i>self.ncells
     error("Requested invalid cell index $i; max is $(self.ncells).")
+  elseif i<1
+    error("Invalid index $i (it must be greater than 0).")
   end
   return get_cell(self, collect(ind2sub(self._ndivscells, i)))
 end
@@ -332,8 +336,9 @@ function _check(P_min::Array{T,1} where {T<:Real},
       end
     end
   end
+  _ndivs = _calc_ndivs(NDIVS)
   for i in 1:_calc_dims(P_min)
-    if NDIVS[i]==0
+    if _ndivs[i]==0
       if P_min[i]!=P_max[i]
         error("Value in `P_min` must be equal to `P_max` in quasi-dimension $i"*
                                             "($(P_min[i])!=$(P_max[i]))")
