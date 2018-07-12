@@ -35,8 +35,10 @@ function discretize(f, xlow, xhigh, n::Int64, r::Float64; central::Bool=false,
                       check::Bool=true)
 
   # ERROR CASES
-  if n <= 0
-    error("Invalid number of intervals (n <= 0)")
+  if n == 0
+    return Any[]
+  elseif n < 0
+    error("Invalid number of intervals (n < 0)")
   elseif r <= 0
     error("Invalid expansion ratio (r <= 0)")
   end
@@ -165,7 +167,7 @@ end
 function splitcontour(x,y)
 
   # Flag indicating whether the contour start at the trailing or leading edge
-  start_TE = x[1]==max(x)
+  start_TE = x[1]==maximum(x)
 
   # Find the opposite end of the contour
   end_i = -1
@@ -193,8 +195,8 @@ function splitcontour(x,y)
   x_sec2, y_sec2 = x[end_i:end], y[end_i:end]
 
   # Sorts them from LE to TE
-  if x_sec1[1] > min(x); reverse!(x_sec1); reverse!(y_sec1); end;
-  if x_sec2[1] > min(x); reverse!(x_sec2); reverse!(y_sec2); end;
+  if x_sec1[1] > minimum(x); reverse!(x_sec1); reverse!(y_sec1); end;
+  if x_sec2[1] > minimum(x); reverse!(x_sec2); reverse!(y_sec2); end;
 
   # Determines upper and lower surfaces
   if mean(y_sec1) > mean(y_sec2)
