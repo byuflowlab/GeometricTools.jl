@@ -35,7 +35,6 @@ type MultiGrid <: AbstractGrid
                         ncells=0,
                         ngrids=0,
                         # bbox=zeros(Int64, dims),
-                        field=Dict{String, Dict{String, Any}}(),
                       _grid_origins=Array{Int64,1}[]
             ) = new(
                       dims,
@@ -45,7 +44,6 @@ type MultiGrid <: AbstractGrid
                         ncells,
                         ngrids,
                         # bbox,
-                        field,
                       _grid_origins
             )
 end
@@ -159,14 +157,14 @@ function calculate_field(self::MultiGrid, args...)
 end
 function lintransform!(self::MultiGrid, args...; optargs...)
   for grid in self.grids
-    lintransform(grid, args...; optargs...)
+    lintransform!(grid, args...; optargs...)
   end
 end
 function transform!(self::MultiGrid, args...; optargs...)
 end
-function save(self::MultiGrid, args...; optargs...)
-  for grid in self.grids
-    save(grid, args...; optargs...)
+function save(self::MultiGrid, file_name::String, args...; optargs...)
+  for (i, grid) in enumerate(self.grids)
+    save(grid, file_name*"_"*self.grid_names[i], args...; optargs...)
   end
 end
 function plot(self::MultiGrid; optargs...)

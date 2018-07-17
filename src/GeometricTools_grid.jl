@@ -311,6 +311,78 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
 end
 
 
+"""
+  `lintransform!(grid::Grid, M::Array{Float64,2}, T::Array{Float64,1})`
+
+Rotates and translates the grid by the rotation matrix `M` and translation
+vector `T` (linear transformation).
+"""
+function lintransform!(grid::Grid, M::Array{Float64,2}, T::Array{Float64,1};
+                        reset_fields::Bool=true)
+  # Error cases
+  if size(M, 1)!=grid.dims
+    error("Invalid rotation matrix `M`."*
+            "Expected $(grid.dims) dimensions, got $(size(M,1))")
+  elseif length(T)!=grid.dims
+    error("Invalid translation vector `T`."*
+            "Expected $(grid.dims) dimensions, got $(length(T))")
+  end
+
+  if reset_fields; grid.field = Dict{String, Dict{String, Any}}(); end;
+
+  invM = inv(M)
+  for i in 1:grid.nnodes
+    grid.nodes[:,i] = countertransform(grid.nodes[:,i], invM, T)
+  end
+end
+
+"""
+  `transform!(grid::Grid, f)`
+
+Applies the space transformation given by function `f` to the grid, where the
+position of every node is given to the function `f`.
+"""
+function transform!(grid::Grid, f; reset_fields::Bool=true)
+
+    if reset_fields; grid.field = Dict{String, Dict{String, Any}}(); end;
+
+    for i in 1:grid.nnodes
+      grid.nodes[:,i] = f(grid.nodes[:,i])
+    end
+end
+
+
+"""
+  `transform2!(grid::Grid, f)`
+
+Applies the space transformation given by function `f` to the grid, where the
+indices of every node is given to the function `f`.
+"""
+function transform2!(grid::Grid, f; reset_fields::Bool=true)
+
+    if reset_fields; grid.field = Dict{String, Dict{String, Any}}(); end;
+
+    for i in 1:grid.nnodes
+      grid.nodes[:,i] = f(ind2sub(grid._ndivsnodes, i))
+    end
+end
+
+"""
+  `transform3!(grid::Grid, f)`
+
+Applies the space transformation given by function `f` to the grid, where the
+both the position and indices of every node is given to the function `f`.
+"""
+function transform3!(grid::Grid, f; reset_fields::Bool=true)
+
+    if reset_fields; grid.field = Dict{String, Dict{String, Any}}(); end;
+
+    for i in 1:grid.nnodes
+      grid.nodes[:,i] = f(grid.nodes[:,i], ind2sub(grid._ndivsnodes, i))
+    end
+end
+
+
 ##### INTERNAL FUNCTIONS  ######################################################
 function _check(P_min::Array{T,1} where {T<:Real},
                 P_max::Array{T,1} where {T<:Real} ,

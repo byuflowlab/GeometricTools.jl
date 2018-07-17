@@ -142,6 +142,20 @@ function get_unitvectors(self::GridTriangleSurface, coor::Array{Int64,1})
   return get_unitvectors(self, sub2ind(self._ndivsnodes, coor...))
 end
 
+function lintransform!(self::GridTriangleSurface, args...; optargs...)
+  lintransform!(self.orggrid, args...; optargs...)
+end
+
+function transform!(self::GridTriangleSurface, args...; optargs...)
+  transform!(self.orggrid, args...; optargs...)
+end
+function transform2!(self::GridTriangleSurface, args...; optargs...)
+  transform!(self.orggrid, args...; optargs...)
+end
+function transform3!(self::GridTriangleSurface, args...; optargs...)
+  transform!(self.orggrid, args...; optargs...)
+end
+
 
 ##### INTERNAL FUNCTIONS  ######################################################
 function _checkGridTriangleSurface(orggrid::Grid, dimsplit::Int64)

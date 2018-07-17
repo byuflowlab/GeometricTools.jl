@@ -12,10 +12,10 @@
 
 "Receives a .dat file as pulled from airfoiltools.com containing the x and y
 contour coordinates of an airfoil, and returns arrays x and y."
-function readcontour(file_name; header_len=1, delim=" ")
+function readcontour(file_name; header_len=1, delim=" ", path="")
   x, y = Float64[], Float64[]
 
-  open(file_name) do f
+  open(joinpath(path,file_name)) do f
     for (i,line) in enumerate(eachline(f))
 
       # Ignores header
