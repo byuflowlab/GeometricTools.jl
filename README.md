@@ -8,6 +8,14 @@ formatting.
 
 See `docs` for code documentation and `examples` for usage examples.
 
+# Installation
+
+Run the following line in a Julia terminal
+
+```
+Pkg.clone("git@github.com:byuflowlab/GeometricTools.jl.git")
+```
+
 # Dependencies
   * Paraview  : Not needed, but examples call Paraview for visualization of
       outputs. Installing through `apt-get install paraview` is not recommended
