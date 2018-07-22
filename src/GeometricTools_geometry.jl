@@ -130,9 +130,8 @@ into multiple sections of refinement as specified in `sections`.
     julia> points = multidiscretize(f, 0, pi, [sec, sec, sec])
   ```
 """
-function multidiscretize(f, xlow, xhigh,
-                          sections::Array{Tuple{Float64,Int64,Float64,Bool},1};
-                          check::Bool=true)
+function multidiscretize(f, xlow, xhigh, sections::multidisctype;
+                                                              check::Bool=true)
   out = Any[f(xlow)]
   ctot = sum([sec[1] for sec in sections]) # Sum of all `c`s
 

@@ -23,10 +23,12 @@ plt = PyPlot
 
 # ------------ GLOBAL VARIABLES ------------------------------------------------
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
+                                                # Type of multidiscretize input
+const multidisctype = Array{Tuple{Float64,Int64,Float64,Bool},1}
 
 # ------------ HEADERS ---------------------------------------------------------
 for header_name in ["vtk", "geometry", "misc", "gridabstract", "airfoil",
-                    "DEPRECATED"]
+                    "surfacing", "DEPRECATED"]
   include("GeometricTools_"*header_name*".jl")
 end
 
