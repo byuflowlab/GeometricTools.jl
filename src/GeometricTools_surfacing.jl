@@ -158,7 +158,7 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
 
     if paraview
       # Calls paraview
-      run(`paraview --data=$save_path$file_name.vtk`)
+      run(`paraview --data=$(joinpath(save_path,file_name)).vtk`)
     end
   end
 
@@ -376,4 +376,14 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
 
   return generate_loft(new_crosssections, bscale, b_low, b_up, b_NDIVS,
                           chords, twists, LE_x, LE_z; optargs...)
+end
+
+
+function generate_loft(crosssections::Array{Tuple{T,String}, 1}, data_path::String,
+                                  args...; optargs...
+                               ) where{T<:Real}
+ secs = [(pos, readcontour(f_name; path=data_path, output="matrix"))
+                              for (pos, f_name) in crosssections]
+
+ return generate_loft(secs, args...; optargs...)
 end

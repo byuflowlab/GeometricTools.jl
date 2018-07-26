@@ -116,7 +116,8 @@ end
 """
   `save(grid, filename; args...)`
 
-Outputs a vtk file of this grid
+Outputs a vtk file of this grid. See generateVTK for a descrition of optional
+arguments `args...`.
 """
 function save(grid::GridExtentions, filename::String; args...)
   # Determins whether to add 0 to points for vtk file
