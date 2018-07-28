@@ -64,10 +64,8 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
                         file_name::String="myloft"
                        ) where{T<:Real}
 
-
   sec_NDIVS = size(crosssections[1][2], 1)-1    # Cross-section cells
   b_NDIVS = size(b_pos, 1)-1                    # Span cells
-
 
   # ERROR CASES
   for (pos, sec) in crosssections
@@ -109,14 +107,14 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
     for val in array[2:end]
         val_in = val_out
         val_out = val
-        if val[1]>=abs(span); break; end
+        if val[1]>=span; break; end
     end
     pos_in = val_in[1]
     val_in = val_in[2]
     pos_out = val_out[1]
     val_out = val_out[2]
 
-    weight = (abs(span)-pos_in)/(pos_out-pos_in)
+    weight = (span-pos_in)/(pos_out-pos_in)
 
     return weight, val_in, val_out
   end
@@ -130,7 +128,7 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
     le_z = LE_z[inds[2]]            # z/bscale LE position
 
     # Merges airfoil contours at this span position
-    weight, sec_in, sec_out = calc_vals(span, crosssections)
+    weight, sec_in, sec_out = calc_vals(span*sign(span)^symmetric, crosssections)
 
     # Point over airfoil contour
     point = weight*sec_out[inds[1], :]+(1-weight)*sec_in[inds[1], :]
@@ -379,10 +377,20 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
 end
 
 
-function generate_loft(crosssections::Array{Tuple{T,String}, 1}, data_path::String,
-                                  args...; optargs...
-                               ) where{T<:Real}
- secs = [(pos, readcontour(f_name; path=data_path, output="matrix"))
+"""
+`generate_loft(crosssections::Array{Tuple{T,String}, 1},
+                        data_path::String, args...; header_len::Int64=1,
+                        delim::String=" ", optargs...) where{T<:Real}`
+
+Loft a geometry where the cross sections are read from the files indicated by
+`crosssections` found in `data_path`.
+"""
+function generate_loft(crosssections::Array{Tuple{T,String}, 1},
+                        data_path::String, args...; header_len::Int64=1,
+                        delim::String=" ", optargs...) where{T<:Real}
+
+ secs = [(pos, readcontour(f_name; path=data_path, header_len=header_len,
+                              delim=delim, output="matrix"))
                               for (pos, f_name) in crosssections]
 
  return generate_loft(secs, args...; optargs...)
