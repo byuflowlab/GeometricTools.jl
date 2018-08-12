@@ -330,20 +330,18 @@ end
 # LINEAR ALGEBRA TRANSFORMATIONS
 ################################################################################
 """
-  `transform(V::Array{Float64,1},
-                      M::Array{Float64,2}, T::Array{Float64,1})`
+  `transform(V::Array{Float64,1}, M::Array{Float64,2}, T::Array{Float64,1})`
 
 Rotates and translates the vector V. Receives the i', j', k' unit vectors of an
-euclidean system with origin T, and returns V'. (In this version, the unit
-vectors have been organized as a matrix M)
+euclidean system with origin T, and returns ``V'=M(V-T)`` (In this version, the
+unit vectors have been organized as a matrix M=[i'; j'; k']).
 """
-function transform(V::Array{Float64,1},
-                    M::Array{Float64,2}, T::Array{Float64,1})
+function transform(V::Array{P,1}, M::Array{P,2}, T::Array{P,1}) where{P<:Real}
   return M*(V-T)
 end
 
-function transform(Vs::Array{Array{Float64,1},1},
-                    M::Array{Float64,2}, T::Array{Float64,1})
+function transform(Vs::Array{Array{P,1},1}, M::Array{P,2}, T::Array{P,1}
+                                                                ) where{P<:Real}
   out = Array{Float64,1}[]
   for V in Vs
     push!(out, transform(V, M, T))
@@ -352,21 +350,21 @@ function transform(Vs::Array{Array{Float64,1},1},
 end
 
 """
-  `countertransform(Vp::Array{Float64,1},
-                            invM::Array{Float64,2}, T::Array{Float64,1})`
+  `countertransform(Vp::Array{Float64,1}, invM::Array{Float64,2},
+T::Array{Float64,1})`
 
 Rotates and translates back a vector V' that had been rotated and translated
-into the system (i', j', k') with origin T, and returns the original V.
-To ease repetitive computation, instead of giving the unit vectors, give the
-inverse of their matrix.
+into the system (i', j', k') with origin T, and returns the original
+``V=M^{-1}V' + T``. To ease repetitive computation, instead of giving the unit
+vectors, give the inverse of their matrix.
 """
-function countertransform(Vp::Array{Float64,1},
-                          invM::Array{Float64,2}, T::Array{Float64,1})
+function countertransform(Vp::Array{P,1}, invM::Array{P,2}, T::Array{P,1}
+                                                                ) where{P<:Real}
   return invM*Vp + T
 end
 
-function countertransform(Vps::Array{Array{Float64,1},1},
-                          invM::Array{Float64,2}, T::Array{Float64,1})
+function countertransform(Vps::Array{Array{P,1},1}, invM::Array{P,2},
+                                                  T::Array{P,1}) where{P<:Real}
   out = Array{Float64,1}[]
   for Vp in Vps
     push!(out, countertransform(Vp, invM, T))
@@ -380,7 +378,7 @@ end
 Checks that the unit vectors given as the matrix `M=[i;j;k]` define a coordinate
 system
 """
-function check_coord_sys(M::Array{Float64,2}; raise_error::Bool=true)
+function check_coord_sys(M::Array{T,2}; raise_error::Bool=true) where{T<:Real}
   # Checks normalization
   for i in 1:size(M)[1]
     if abs(norm(M[i,:])-1) > 0.00000001
@@ -409,7 +407,8 @@ function check_coord_sys(M::Array{Float64,2}; raise_error::Bool=true)
   return true
 end
 
-function check_coord_sys(M::Array{Array{Float64,1},1}; raise_error::Bool=true)
+function check_coord_sys(M::Array{Array{T,1},1}; raise_error::Bool=true
+                                                                ) where{T<:Real}
   dims = 3
   newM = zeros(dims,dims)
   for i in 1:dims
@@ -424,7 +423,7 @@ end
 Returns the transformation matrix of rotation around an arbitrary axis of unit
 vector `r`
 """
-function axis_rotation(r::Array{Float64, 1}, angle_deg::Float64)
+function axis_rotation(r::Array{T, 1}, angle_deg::Real) where{T<:Real}
   ux, uy, uz = r
   C = cos(angle_deg*pi/180)
   S = sin(angle_deg*pi/180)
@@ -436,9 +435,16 @@ function axis_rotation(r::Array{Float64, 1}, angle_deg::Float64)
 end
 
 """
-  Receives yaw, pitch, and roll angles (in degrees) and return the rotation
-  matrix corresponding to this rotation.
-  (see http://planning.cs.uiuc.edu/node102.html)
+  `rotation_matrix(yaw::Real, pitch::Real, roll::Real)`
+
+Receives yaw, pitch, and roll angles (in degrees) and returns the rotation
+matrix corresponding to this rotation.
+(see http://planning.cs.uiuc.edu/node102.html)
+
+NOTE: Naming follows aircraft convention, with
+* yaw:    rotation about z-axis.
+* pitch:  rotation about y-axis.
+* roll:   rotation about x-axis.
 """
 function rotation_matrix(yaw::Real, pitch::Real, roll::Real)
   a, b, g = yaw*pi/180, pitch*pi/180, roll*pi/180
@@ -446,6 +452,99 @@ function rotation_matrix(yaw::Real, pitch::Real, roll::Real)
   Ry = [cos(b) 0 sin(b); 0 1 0; -sin(b) 0 cos(b)]
   Rx = [1 0 0; 0 cos(g) -sin(g); 0 sin(g) cos(g)]
   return Rz*Ry*Rx
+end
+
+"""
+  `rotation_matrix2(roll::Real, pitch::Real, yaw::Real)`
+
+Receives yaw, pitch, and roll angles (in degrees) and returns the rotation
+matrix corresponding to this rotation.
+(see http://planning.cs.uiuc.edu/node102.html)
+
+NOTE: Naming follows aircraft convention, with
+* roll:   rotation about x-axis.
+* pitch:  rotation about y-axis.
+* yaw:    rotation about z-axis.
+
+**Examples**
+```jldoctest
+julia> M = gt.rotation_matrix(0, 0, 0)
+3×3 Array{Float64,2}:
+  1.0  0.0  0.0
+  0.0  1.0  0.0
+  0.0  0.0  1.0
+
+julia> M = gt.rotation_matrix(90, 0, 0)
+3×3 Array{Float64,2}:
+  1.0  0.0   0.0
+  0.0  0.0  -1.0
+  0.0  1.0   0.0
+
+julia> X = [0, 1, 0];
+julia> Xp = M*X
+3-element Array{Float64,1}:
+  0.0
+  0.0
+  1.0
+
+julia> M = gt.rotation_matrix(0, 90, 0)
+3×3 Array{Float64,2}:
+  0.0  0.0  1.0
+  0.0  1.0  0.0
+ -1.0  0.0  0.0
+
+julia> X = [1, 0, 0];
+julia> Xp = M*X
+3-element Array{Float64,1}:
+  0.0
+  0.0
+ -1.0
+
+
+julia> M = gt.rotation_matrix(0, 0, 90)
+3×3 Array{Float64,2}:
+  0.0  -1.0  0.0
+  1.0   0.0  0.0
+  0.0   0.0  1.0
+
+julia> X = [1, 0, 0];
+julia> Xp = M*X
+3-element Array{Float64,1}:
+  0.0
+  1.0
+  0.0
+
+
+julia> M = gt.rotation_matrix(0, 45, 0)
+3×3 Array{Float64,2}:
+  0.707  0.0  0.707
+  0.0    1.0  0.0
+ -0.707  0.0  0.707
+
+julia> X = [1, 0, 0];
+julia> Xp = M*X
+3-element Array{Float64,1}:
+  0.707
+  0.0
+ -0.707
+
+
+julia> M = gt.rotation_matrix(0, 45, 45)
+3×3 Array{Float64,2}:
+  0.5    -0.707  0.5
+  0.5     0.707  0.5
+ -0.707   0.0    0.707
+
+julia> X = [1, 0, 0];
+julia> Xp = M*X
+3-element Array{Float64,1}:
+  0.5
+  0.5
+ -0.707
+```
+"""
+function rotation_matrix2(roll::Real, pitch::Real, yaw::Real)
+  return return rotation_matrix(yaw, pitch, roll)
 end
 ##### END OF ALGEBRA ###########################################################
 
