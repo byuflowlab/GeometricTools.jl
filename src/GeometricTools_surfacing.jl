@@ -10,6 +10,7 @@
 
 
 
+# LOFTING ######################################################################
 """
   `generate_loft(crosssections, bscale, b_pos, chords, twists, LE_x, LE_z)`
 
@@ -160,7 +161,7 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
     end
   end
 
-  return grid
+  return grid::Grid
 end
 
 
@@ -395,3 +396,117 @@ function generate_loft(crosssections::Array{Tuple{T,String}, 1},
 
  return generate_loft(secs, args...; optargs...)
 end
+
+
+
+
+
+# REVOLTUION ###################################################################
+"""
+  `surface_revolution(profile, thetaNDIVS; loop_dim=0, axis_angle=0, low_a=0,
+up_a=360, save_path=nothing, paraview=true, file_name="myrev")`
+
+Receives a contour to revolve around an axis generating a surface of revolution.
+
+**ARGUMENTS**
+  * `profile::Array{Float64,2}`   : Contour to revolve. These are two-
+                                    dimensional points in the YZ-plane that will
+                                    get revolve around the Z-axis.
+  * `thetaNDIVS::Int64`           : Number of angle-sections (cells) in the
+                                    revolution.
+
+**OPTIONAL ARGUMENTS**
+  * `loop_dim::Int64=0`           : Whether to loop any dimension of the
+                                    parametric grid.
+  * `axis_angle::Float64=0`       : Tilting angle (deg) about the Z-axis to
+                                    revolve the contour.
+  * `low_a::Float64=0`            : Lower bound of angle (deg) of revolution.
+  * `up_a::Float64=0`             : Upper bound of angle (deg) of revolution.
+"""
+function surface_revolution(profile::Array{T,2}, thetaNDIVS::Int64;
+                              loop_dim::Int64=0, axis_angle::Real=0,
+                              low_a::Real=0, up_a::Real=360,
+                              # OUTPUT OPTIONS
+                              save_path=nothing, paraview::Bool=true,
+                              file_name::String="myrev"
+                              ) where{T<:Real}
+  #ERROR CASES
+  if size(profile,2)!=2
+    error("Invalid point dimensions in `profile`."*
+          " Expected 2 dimensions, got $(size(profile,2))")
+  elseif profile[1,:]==profile[end,:] && loop_dim==0
+    warn("Received a closed contour but parametric grid wasn't declared to"*
+          " loop, resulting in overlaping start/end points. Give it"*
+          " `loop_dim=1` to fix that.")
+  end
+
+  # First coordinate is a map to the points in the countor of revolution
+  # Seciond coordinate is the angle of revolution
+  # Third is a dummy
+  NDIVS = [size(profile,1)-1, thetaNDIVS, 0]# Divisions in every coordinate
+  P_min = [0, low_a, 0]                     # Lower boundaries
+  P_max = [1, up_a, 0 ]                     # Upper boundaries
+  # loop_dim = 1                            # Loops the countour of revolution
+
+  # Parametric grid
+  grid = Grid(P_min, P_max, NDIVS, loop_dim)
+
+  # Rotates the profile according the revolution tilting
+  if axis_angle!=0
+    M = rotation_matrix(0,0,-axis_angle)
+    M2D = M[2:3,2:3]
+    M3D = M'
+    points = hcat([M2D*profile[i,:] for i in 1:size(profile,1)]...)'
+  else
+    M3D = eye(3)
+    points = profile
+  end
+
+  # Space transformation function
+  function my_space_transform(X, ind)
+      p_ind = ind[1]                  # Point index
+      angle = X[2]                    # (deg) angle
+
+      # Places the contour in the YZ-plane
+      point = [0, points[p_ind,1], points[p_ind,2]]
+
+      # Rotates the contour around the Z-axis
+      return M3D*axis_rotation(Float64[0,0,1], Float64(angle))*point
+  end
+
+  # Applies the space transformation to the parametric grid
+  transform3!(grid, my_space_transform)
+
+
+  if save_path!=nothing
+    # Outputs a vtk file
+    save(grid, file_name; path=save_path)
+
+    if paraview
+      # Calls paraview
+      run(`paraview --data=$(joinpath(save_path,file_name)).vtk`)
+    end
+  end
+
+  return grid::Grid
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
