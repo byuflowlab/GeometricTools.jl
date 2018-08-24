@@ -201,7 +201,8 @@ end
 function plot(grid::Grid; fig_name="gridplot", fontsize=15,
                           xlims=nothing, ylims=nothing, zlims=nothing,
                           labelcells=true, labelnodes=false, labelndivs=true,
-                          title_str=nothing)
+                          title_str=nothing,
+                          alpha=1.0)
 
   if grid.dims>3
     error("There is no plotting method for $(grid.dims)-dimensional grids")
@@ -277,7 +278,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
       end
   end
   x,y,z,u,v,w = [coor for coor in xyzuvw]
-  ax[:quiver](x,y,z, u,v,w, arrow_length_ratio=0.0);
+  ax[:quiver](x,y,z, u,v,w, arrow_length_ratio=0.0, alpha=alpha);
 
   # Labels nodes
   if labelnodes
@@ -317,8 +318,8 @@ end
 Rotates and translates the grid by the rotation matrix `M` and translation
 vector `T` (linear transformation).
 """
-function lintransform!(grid::Grid, M::Array{Float64,2}, T::Array{Float64,1};
-                        reset_fields::Bool=true)
+function lintransform!(grid::Grid, M::Array{P,2}, T::Array{P,1};
+                        reset_fields::Bool=true) where{P<:Real}
   # Error cases
   if size(M, 1)!=grid.dims
     error("Invalid rotation matrix `M`."*
