@@ -16,7 +16,7 @@ function get_cellnodes(self::GridExtentions, i::Int64)
   return [get_node(self, n) for n in get_cell(self, i)]
 end
 function get_cellnodes(self::GridExtentions, coor::Array{Int64,1})
-  return get_cellnodes(self, sub2ind(self._ndivsnodes, coor...))
+  return get_cellnodes(self, sub2ind(self._ndivscells, coor...))
 end
 
 """
@@ -26,11 +26,7 @@ Returns the value of node of coordinates `coor` (1-indexed) in the field
 'field_name'.
 """
 function get_fieldval(self::GridExtentions, field_name::String, coor::Array{Int64,1})
-  if !(field_name in keys(self.field))
-    error("Field $field_name doesn't exist."*
-          " Available fields: $(keys(self.field))")
-  end
-
+println(self._ndivscells)
   if self.field[field_name]["entry_type"]=="node"
     return get_fieldval(self, field_name, sub2ind(self._ndivsnodes, coor...))
 
@@ -54,6 +50,7 @@ function get_fieldval(self::GridExtentions, field_name::String, i::Int64)
           " Available fields: $(keys(self.field))")
   end
 
+  println(i)
   return self.field[field_name]["field_data"][i]
 end
 
@@ -67,11 +64,12 @@ NOTE: each data entry must be a single value if `field_type==scalar`, or a
       3-element array if `field_type==vector`.
 """
 function add_field(grid::GridExtentions, field_name::String,
-                            field_type::String, field_data, entry_type::String)
+                            field_type::String, field_data, entry_type::String;
+                            raise_warn::Bool=true)
   # Error cases
   if !(field_type in ["vector", "scalar"])
     error("Unkown field type $(field_type)")
-  elseif !(entry_type in ["node", "cell"])
+  elseif !(entry_type in ["node", "cell", "system"])
     error("Unkown entry type $(entry_type)")
   elseif entry_type=="node" && size(field_data, 1)!=grid.nnodes
     error("Invalid node field size."*
@@ -82,7 +80,7 @@ function add_field(grid::GridExtentions, field_name::String,
   end
 
 
-  if field_name in keys(grid.field)
+  if field_name in keys(grid.field) && raise_warn
     warn("Overwritting field $field_name.")
   end
 
@@ -137,6 +135,8 @@ function save(grid::GridExtentions, filename::String; args...)
       push!(point_data, val)
     elseif val["entry_type"] == "cell"
       push!(cell_data, val)
+    elseif val["entry_type"] == "system"
+      nothing
     else
       error("Unkown entry type $(entry_type)")
     end
