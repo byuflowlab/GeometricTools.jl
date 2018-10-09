@@ -1,3 +1,4 @@
 temp*
 .ipynb_checkpoints*
 *.pyc
+Manifest.toml
