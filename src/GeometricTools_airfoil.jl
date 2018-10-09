@@ -84,9 +84,9 @@ function rediscretize_airfoil(x::Array{T,1}, y::Array{T,1},
   upper, lower = splitcontour(x, y)
 
   # Parameterize both sides independently
-  fun_upper = parameterize(upper[1], upper[2], zeros(upper[1]); inj_var=1,
+  fun_upper = parameterize(upper[1], upper[2], zeros(eltype(upper[1]), size(upper[1])); inj_var=1,
                                                       s=spl_s, kspl=spl_k)
-  fun_lower = parameterize(lower[1], lower[2], zeros(lower[1]); inj_var=1,
+  fun_lower = parameterize(lower[1], lower[2], zeros(eltype(lower[1]), size(lower[1])); inj_var=1,
                                                       s=spl_s, kspl=spl_k)
 
   # Discretizes both sides

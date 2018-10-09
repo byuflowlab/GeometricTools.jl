@@ -43,7 +43,7 @@ NOTE2: `NDIVS` can either be an array of integers with NDIVS[i] indicating the
       sections (see `multidiscretize()` doc) with NDIVS[i] = [sec1, sec2, ...]
       indicating the discretization into sections in the i-th coordinate.
 """
-type Grid <: AbstractGrid
+mutable struct Grid <: AbstractGrid
 
   # User inputs
   P_min::Array{T,1} where {T<:Real}   # Minimum point of the domain
@@ -216,11 +216,11 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
 
   # Iterates over every child plotting them
   for i in 1:nc
-    nodes = [vcat(get_node(grid, node), zeros(3-grid.dims))
+    nodes = [vcat(get_node(grid, node), zeros(Float64, 3-grid.dims))
                                                   for node in get_cell(grid, i)]
 
     if labelcells
-      center = vcat(get_cellcenter(grid, i), zeros(3-grid.dims))
+      center = vcat(get_cellcenter(grid, i), zeros(Float64, 3-grid.dims))
       PyPlot.text3D(center[1], center[2], center[3], "$i", fontsize=fontsize, color="g")
     end
 
@@ -260,7 +260,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
           coor[i] += 1
         end
         p2 = get_node(grid, coor)
-        center = vcat((p1+p2)/2, zeros(3-grid.dims))
+        center = vcat((p1+p2)/2, zeros(Float64, 3-grid.dims))
         PyPlot.text3D(center[1], center[2], center[3], "$j", fontsize=fontsize,
                                                                       color="r")
       end
@@ -283,7 +283,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
   # Labels nodes
   if labelnodes
     for i in 1:grid.nnodes
-      pos = vcat(get_node(grid, i), zeros(3-grid.dims))
+      pos = vcat(get_node(grid, i), zeros(Float64, 3-grid.dims))
       PyPlot.text3D(pos[1], pos[2], pos[3], "$i", fontsize=fontsize, color="k")
     end
   end
@@ -455,7 +455,7 @@ function _calc_ndivsnodes(NDIVS::Array{T,1} where {T<:Any}, loop_dim::Int64)
   if loop_dim!=0
     ndivs[loop_dim] -= 1
   end
-  return ndivs+1
+  return ndivs .+ 1
 end
 
 "Calculates the number of cells given NDIVS"
@@ -474,12 +474,12 @@ function _generate_grid(P_min::Array{T,1} where {T<:Real},
 
   dims = _calc_dims(P_min)
   nnodes = _calc_nnodes(NDIVS, loop_dim)
-  nodes = zeros(dims, nnodes)
+  nodes = zeros(Float64, dims, nnodes)
   ndivs = Tuple(_calc_ndivs(NDIVS))
 
   # Discretizes each coordinate according to NDIVS
   if typeof(NDIVS)==Array{Int64,1}
-    spacing = [linspace(P_min[i], P_max[i], ndivs[i]+1) for i in 1:dims]
+    spacing = [range(P_min[i], stop=P_max[i], length=ndivs[i]+1) for i in 1:dims]
 
   elseif typeof(NDIVS)==Array{Array{Tuple{Float64,Int64,Float64,Bool},1},1}
     spacing = [multidiscretize(x->x, P_min[i], P_max[i], NDIVS[i]) for i in 1:dims]
@@ -492,7 +492,7 @@ function _generate_grid(P_min::Array{T,1} where {T<:Real},
   ind2 = 1
   ndivsnodes = Tuple(_calc_ndivsnodes(NDIVS, 0))
   for ind in 1:_calc_nnodes(NDIVS, 0)
-    sub = ind2sub(ndivsnodes, ind)
+    sub = CartesianIndices(ndivsnodes)[ind]
 
     if loop_dim==0 || sub[loop_dim]!=ndivsnodes[loop_dim]
       p = [spacing[dim][sub[dim]] for dim in 1:dims]

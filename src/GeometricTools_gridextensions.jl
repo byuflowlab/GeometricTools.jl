@@ -120,7 +120,7 @@ arguments `args...`.
 function save(grid::GridExtentions, filename::String; args...)
   # Determins whether to add 0 to points for vtk file
   if grid.dims<=3
-    aux1 = zeros(3-grid.dims)
+    aux1 = zeros(Float64, 3-grid.dims)
   else
     error("$(grid.dims)-dimensional grids can't be exported as VTKs!")
   end

@@ -24,7 +24,7 @@ original quadrilateral panel into triangles.
   * `orggrid`         : Original quadrilateral surface grid.
   * `dimsplit`        : Dimension along which to split the quadrilaterals.
 """
-type GridTriangleSurface <: AbstractGrid
+mutable struct GridTriangleSurface <: AbstractGrid
 
   # User inputs
   orggrid::Grid                       # Original quadrilateral surface grid

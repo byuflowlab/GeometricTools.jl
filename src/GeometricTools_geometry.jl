@@ -27,7 +27,7 @@ into `n` intervals, with `r` the ratio between first and last interval if
   into 100 intervals of uniform length:
 
   ```julia
-    julia> f(x) = (x, sqrt(1-round(x,8)^2), 0)  # Semi-circunference of radius 1
+    julia> f(x) = (x, sqrt(1-round(x,digits=8)^2), 0)  # Semi-circunference of radius 1
     julia> discretize(f, -1, 1, 100, 1.0)
   ```
 """
@@ -198,7 +198,7 @@ function splitcontour(x,y)
   if x_sec2[1] > minimum(x); reverse!(x_sec2); reverse!(y_sec2); end;
 
   # Determines upper and lower surfaces
-  if mean(y_sec1) > mean(y_sec2)
+  if Statistics.mean(y_sec1) > Statistics.mean(y_sec2)
     upper = [x_sec1, y_sec1]
     lower = [x_sec2, y_sec2]
   else
@@ -272,7 +272,7 @@ function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false,
   # Defines the path function
   dfdx1(x) = Dierckx.derivative(spl[1], x)    # Derivative of f respect x1
   dfdx2(x) = Dierckx.derivative(spl[2], x)    # Derivative of f respect x2
-  fun(x) = sqrt.(1+(dfdx1(x)).^2+(dfdx2(x)).^2)   # Integrand
+  fun(x) = sqrt.(1 .+ (dfdx1(x)).^2 .+ (dfdx2(x)).^2)   # Integrand
                                                   # Integral between xmin and x
   fun_s(this_x) = QuadGK.quadgk(fun, inj[1], this_x)[1]
 
@@ -410,7 +410,7 @@ end
 function check_coord_sys(M::Array{Array{T,1},1}; raise_error::Bool=true
                                                                 ) where{T<:Real}
   dims = 3
-  newM = zeros(dims,dims)
+  newM = zeros(Float64, dims,dims)
   for i in 1:dims
     newM[i, :] = M[i]
   end

@@ -12,7 +12,7 @@
 # MULTIGRID
 ################################################################################
 
-type MultiGrid <: AbstractGrid
+mutable struct MultiGrid <: AbstractGrid
 
   # User inputs
   dims::Int64                         # Number of dimensions

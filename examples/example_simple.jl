@@ -104,7 +104,7 @@ function parametric_mesh(; prompt=true)
 
   # Dummy point data for good looking visuals
   pd1 = [i for i in 1:size(line1)[1]]
-  pd2 = size(line1)[1]+[i for i in 1:size(line2)[1]]
+  pd2 = size(line1)[1] .+ [i for i in 1:size(line2)[1]]
 
   # Generates cells in VTK Legacy format
   out = gt.lines2vtkcells(line1, line2; point_data1=pd1, point_data2=pd2)
@@ -168,7 +168,7 @@ function parametric_mesh2(; prompt=true)
 
   # Dummy point data for good looking visuals
   pd1 = [i for i in 1:size(line1)[1]]
-  pd2 = size(line1)[1]+[i for i in 1:size(line2)[1]]
+  pd2 = size(line1)[1] .+ [i for i in 1:size(line2)[1]]
 
   # Generates cells in VTK Legacy format
   out = gt.lines2vtkmulticells(line1, line2, sections;

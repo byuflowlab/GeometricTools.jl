@@ -231,7 +231,7 @@ function lines2vtkmulticells(line1, line2,
     end
     # Adds point indexing of cells
     vtk_cells = vcat(vtk_cells,
-                            [cells+(i-1)*npoints for cells in row_vtk_cells])
+                            [cells .+ (i-1)*npoints for cells in row_vtk_cells])
 
     prev_line2 = this_line2
     prev_point_data2 = this_point_data2

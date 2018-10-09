@@ -56,7 +56,7 @@ function taylor_wing(; prompt=true, file_name="temp_taylor00")
   crosssections = []        # It will store here the cross sections for lofting
   point_datas = []          # Dummy point data for good looking visuals
 
-  println("\t Runtime: $(round(time()-prev_time,1)) (s)")
+  println("\t Runtime: $(round(time()-prev_time,digits=1)) (s)")
   println("Processing airfoils...")
   prev_time = time()
 
@@ -74,8 +74,8 @@ function taylor_wing(; prompt=true, file_name="temp_taylor00")
       upper, lower = splitcontour(x, y)
 
       # Parameterize both sides independently
-      fun_upper = gt.parameterize(upper[1], upper[2], zeros(upper[1]); inj_var=1)
-      fun_lower = gt.parameterize(lower[1], lower[2], zeros(lower[1]); inj_var=1)
+      fun_upper = gt.parameterize(upper[1], upper[2], zeros(eltype(upper[1]), size(upper[1])); inj_var=1)
+      fun_lower = gt.parameterize(lower[1], lower[2], zeros(eltype(lower[1]), size(lower[1])); inj_var=1)
 
       # New discretization for both surfaces
       upper_points = gt.discretize(fun_upper, 0, 1, n_upper, r[1]; central=true)
@@ -106,10 +106,10 @@ function taylor_wing(; prompt=true, file_name="temp_taylor00")
       airfoil = gt.countertransform(airfoil, invOaxis, Os[i])
 
       push!(crosssections, airfoil)
-      push!(point_datas, [j for j in npoints*(i-1)+1:npoints*i])
+      push!(point_datas, [j for j in npoints*(i-1) .+ 1:npoints*i])
   end
 
-  println("\t Runtime: $(round(time()-prev_time,1)) (s)")
+  println("\t Runtime: $(round(time()-prev_time,digits=1)) (s)")
   println("Lofting and generating VTK files...")
   prev_time = time()
 
@@ -131,7 +131,7 @@ function taylor_wing(; prompt=true, file_name="temp_taylor00")
   # Generates the vtk file
   gt.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
 
-  println("\t Runtime: $(round(time()-prev_time,1)) (s)")
+  println("\t Runtime: $(round(time()-prev_time,digits=1)) (s)")
 
   # Calls paraview
   run(`paraview --data="$(file_name).vtk;"`)

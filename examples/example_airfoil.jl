@@ -19,8 +19,8 @@ function airfoil_example()
   upper, lower = splitcontour(x,y)
 
   # Parameterize both surfaces independently
-  fun_upper = gt.parameterize(upper[1], upper[2], zeros(upper[1]); inj_var=1)
-  fun_lower = gt.parameterize(lower[1], lower[2], zeros(lower[1]); inj_var=1)
+  fun_upper = gt.parameterize(upper[1], upper[2], zeros(Float64, size(upper[1])); inj_var=1)
+  fun_lower = gt.parameterize(lower[1], lower[2], zeros(Float64, size(lower[1])); inj_var=1)
 
   # New discretization for both surfaces
   upper_points = gt.discretize(fun_upper, 0, 1, 50, 1.0)
@@ -150,7 +150,7 @@ function splitcontour(x,y)
   if x_sec2[1] > 0.5; reverse!(x_sec2); reverse!(y_sec2); end;
 
   # Determines upper and lower surfaces
-  if mean(y_sec1) > mean(y_sec2)
+  if Statistics.mean(y_sec1) > Statistics.mean(y_sec2)
     upper = [x_sec1, y_sec1]
     lower = [x_sec2, y_sec2]
   else

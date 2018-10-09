@@ -28,10 +28,10 @@ function wing_example(; prompt=true, file_name="temp_wing00")
   upper2, lower2 = splitcontour(org_x2, org_y2)
 
   # Parameterize both sides independently
-  fun_upper1 = gt.parameterize(upper1[1], upper1[2], zeros(upper1[1]); inj_var=1)
-  fun_lower1 = gt.parameterize(lower1[1], lower1[2], zeros(lower1[1]); inj_var=1)
-  fun_upper2 = gt.parameterize(upper2[1], upper2[2], zeros(upper2[1]); inj_var=1)
-  fun_lower2 = gt.parameterize(lower2[1], lower2[2], zeros(lower2[1]); inj_var=1)
+  fun_upper1 = gt.parameterize(upper1[1], upper1[2], zeros(eltype(upper1[1]), size(upper1[1])); inj_var=1)
+  fun_lower1 = gt.parameterize(lower1[1], lower1[2], zeros(eltype(lower1[1]), size(lower1[1])); inj_var=1)
+  fun_upper2 = gt.parameterize(upper2[1], upper2[2], zeros(eltype(upper2[1]), size(upper2[1])); inj_var=1)
+  fun_lower2 = gt.parameterize(lower2[1], lower2[2], zeros(eltype(lower2[1]), size(lower2[1])); inj_var=1)
 
   # Upper surface sections
   aux1 = Int(floor(20/53*n_up))
@@ -76,7 +76,7 @@ function wing_example(; prompt=true, file_name="temp_wing00")
 
   # Dummy point data for good looking visuals
   pd1 = [i for i in 1:size(airfoil1)[1]]
-  pd2 = size(airfoil1)[1]+[i for i in 1:size(airfoil2)[1]]
+  pd2 = size(airfoil1)[1] .+ [i for i in 1:size(airfoil2)[1]]
 
   # Generates cells in VTK Legacy format
   out = gt.lines2vtkmulticells(airfoil1, airfoil2, sections;

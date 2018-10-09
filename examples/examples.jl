@@ -11,6 +11,7 @@
 module GeometricTools_examples
 
   # ------------ MODULE IMPORTS ------------------------------------------------
+  import Statistics
   using PyPlot
 
   const module_path,_ = splitdir(@__FILE__);      # Path to this module
