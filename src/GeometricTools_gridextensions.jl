@@ -26,7 +26,7 @@ Returns the value of node of coordinates `coor` (1-indexed) in the field
 'field_name'.
 """
 function get_fieldval(self::GridExtentions, field_name::String, coor::Array{Int64,1})
-println(self._ndivscells)
+
   if self.field[field_name]["entry_type"]=="node"
     return get_fieldval(self, field_name, sub2ind(self._ndivsnodes, coor...))
 
@@ -50,7 +50,6 @@ function get_fieldval(self::GridExtentions, field_name::String, i::Int64)
           " Available fields: $(keys(self.field))")
   end
 
-  println(i)
   return self.field[field_name]["field_data"][i]
 end
 
