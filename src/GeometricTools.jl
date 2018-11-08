@@ -11,7 +11,7 @@
 module GeometricTools
 
 # ------------ GENERIC MODULES -------------------------------------------------
-import PyCall
+# import PyCall
 # import PyPlot
 import Dierckx
 import Roots
@@ -19,7 +19,7 @@ import QuadGK
 
 # @PyCall.pyimport matplotlib.patches as patch
 
-plt = PyPlot
+# plt = PyPlot
 
 # ------------ GLOBAL VARIABLES ------------------------------------------------
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
