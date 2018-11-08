@@ -33,10 +33,10 @@ function simple_box(; prompt=true)
   c5 = [p2, p3, p7, p6] # Back
 
   # Formats the cells into vtk format
-  points, vtk_cells = vtk.lines2vtk([c0,c1,c2,c3,c4,c5])
+  points, vtk_cells = gt.lines2vtk([c0,c1,c2,c3,c4,c5])
 
   # Generates the vtk file
-  vtk.generateVTK(file_name1, points; cells=vtk_cells)
+  gt.generateVTK(file_name1, points; cells=vtk_cells)
 
   # Calls paraview
   run(`paraview --data="$(file_name1).vtk;"`)
@@ -52,7 +52,7 @@ function simple_box(; prompt=true)
   d5 = [2, 3, 7, 6]
 
   # Formats the cells into vtk format
-  points, vtk_cells, vtk_values = vtk.lines2vtk([c0,c1,c2,c3,c4,c5];
+  points, vtk_cells, vtk_values = gt.lines2vtk([c0,c1,c2,c3,c4,c5];
                                              values=[d0,d1,d2,d3,d4,d5])
 
   # Formats the data for generateVTK
@@ -64,7 +64,7 @@ function simple_box(; prompt=true)
                   )
        )
   # Generates the vtk file
-  vtk.generateVTK(file_name2, points;
+  gt.generateVTK(file_name2, points;
                cells=vtk_cells, point_data=data)
   # Calls paraview
   run(`paraview --data="$(file_name2).vtk;"`)
@@ -99,15 +99,15 @@ function parametric_mesh(; prompt=true)
   xlow, xhigh = 0, revs*2*pi      # Bounds of parametric edges
   n = 100                         # Number of cells
   r = 1.0                         # Expansion ratio
-  line1 = vtk.discretize(f1, xlow, xhigh, n, r)
-  line2 = vtk.discretize(f2, xlow, xhigh, n, r)
+  line1 = gt.discretize(f1, xlow, xhigh, n, r)
+  line2 = gt.discretize(f2, xlow, xhigh, n, r)
 
   # Dummy point data for good looking visuals
   pd1 = [i for i in 1:size(line1)[1]]
   pd2 = size(line1)[1]+[i for i in 1:size(line2)[1]]
 
   # Generates cells in VTK Legacy format
-  out = vtk.lines2vtkcells(line1, line2; point_data1=pd1, point_data2=pd2)
+  out = gt.lines2vtkcells(line1, line2; point_data1=pd1, point_data2=pd2)
   points, vtk_cells, point_data = out
 
 
@@ -122,7 +122,7 @@ function parametric_mesh(; prompt=true)
 
 
    # Generates the vtk file
-   vtk.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
+   gt.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
 
    # Calls paraview
    run(`paraview --data="$(file_name).vtk;"`)
@@ -157,8 +157,8 @@ function parametric_mesh2(; prompt=true)
   xlow, xhigh = 0, revs*2*pi      # Bounds of parametric edges
   n = 100                         # Number of cells
   r = 1.0                         # Expansion ratio
-  line1 = vtk.discretize(f1, xlow, xhigh, n, r)
-  line2 = vtk.discretize(f2, xlow, xhigh, n, r)
+  line1 = gt.discretize(f1, xlow, xhigh, n, r)
+  line2 = gt.discretize(f2, xlow, xhigh, n, r)
 
   # Discretize width between lines
   nwidth = 25                     # Number of rows between edges
@@ -171,7 +171,7 @@ function parametric_mesh2(; prompt=true)
   pd2 = size(line1)[1]+[i for i in 1:size(line2)[1]]
 
   # Generates cells in VTK Legacy format
-  out = vtk.lines2vtkmulticells(line1, line2, sections;
+  out = gt.lines2vtkmulticells(line1, line2, sections;
                                             point_data1=pd1, point_data2=pd2)
   points, vtk_cells, point_data = out
 
@@ -186,7 +186,7 @@ function parametric_mesh2(; prompt=true)
 
 
    # Generates the vtk file
-   vtk.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
+   gt.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
 
    # Calls paraview
    run(`paraview --data="$(file_name).vtk;"`)

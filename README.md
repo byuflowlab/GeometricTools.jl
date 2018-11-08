@@ -1,11 +1,20 @@
-# VTKtools
-Methods for the manipulation of geometric data and formatting into VTK format.
+# GeometricTools
+Methods for the manipulation of geometric data, grid generation, and visualization
+formatting.
 
 <img src="docs/img/helicoid01.png" alt="Pic here" style="width: 200px;"/>
 <img src="docs/img/blade00.png" alt="Pic here" style="width: 200px;"/>
 <img src="docs/img/blade02.png" alt="Pic here" style="width: 200px;"/>
 
 See `docs` for code documentation and `examples` for usage examples.
+
+# Installation
+
+Run the following line in a Julia terminal
+
+```
+Pkg.clone("git@github.com:byuflowlab/GeometricTools.jl.git")
+```
 
 # Dependencies
   * Paraview  : Not needed, but examples call Paraview for visualization of

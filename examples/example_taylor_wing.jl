@@ -74,12 +74,12 @@ function taylor_wing(; prompt=true, file_name="temp_taylor00")
       upper, lower = splitcontour(x, y)
 
       # Parameterize both sides independently
-      fun_upper = vtk.parameterize(upper[1], upper[2], zeros(upper[1]); inj_var=1)
-      fun_lower = vtk.parameterize(lower[1], lower[2], zeros(lower[1]); inj_var=1)
+      fun_upper = gt.parameterize(upper[1], upper[2], zeros(upper[1]); inj_var=1)
+      fun_lower = gt.parameterize(lower[1], lower[2], zeros(lower[1]); inj_var=1)
 
       # New discretization for both surfaces
-      upper_points = vtk.discretize(fun_upper, 0, 1, n_upper, r[1]; central=true)
-      lower_points = vtk.discretize(fun_lower, 0, 1, n_lower, r[1]; central=true)
+      upper_points = gt.discretize(fun_upper, 0, 1, n_upper, r[1]; central=true)
+      lower_points = gt.discretize(fun_lower, 0, 1, n_lower, r[1]; central=true)
 
       # Put both surfaces back together from TE over the top and from LE over the bottom.
       reverse!(upper_points)                           # Trailing edge over the top
@@ -101,9 +101,9 @@ function taylor_wing(; prompt=true, file_name="temp_taylor00")
       airfoil = Array{Float64, 1}[[new_x[j], new_y[j], 0] for j in 1:npoints]
 
       # Positions the airfoil along the blade in the right orientation
-      Oaxis = vtk.rotation_matrix(orien[i][1], orien[i][2], orien[i][3])
+      Oaxis = gt.rotation_matrix(orien[i][1], orien[i][2], orien[i][3])
       invOaxis = inv(Oaxis)
-      airfoil = vtk.countertransform(airfoil, invOaxis, Os[i])
+      airfoil = gt.countertransform(airfoil, invOaxis, Os[i])
 
       push!(crosssections, airfoil)
       push!(point_datas, [j for j in npoints*(i-1)+1:npoints*i])
@@ -114,7 +114,7 @@ function taylor_wing(; prompt=true, file_name="temp_taylor00")
   prev_time = time()
 
   # Generates cells in VTK Legacy format
-  out = vtk.multilines2vtkmulticells(crosssections, sections;
+  out = gt.multilines2vtkmulticells(crosssections, sections;
                                         point_datas=point_datas)
   points, vtk_cells, point_data = out
 
@@ -129,7 +129,7 @@ function taylor_wing(; prompt=true, file_name="temp_taylor00")
    )
 
   # Generates the vtk file
-  vtk.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
+  gt.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
 
   println("\t Runtime: $(round(time()-prev_time,1)) (s)")
 

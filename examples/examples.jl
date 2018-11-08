@@ -8,7 +8,7 @@
 #   * License   : MIT License
 =###############################################################################
 
-module VTKtools_examples
+module GeometricTools_examples
 
   # ------------ MODULE IMPORTS ------------------------------------------------
   using PyPlot
@@ -17,9 +17,9 @@ module VTKtools_examples
   const data_path = module_path*"/../docs/data/"       # Path to data folder
   push!(LOAD_PATH, joinpath(module_path,"../src/"))   # Point to VTKtools source
 
-  using VTKtools
-  # include("../src/VTKtools.jl")
-  vtk = VTKtools
+  using GeometricTools
+  # include("../src/GeometricTools.jl")
+  gt = GeometricTools
 
   # ------------ HEADERS -------------------------------------------------------
   for header_name in ["simple", "airfoil", "wing", "blade", "taylor_wing"]
