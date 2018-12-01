@@ -435,7 +435,7 @@ function surface_revolution(profile::Array{T,2}, thetaNDIVS::Int64;
     error("Invalid point dimensions in `profile`."*
           " Expected 2 dimensions, got $(size(profile,2))")
   elseif profile[1,:]==profile[end,:] && loop_dim==0
-    warn("Received a closed contour but parametric grid wasn't declared to"*
+    @warn("Received a closed contour but parametric grid wasn't declared to"*
           " loop, resulting in overlaping start/end points. Give it"*
           " `loop_dim=1` to fix that.")
   end
