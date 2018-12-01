@@ -317,7 +317,7 @@ function multilines2vtkmulticells(lines,
       # Adds point indexing of cells
       this_zero = cur_npoints - npoints*(i!=2) # Point index corresponding to
                                                # this cell's zero
-      vtk_cells = vcat(vtk_cells, [cells+this_zero for cells in this_vtk_cells])
+      vtk_cells = vcat(vtk_cells, [cells.+this_zero for cells in this_vtk_cells])
     end
   end
 
@@ -467,7 +467,7 @@ function generateVTK(filename::String, points;
     field_type = field["field_type"]
     data = field["field_data"]
     if size(data)[1]!=np
-      warn("Corrupted field $(field_name)! Field size != number of points.")
+      @warn("Corrupted field $(field_name)! Field size != number of points.")
     end
     if field_type=="scalar"
       write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
@@ -495,7 +495,7 @@ function generateVTK(filename::String, points;
       field_type = field["field_type"]
       data = field["field_data"]
       if size(data)[1]!=nc
-        warn("Corrupted field $(field_name)! Field size != number of cells.")
+        @warn("Corrupted field $(field_name)! Field size != number of cells.")
       end
       if field_type=="scalar"
         write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
