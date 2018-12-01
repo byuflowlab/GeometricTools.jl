@@ -336,11 +336,11 @@ Rotates and translates the vector V. Receives the i', j', k' unit vectors of an
 euclidean system with origin T, and returns ``V'=M(V-T)`` (In this version, the
 unit vectors have been organized as a matrix M=[i'; j'; k']).
 """
-function transform(V::Array{P,1}, M::Array{P,2}, T::Array{P,1}) where{P<:Real}
+function transform(V::AbstractArray{P,1}, M::AbstractArray{P,2}, T::AbstractArray{P,1}) where{P<:Real}
   return M*(V-T)
 end
 
-function transform(Vs::Array{Array{P,1},1}, M::Array{P,2}, T::Array{P,1}
+function transform(Vs::AbstractArray{Array{P,1},1}, M::AbstractArray{P,2}, T::AbstractArray{P,1}
                                                                 ) where{P<:Real}
   out = Array{Float64,1}[]
   for V in Vs
@@ -358,13 +358,13 @@ into the system (i', j', k') with origin T, and returns the original
 ``V=M^{-1}V' + T``. To ease repetitive computation, instead of giving the unit
 vectors, give the inverse of their matrix.
 """
-function countertransform(Vp::Array{P,1}, invM::Array{P,2}, T::Array{P,1}
+function countertransform(Vp::AbstractArray{P,1}, invM::AbstractArray{P,2}, T::Array{P,1}
                                                                 ) where{P<:Real}
   return invM*Vp + T
 end
 
-function countertransform(Vps::Array{Array{P,1},1}, invM::Array{P,2},
-                                                  T::Array{P,1}) where{P<:Real}
+function countertransform(Vps::AbstractArray{Array{P,1},1}, invM::AbstractArray{P,2},
+                                                  T::AbstractArray{P,1}) where{P<:Real}
   out = Array{Float64,1}[]
   for Vp in Vps
     push!(out, countertransform(Vp, invM, T))
