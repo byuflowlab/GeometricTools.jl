@@ -81,7 +81,7 @@ function add_field(grid::GridExtentions, field_name::String,
 
 
   if field_name in keys(grid.field) && raise_warn
-    warn("Overwritting field $field_name.")
+    @warn("Overwritting field $field_name.")
   end
 
   grid.field[field_name] = Dict("field_name" => field_name,
