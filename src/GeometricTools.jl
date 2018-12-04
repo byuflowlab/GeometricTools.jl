@@ -12,19 +12,19 @@ module GeometricTools
 
 # ------------ GENERIC MODULES -------------------------------------------------
 import Statistics
-import PyCall
-import PyPlot
+# import PyCall
+# import PyPlot
 import Dierckx
 import Roots
 import QuadGK
 
-const patch = PyCall.PyNULL()
+# const patch = PyCall.PyNULL()
+#
+# function __init__()
+#     copy!(patch, PyCall.pyimport_conda("matplotlib.patches", "patches"))
+# end
 
-function __init__()
-    copy!(patch, PyCall.pyimport_conda("matplotlib.patches", "patches"))
-end
-
-plt = PyPlot
+# plt = PyPlot
 
 # ------------ GLOBAL VARIABLES ------------------------------------------------
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
