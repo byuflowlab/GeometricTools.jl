@@ -128,11 +128,13 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
     le_x = LE_x[inds[2]]            # x/bscale LE position
     le_z = LE_z[inds[2]]            # z/bscale LE position
 
+    inds1 = (sec_NDIVS+1) - (inds[1]-1) # Here it flips the airfoil contour
+
     # Merges airfoil contours at this span position
     weight, sec_in, sec_out = calc_vals(span*sign(span)^symmetric, crosssections)
 
     # Point over airfoil contour
-    point = weight*sec_out[inds[1], :]+(1-weight)*sec_in[inds[1], :]
+    point = weight*sec_out[inds1, :]+(1-weight)*sec_in[inds1, :]
     point = vcat(point, 0)
 
     # Scales the airfoil contour by the normalized chord length
