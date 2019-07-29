@@ -200,3 +200,51 @@ function parametric_mesh2(; prompt=true)
    end
    if y=="y"; run(`rm -f $(file_name).vtk`); end;
 end
+
+
+
+"""
+  Example of using lines2vtk with generateVTK. Generates a simple 6-sided box.
+"""
+function simple_box2(; prompt=true)
+  file_name1 = "temp_vtk_example"
+  # Defining points
+  p0 = [0,0,0]
+  p1 = [1,0,0]
+  p2 = [1,1,0]
+  p3 = [0,1,0]
+  p4 = [0,0,1]
+  p5 = [1,0,1]
+  p6 = [1,1,1]
+  p7 = [0,1,1]
+
+  points = [p0, p1, p2, p3, p4, p5, p6 ,p7]
+
+  # Data for each point in each cell
+  c0 = [0, 3, 2, 1] # Data of cell 0
+  c1 = [4, 5, 6, 7]
+  c2 = [0, 4, 7, 3]
+  c3 = [1, 2, 6, 5]
+  c4 = [0, 1, 5, 4]
+  c5 = [2, 3, 7, 6]
+
+  cells = [c0, c1, c2, c3, c4, c5]
+
+  cell_index = [1,2,3,4,5,6]
+
+  cell_index_field = Dict(
+                            "field_name" => "CellInd",
+                            "field_type" => "scalar",
+                            "field_data" => cell_index
+                          )
+
+  cell_data = [cell_index_field]
+
+
+  # Generates the vtk file
+  gt.generateVTK(file_name1, points; cells=cells, cell_data=cell_data)
+
+  # Calls paraview
+  run(`paraview --data="$(file_name1).vtk;"`)
+
+end

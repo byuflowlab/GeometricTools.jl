@@ -337,8 +337,21 @@ Rotates and translates the vector V. Receives the i', j', k' unit vectors of an
 euclidean system with origin T, and returns ``V'=M(V-T)`` (In this version, the
 unit vectors have been organized as a matrix M=[i'; j'; k']).
 """
-function transform(V::Array{P,1}, M::Array{P,2}, T::Array{P,1}) where{P<:Real}
-  return M*(V-T)
+function transform(V::Array{T1,1}, M::Array{T2,2}, T::Array{T3,1}
+                                        ) where{T1<:Real, T2<:Real, T3<:Real}
+    return [
+                M[1,1]*(V[1]-T[1]) + M[1,2]*(V[2]-T[2]) + M[1,3]*(V[3]-T[3]),
+                M[2,1]*(V[1]-T[1]) + M[2,2]*(V[2]-T[2]) + M[2,3]*(V[3]-T[3]),
+                M[3,1]*(V[1]-T[1]) + M[3,2]*(V[2]-T[2]) + M[3,3]*(V[3]-T[3])
+            ]
+end
+
+function transform!(out::Array{T1, 1}, V::Array{T2,1},
+                            M::Array{T3,2}, T::Array{T4,1}
+                           ) where{T1<:Real, T2<:Real, T3<:Real, T4<:Real}
+    out[1] = M[1,1]*(V[1]-T[1]) + M[1,2]*(V[2]-T[2]) + M[1,3]*(V[3]-T[3])
+    out[2] = M[2,1]*(V[1]-T[1]) + M[2,2]*(V[2]-T[2]) + M[2,3]*(V[3]-T[3])
+    out[3] = M[3,1]*(V[1]-T[1]) + M[3,2]*(V[2]-T[2]) + M[3,3]*(V[3]-T[3])
 end
 
 function transform(Vs::Array{Array{P,1},1}, M::Array{P,2}, T::Array{P,1}
@@ -359,9 +372,21 @@ into the system (i', j', k') with origin T, and returns the original
 ``V=M^{-1}V' + T``. To ease repetitive computation, instead of giving the unit
 vectors, give the inverse of their matrix.
 """
-function countertransform(Vp::Array{P,1}, invM::Array{P,2}, T::Array{P,1}
-                                                                ) where{P<:Real}
-  return invM*Vp + T
+function countertransform(Vp::Array{T1,1}, invM::Array{T2,2}, T::Array{T3,1}
+                                        ) where{T1<:Real, T2<:Real, T3<:Real}
+    return [
+                invM[1,1]*Vp[1] + invM[1,2]*Vp[2] + invM[1,3]*Vp[3] + T[1],
+                invM[2,1]*Vp[1] + invM[2,2]*Vp[2] + invM[2,3]*Vp[3] + T[2],
+                invM[3,1]*Vp[1] + invM[3,2]*Vp[2] + invM[3,3]*Vp[3] + T[3]
+            ]
+end
+
+function countertransform!(out::Array{T1, 1}, Vp::Array{T2,1},
+                            invM::Array{T3,2}, T::Array{T4,1}
+                           ) where{T1<:Real, T2<:Real, T3<:Real, T4<:Real}
+   out[1] = invM[1,1]*Vp[1] + invM[1,2]*Vp[2] + invM[1,3]*Vp[3] + T[1]
+   out[2] = invM[2,1]*Vp[1] + invM[2,2]*Vp[2] + invM[2,3]*Vp[3] + T[2]
+   out[3] = invM[3,1]*Vp[1] + invM[3,2]*Vp[2] + invM[3,3]*Vp[3] + T[3]
 end
 
 function countertransform(Vps::Array{Array{P,1},1}, invM::Array{P,2},
