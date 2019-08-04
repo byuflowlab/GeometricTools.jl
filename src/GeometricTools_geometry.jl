@@ -570,7 +570,7 @@ julia> Xp = M*X
 ```
 """
 function rotation_matrix2(roll::Real, pitch::Real, yaw::Real)
-  return return rotation_matrix(yaw, pitch, roll)
+  return rotation_matrix(yaw, pitch, roll)
 end
 ##### END OF ALGEBRA ###########################################################
 

@@ -116,15 +116,34 @@ end
 Outputs a vtk file of this grid. See generateVTK for a descrition of optional
 arguments `args...`.
 """
-function save(grid::GridExtentions, filename::String; args...)
-  # Determins whether to add 0 to points for vtk file
+function save(grid::GridExtentions, filename::String; O=nothing, Oaxis=nothing,
+                                                                        args...)
+  # Determines whether to add 0 to points for vtk file
   if grid.dims<=3
     aux1 = zeros(3-grid.dims)
   else
     error("$(grid.dims)-dimensional grids can't be exported as VTKs!")
   end
 
-  points = [vcat(get_node(grid, i), aux1) for i in 1:grid.nnodes]
+  if O != nothing || Oaxis != nothing
+
+    if grid.dims != 3
+      error("Requested space transformation on grid of $(grid.dims) "*
+            "dimensions. There is not such implementation yet!")
+    end
+    O = O==nothing ? zeros(3) : O
+    Oaxis = Oaxis==nothing ? eye(3) : Oaxis
+    check_coord_sys(Oaxis)
+    invOaxis = Oaxis'
+
+    points = [countertransform(get_node(grid, i), invOaxis, O) for i in 1:grid.nnodes]
+
+  else
+
+    points = [vcat(get_node(grid, i), aux1) for i in 1:grid.nnodes]
+
+  end
+
   cells = [get_cell(grid, i)-1 for i in 1:grid.ncells]
 
   point_data = []

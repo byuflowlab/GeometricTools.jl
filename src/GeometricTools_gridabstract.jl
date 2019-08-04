@@ -107,5 +107,4 @@ function get_cellcenter(self::GridTypes, args...)
   return C
 end
 
-
 ##### END OF ABSTRACT GRID #####################################################

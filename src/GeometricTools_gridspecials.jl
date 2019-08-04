@@ -102,6 +102,61 @@ function get_cell(self::GridTriangleSurface, coor::Array{Int64,1})
   end
 end
 
+"""
+    `get_area(self::GridTriangleSurface, i_or_coor::Union{Int, Array{Int,1}})`
+Returns the area of the i-th cell.
+"""
+function get_area(self::GridTriangleSurface, i)
+    cell = get_cell(self, i)
+    A = get_node(self, cell[1])
+    B = get_node(self, cell[2])
+    C = get_node(self, cell[3])
+    return 0.5*norm(cross(B-A, C-A))
+end
+
+"""
+    `get_area(self::GridTriangleSurface)`
+Returns the area of the entire grid.
+"""
+function get_area(self::GridTriangleSurface)
+    A = 0
+    for i in 1:self.ncells
+        A += get_area(self, i)
+    end
+    return A
+end
+
+"""
+    `get_volume(self::GridTriangleSurface)`
+Returns the volume encloused by the grid using Green's theorem. See
+https://en.wikipedia.org/wiki/Green%27s_theorem#Area_Calculation
+"""
+function get_volume(self::GridTriangleSurface)
+    V = 0
+    for i in 1:self.ncells
+        A = get_area(self, i)
+        n = get_normal(self, i)
+        r = get_cellcenter(self, i)
+        V += 1/3 * dot(r, A*n)
+    end
+    return V
+end
+
+"""
+    `get_centroid(self::GridTriangleSurface)`
+Returns the centroid of the volume encloused by the grid using Green's theorem.
+See https://en.wikipedia.org/wiki/Green%27s_theorem#Area_Calculation
+"""
+function get_centroid(self::GridTriangleSurface)
+    R = zeros(self.dims)
+    for i in 1:self.ncells
+        A = get_area(self, i)
+        n = get_normal(self, i)
+        r = get_cellcenter(self, i)
+        R += 3/4*r * (1/3 * dot(r, A*n))
+    end
+    return R/get_volume(self)
+end
 
 """
   `get_normal(self::GridTriangleSurface, i::Int64)`
