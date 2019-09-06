@@ -9,9 +9,11 @@
 =###############################################################################
 
 
-
+"""
+Generate a structured PLOT3D mesh
+"""
 function generatePLOT3D(grid::GridExtentions, name::String; path="",
-                        num=nothing, ext="xyz")
+                        num=nothing, ext="xyz", trickwopwop=false)
 
     fname = joinpath(path, name*(num!=nothing ? ".$num" : "")*"."*ext)
     f = open(fname, "w")
@@ -20,11 +22,15 @@ function generatePLOT3D(grid::GridExtentions, name::String; path="",
     dims = grid.dims
 
     # imax jmax kmax
-    for (i,ndiv) in enumerate(ndivs)
-        print(f, i!=1 ? " " : "", ndiv)
-    end
-    for i in 1:3-dims
-        print(f, i!=1 ? " " : "", 1)
+    if trickwopwop
+        print(f, ndivs[1], " ", dims==3  ? ndivs[2]*ndivs[3] :  ndivs[2], " 1")
+    else
+        for (i,ndiv) in enumerate(ndivs)
+            print(f, i!=1 ? " " : "", ndiv)
+        end
+        for i in 1:3-dims
+            print(f, i!=1 ? " " : "", 1)
+        end
     end
     print(f, "\n")
 
