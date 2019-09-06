@@ -4,7 +4,7 @@ formatting.
 
 <img src="docs/img/helicoid01.png" alt="Pic here" style="width: 200px;"/>
 <img src="docs/img/blade00.png" alt="Pic here" style="width: 200px;"/>
-<img src="docs/img/blade02.png" alt="Pic here" style="width: 200px;"/>
+<img src="docs/img/vahana_fuselage02.png" alt="Pic here" style="width: 200px;"/>
 
 See `docs` for code documentation and `examples` for usage examples.
 
