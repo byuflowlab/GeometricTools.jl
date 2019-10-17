@@ -513,4 +513,5 @@ function generateVTK(filename::String, points;
     end
 
   close(f)
+  return filename*ext*";"
 end

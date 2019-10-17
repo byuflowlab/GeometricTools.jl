@@ -166,7 +166,7 @@ function save(grid::GridExtentions, filename::String; O=nothing, Oaxis=nothing,
 
   ctype = grid._override_vtkcelltype
 
-  generateVTK(filename, points; cells=cells,
+  return generateVTK(filename, points; cells=cells,
                       point_data=size(point_data,1)!=0 ? point_data : nothing,
                       cell_data=size(cell_data,1)!=0 ? cell_data : nothing,
                       _griddims=dims,
