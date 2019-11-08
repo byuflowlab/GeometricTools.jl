@@ -355,7 +355,8 @@ function generateVTK(filename::String, points;
                     num=nothing, time=nothing,
                     path="", comments="", _griddims::Int64=-1,
                     keep_points::Bool=false,
-                    override_cell_type::Int64=-1)
+                    override_cell_type::Int64=-1,
+                    rnd_d=32)
 
   aux = num!=nothing ? ".$num" : ""
   ext = aux*".vtk"
@@ -377,7 +378,7 @@ function generateVTK(filename::String, points;
   if time!=nothing
     line0 = "\nFIELD FieldData 1"
     line1 = "\nSIM_TIME 1 1 double"
-    line2 = "\n$(time)"
+    line2 = "\n$(round.(time, rnd_d))"
     write(f, line0*line1*line2)
   end
 
@@ -390,7 +391,8 @@ function generateVTK(filename::String, points;
   # POINTS
   write(f, string("\n", "POINTS ", np, " float"))
   for i in 1:np
-    print(f, "\n", points[i][1], " ", points[i][2], " ", points[i][3])
+    print(f, "\n", round.(points[i][1], rnd_d), " ",
+            round.(points[i][2], rnd_d), " ", round.(points[i][3], rnd_d))
   end
 
   # We do this to avoid outputting points as cells if outputting a Grid
@@ -472,12 +474,12 @@ function generateVTK(filename::String, points;
     if field_type=="scalar"
       write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
       for entry in data
-        print(f, "\n", entry)
+        print(f, "\n", round.(entry, rnd_d))
       end
     elseif field_type=="vector"
       write(f, "\n\nVECTORS $field_name float")
       for entry in data
-        print(f, "\n", entry[1], " ", entry[2], " ", entry[3])
+        print(f, "\n", round.(entry[1], rnd_d), " ", round.(entry[2], rnd_d), " ", round.(entry[3], rnd_d))
       end
     else
       error("Unknown field type $(field_type).")
@@ -500,12 +502,12 @@ function generateVTK(filename::String, points;
       if field_type=="scalar"
         write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
         for entry in data
-          print(f, "\n", entry)
+          print(f, "\n", round.(entry, rnd_d))
         end
       elseif field_type=="vector"
         write(f, "\n\nVECTORS $field_name float")
         for entry in data
-          print(f, "\n", entry[1], " ", entry[2], " ", entry[3])
+          print(f, "\n", round.(entry[1], rnd_d), " ", round.(entry[2], rnd_d), " ", round.(entry[3], rnd_d))
         end
       else
         error("Unknown field type $(field_type).")
