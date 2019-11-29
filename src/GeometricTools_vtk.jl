@@ -325,6 +325,168 @@ function multilines2vtkmulticells(lines,
 end
 
 """
+    `read_vtk(filename; path="")`
+
+Read the VTK legacy file `filename` in the directory `path`, and returns
+`(points, cells, cell_types, data)`.
+"""
+function read_vtk(filename::String; path::String="")
+
+    f = open(joinpath(path, filename), "r")
+
+    # -------------- HEADER ------------------------------------------
+    version = readline(f)             # VTK version
+    header = readline(f)              # Header
+    format = readline(f)              # VTK format
+
+    if format != "ASCII"
+        error("Only ASCII files currently supported; found $format.")
+    end
+
+    dataset_type = readline(f)[9:end] # Dataset type
+
+    if dataset_type != "UNSTRUCTURED_GRID"
+        error("Only UNSTRUCTURED_GRID dataset type current supported;"*
+                    " found $dataset_type.")
+    end
+
+    # -------------- POINTS -------------------------------------------
+    ln = readline(f)
+    if ln[1:6]!="POINTS"
+        error("Expected to find POINTS, found $(ln[1:7]).")
+    end
+
+    np = parse(Int, split(ln, " ")[2])  # Number of points
+    preal = split(ln, " ")[3]           # Point data real type
+
+    # Read points
+    points = zeros(3, np)
+    for pi in 1:np
+        points[:, pi] .= parse.(Float64, split(readline(f), " "))
+    end
+
+
+    # -------------- CELLS --------------------------------------------
+
+    # Skip empty lines
+    ln = skip_empty_lines(f)
+
+    if ln[1:5]!="CELLS"
+        error("Expected to find CELLS, found $(ln[1:7]).")
+    end
+
+    nc = parse(Int, split(ln, " ")[2])      # Number of cells
+    csize = parse(Int, split(ln, " ")[3])   # Cell list size
+
+    # Read cells
+    cells = Array{Int, 1}[]
+    for ci in 1:nc
+        ln = parse.(Int, split(readline(f), " "))
+        nn = ln[1]                     # Number of nodes
+        push!(cells, ln[2:end])
+    end
+
+
+    # Skip empty lines
+    ln = skip_empty_lines(f)
+
+    if ln[1:10]!="CELL_TYPES"
+        error("Expected to find CELL_TYPES, found $(ln[1:7]).")
+    end
+
+    nc2 = parse(Int, split(ln, " ")[2])      # Number of cells again
+    if nc != nc2
+        error("Found $nc2 cell types but there's $nc cells.")
+    end
+
+
+    # Read cells
+    cell_types = zeros(Int, nc2)
+    for ci in 1:nc2
+        cell_types[ci] = parse(Int, readline(f))    # Cell type
+    end
+
+    # -------------- DATA FIELDS ------------------------------------------
+    data = Dict()
+
+    # Skip empty lines
+    ln = skip_empty_lines(f)
+
+    while ln != nothing    # Iterate until end of file
+
+        dataparent = split(ln, " ")[1]  # Parent of this data
+        nd = parse(Int, split(ln, " ")[2])   # Number of data entries
+
+        if dataparent == "POINT_DATA"
+            if nd != np
+                error("Found $nd point data but there's $np points.")
+            end
+
+
+        elseif dataparent == "CELL_DATA"
+            if nd != nc
+                error("Found $nd cell data but there's $nc cells.")
+            end
+
+        else
+            error("Found invalid data parent $dataparent."*
+                   " Valid types are POINT_DATA and CELL_DATA.")
+        end
+
+        if dataparent in keys(data)
+            error("LOGIC ERROR: Found data parent $dataparent more than once!")
+        end
+
+        data[dataparent] = Dict()
+
+        ln = skip_empty_lines(f)
+
+        # Read datasets until next data parent is encountered
+        while ln != nothing && split(ln, " ")[1] in ["SCALARS", "VECTORS"]
+
+            datatype, name, dreal = split(ln, " ")
+
+            if name in keys(data[dataparent])
+                error("LOGIC ERROR: Found data name $name more than once!")
+            end
+
+            if datatype == "SCALARS"
+
+                entrytype, tag = split(readline(f), " ")
+
+                if entrytype != "LOOKUP_TABLE"
+                    error("Only LOOKUP_TABLE currently supported; found $entrytype.")
+                end
+
+                this_data = zeros(nd)
+                for i in 1:nd
+                     this_data[i] = parse(Float64, readline(f))
+                end
+            elseif datatype == "VECTORS"
+
+                this_data = zeros(3, nd)
+                for i in 1:nd
+                     this_data[:, i] = parse.(Float64, split(readline(f), " "))
+                end
+
+            else
+                error("Found invalid data type $datatype."*
+                       " Valid types are SCALARS and VECTORS.")
+            end
+
+            data[dataparent][name] = this_data
+
+            ln = skip_empty_lines(f)
+        end
+
+    end
+
+    close(f)
+
+    return points, cells, cell_types, data
+end
+
+"""
   `generateVTK(filename, points; lines, cells, point_data, path, num, time)`
 
 Generates a vtk file with the given data.
