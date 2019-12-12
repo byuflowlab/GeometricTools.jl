@@ -68,7 +68,8 @@ function get_cell(self::GridTriangleSurface, i::Int64)
   if i>self.ncells
     error("Requested invalid cell index $i; max is $(self.ncells).")
   end
-  return get_cell(self, collect(ind2sub(self._ndivscells, i)))
+  dims = Tuple(d != 0 ? d : 1 for d in self._ndivscells)
+  return get_cell(self, collect(ind2sub(dims, i)))
 end
 
 function get_cell(self::GridTriangleSurface, coor::Array{Int64,1})
