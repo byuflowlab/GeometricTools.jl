@@ -56,6 +56,7 @@ function addgrid(self::MultiGrid, grid_name::String, grid::T) where {T<:Abstract
 
   self.nnodes += grid.nnodes
   self.ncells += grid.ncells
+  self.ngrids += 1
 
   push!(self.grids, grid)
   push!(self.grid_names, grid_name)
