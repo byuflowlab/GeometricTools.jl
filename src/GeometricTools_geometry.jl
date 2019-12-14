@@ -238,7 +238,7 @@ variable must be given in increasing order.
 
 See Parametrization section in documentation for more details.
 """
-function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false,
+function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false, atol=0,
                                             kspl="automatic", bc="extrapolate")
   # ERROR CASES
   if size(x)!=size(y)!=size(z)  # Invalid contour
@@ -275,7 +275,7 @@ function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false,
   dfdx2(x) = Dierckx.derivative(spl[2], x)    # Derivative of f respect x2
   fun(x) = sqrt.(1+(dfdx1(x)).^2+(dfdx2(x)).^2)   # Integrand
                                                   # Integral between xmin and x
-  fun_s(this_x) = QuadGK.quadgk(fun, inj[1], this_x)[1]
+  fun_s(this_x) = QuadGK.quadgk(fun, inj[1], this_x; atol=atol)[1]
 
   # Defines the normalized path function
   stot = fun_s(inj[end])      # Total length of the path
