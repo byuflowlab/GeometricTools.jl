@@ -330,7 +330,7 @@ end
 Read the VTK legacy file `filename` in the directory `path`, and returns
 `(points, cells, cell_types, data)`.
 """
-function read_vtk(filename::String; path::String="")
+function read_vtk(filename::String; path::String="", fielddata=Dict())
 
     f = open(joinpath(path, filename), "r")
 
@@ -352,6 +352,41 @@ function read_vtk(filename::String; path::String="")
 
     # -------------- POINTS -------------------------------------------
     ln = readline(f)
+
+    # Read fields
+    while ln[1:5]=="FIELD"      # Iterate over fields
+        dataname = split(ln, " ")[2]    # Data name
+        narr = parse(Int, split(ln, " ")[3])  # Number of arrays
+
+        fielddata[dataname] = Dict{String, Array{Float64}}()
+
+        for ai in 1:narr    # Read arrays
+            ln = readline(f)
+            splt = split(ln, " ")
+
+            arrayname = splt[1]         # Array name
+            nc = parse(Int, splt[2])    # Number of components
+            nt = parse(Int, splt[3])    # Number of tuples
+            datatype = splt[4]          # Data type
+
+            if datatype!="double"
+                warn("Reading data type $datatype as Float64!")
+            end
+
+            fielddata[dataname][arrayname] = zeros(Float64, nt, nc)
+
+            for ti in 1:nt      # Read tuples
+                comps = parse.(Float64, split(readline(f), " ")) # Read components
+                if length(comps)!=nc
+                    error("LOGIC ERROR! Expected $nc components, got $(length(comps)).")
+                end
+                fielddata[dataname][arrayname][ti, :] = comps
+            end
+        end
+
+        ln = readline(f)
+    end
+
     if ln[1:6]!="POINTS"
         error("Expected to find POINTS, found $(ln[1:7]).")
     end
