@@ -125,7 +125,9 @@ function get_cell(self::Grid, i::Int64)
   elseif i<1
     error("Invalid index $i (it must be greater than 0).")
   end
-  return get_cell(self, collect(ind2sub(self._ndivscells, i)))
+  dims = Tuple(d != 0 ? d : 1 for d in self._ndivscells)
+  # return get_cell(self, collect(ind2sub(self._ndivscells, i)))
+  return get_cell(self, collect(ind2sub(dims, i)))
 end
 
 """

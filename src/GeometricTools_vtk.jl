@@ -325,6 +325,203 @@ function multilines2vtkmulticells(lines,
 end
 
 """
+    `read_vtk(filename; path="")`
+
+Read the VTK legacy file `filename` in the directory `path`, and returns
+`(points, cells, cell_types, data)`.
+"""
+function read_vtk(filename::String; path::String="", fielddata=Dict())
+
+    f = open(joinpath(path, filename), "r")
+
+    # -------------- HEADER ------------------------------------------
+    version = readline(f)             # VTK version
+    header = readline(f)              # Header
+    format = readline(f)              # VTK format
+
+    if format != "ASCII"
+        error("Only ASCII files currently supported; found $format.")
+    end
+
+    dataset_type = readline(f)[9:end] # Dataset type
+
+    if dataset_type != "UNSTRUCTURED_GRID"
+        error("Only UNSTRUCTURED_GRID dataset type current supported;"*
+                    " found $dataset_type.")
+    end
+
+    # -------------- POINTS -------------------------------------------
+    ln = readline(f)
+
+    # Read fields
+    while ln[1:5]=="FIELD"      # Iterate over fields
+        dataname = split(ln, " ")[2]    # Data name
+        narr = parse(Int, split(ln, " ")[3])  # Number of arrays
+
+        fielddata[dataname] = Dict{String, Array{Float64}}()
+
+        for ai in 1:narr    # Read arrays
+            ln = readline(f)
+            splt = split(ln, " ")
+
+            arrayname = splt[1]         # Array name
+            nc = parse(Int, splt[2])    # Number of components
+            nt = parse(Int, splt[3])    # Number of tuples
+            datatype = splt[4]          # Data type
+
+            if datatype!="double"
+                warn("Reading data type $datatype as Float64!")
+            end
+
+            fielddata[dataname][arrayname] = zeros(Float64, nt, nc)
+
+            for ti in 1:nt      # Read tuples
+                comps = parse.(Float64, split(readline(f), " ")) # Read components
+                if length(comps)!=nc
+                    error("LOGIC ERROR! Expected $nc components, got $(length(comps)).")
+                end
+                fielddata[dataname][arrayname][ti, :] = comps
+            end
+        end
+
+        ln = readline(f)
+    end
+
+    if ln[1:6]!="POINTS"
+        error("Expected to find POINTS, found $(ln[1:7]).")
+    end
+
+    np = parse(Int, split(ln, " ")[2])  # Number of points
+    preal = split(ln, " ")[3]           # Point data real type
+
+    # Read points
+    points = zeros(3, np)
+    for pi in 1:np
+        points[:, pi] .= parse.(Float64, split(readline(f), " "))
+    end
+
+
+    # -------------- CELLS --------------------------------------------
+
+    # Skip empty lines
+    ln = skip_empty_lines(f)
+
+    if ln[1:5]!="CELLS"
+        error("Expected to find CELLS, found $(ln[1:7]).")
+    end
+
+    nc = parse(Int, split(ln, " ")[2])      # Number of cells
+    csize = parse(Int, split(ln, " ")[3])   # Cell list size
+
+    # Read cells
+    cells = Array{Int, 1}[]
+    for ci in 1:nc
+        ln = parse.(Int, split(readline(f), " "))
+        nn = ln[1]                     # Number of nodes
+        push!(cells, ln[2:end])
+    end
+
+
+    # Skip empty lines
+    ln = skip_empty_lines(f)
+
+    if ln[1:10]!="CELL_TYPES"
+        error("Expected to find CELL_TYPES, found $(ln[1:7]).")
+    end
+
+    nc2 = parse(Int, split(ln, " ")[2])      # Number of cells again
+    if nc != nc2
+        error("Found $nc2 cell types but there's $nc cells.")
+    end
+
+
+    # Read cells
+    cell_types = zeros(Int, nc2)
+    for ci in 1:nc2
+        cell_types[ci] = parse(Int, readline(f))    # Cell type
+    end
+
+    # -------------- DATA FIELDS ------------------------------------------
+    data = Dict()
+
+    # Skip empty lines
+    ln = skip_empty_lines(f)
+
+    while ln != nothing    # Iterate until end of file
+
+        dataparent = split(ln, " ")[1]  # Parent of this data
+        nd = parse(Int, split(ln, " ")[2])   # Number of data entries
+
+        if dataparent == "POINT_DATA"
+            if nd != np
+                error("Found $nd point data but there's $np points.")
+            end
+
+
+        elseif dataparent == "CELL_DATA"
+            if nd != nc
+                error("Found $nd cell data but there's $nc cells.")
+            end
+
+        else
+            error("Found invalid data parent $dataparent."*
+                   " Valid types are POINT_DATA and CELL_DATA.")
+        end
+
+        if dataparent in keys(data)
+            error("LOGIC ERROR: Found data parent $dataparent more than once!")
+        end
+
+        data[dataparent] = Dict()
+
+        ln = skip_empty_lines(f)
+
+        # Read datasets until next data parent is encountered
+        while ln != nothing && split(ln, " ")[1] in ["SCALARS", "VECTORS"]
+
+            datatype, name, dreal = split(ln, " ")
+
+            if name in keys(data[dataparent])
+                error("LOGIC ERROR: Found data name $name more than once!")
+            end
+
+            if datatype == "SCALARS"
+
+                entrytype, tag = split(readline(f), " ")
+
+                if entrytype != "LOOKUP_TABLE"
+                    error("Only LOOKUP_TABLE currently supported; found $entrytype.")
+                end
+
+                this_data = zeros(nd)
+                for i in 1:nd
+                     this_data[i] = parse(Float64, readline(f))
+                end
+            elseif datatype == "VECTORS"
+
+                this_data = zeros(3, nd)
+                for i in 1:nd
+                     this_data[:, i] = parse.(Float64, split(readline(f), " "))
+                end
+
+            else
+                error("Found invalid data type $datatype."*
+                       " Valid types are SCALARS and VECTORS.")
+            end
+
+            data[dataparent][name] = this_data
+
+            ln = skip_empty_lines(f)
+        end
+
+    end
+
+    close(f)
+
+    return points, cells, cell_types, data
+end
+
+"""
   `generateVTK(filename, points; lines, cells, point_data, path, num, time)`
 
 Generates a vtk file with the given data.
@@ -355,7 +552,8 @@ function generateVTK(filename::String, points;
                     num=nothing, time=nothing,
                     path="", comments="", _griddims::Int64=-1,
                     keep_points::Bool=false,
-                    override_cell_type::Int64=-1)
+                    override_cell_type::Int64=-1,
+                    rnd_d=32)
 
   aux = num!=nothing ? ".$num" : ""
   ext = aux*".vtk"
@@ -377,7 +575,7 @@ function generateVTK(filename::String, points;
   if time!=nothing
     line0 = "\nFIELD FieldData 1"
     line1 = "\nSIM_TIME 1 1 double"
-    line2 = "\n$(time)"
+    line2 = "\n$(round.(time, rnd_d))"
     write(f, line0*line1*line2)
   end
 
@@ -390,7 +588,8 @@ function generateVTK(filename::String, points;
   # POINTS
   write(f, string("\n", "POINTS ", np, " float"))
   for i in 1:np
-    print(f, "\n", points[i][1], " ", points[i][2], " ", points[i][3])
+    print(f, "\n", round.(points[i][1], rnd_d), " ",
+            round.(points[i][2], rnd_d), " ", round.(points[i][3], rnd_d))
   end
 
   # We do this to avoid outputting points as cells if outputting a Grid
@@ -472,12 +671,12 @@ function generateVTK(filename::String, points;
     if field_type=="scalar"
       write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
       for entry in data
-        print(f, "\n", entry)
+        print(f, "\n", round.(entry, rnd_d))
       end
     elseif field_type=="vector"
       write(f, "\n\nVECTORS $field_name float")
       for entry in data
-        print(f, "\n", entry[1], " ", entry[2], " ", entry[3])
+        print(f, "\n", round.(entry[1], rnd_d), " ", round.(entry[2], rnd_d), " ", round.(entry[3], rnd_d))
       end
     else
       error("Unknown field type $(field_type).")
@@ -500,12 +699,12 @@ function generateVTK(filename::String, points;
       if field_type=="scalar"
         write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
         for entry in data
-          print(f, "\n", entry)
+          print(f, "\n", round.(entry, rnd_d))
         end
       elseif field_type=="vector"
         write(f, "\n\nVECTORS $field_name float")
         for entry in data
-          print(f, "\n", entry[1], " ", entry[2], " ", entry[3])
+          print(f, "\n", round.(entry[1], rnd_d), " ", round.(entry[2], rnd_d), " ", round.(entry[3], rnd_d))
         end
       else
         error("Unknown field type $(field_type).")
@@ -513,4 +712,5 @@ function generateVTK(filename::String, points;
     end
 
   close(f)
+  return filename*ext*";"
 end

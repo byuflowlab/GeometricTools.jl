@@ -33,7 +33,8 @@ const multidisctype = Array{Tuple{Float64,Int64,Float64,Bool},1}
 
 # ------------ HEADERS ---------------------------------------------------------
 for header_name in ["vtk", "geometry", "misc", "gridabstract", "airfoil",
-                    "surfacing", "DEPRECATED"]
+                    "surfacing", "plot3d", "vtk_shapes", "conics",
+                    "DEPRECATED"]
   include("GeometricTools_"*header_name*".jl")
 end
 

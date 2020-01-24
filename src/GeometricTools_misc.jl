@@ -25,14 +25,37 @@ function create_path(save_path::String, prompt::Bool)
         inp1 = readline()[1:end]
       end
       if inp1=="y"
-        run(`rm $save_path -rf`)
+        run(`rm -rf $save_path`)
         println("\n")
       else
         return
       end
     else
-      run(`rm $save_path -rf`)
+      run(`rm -rf $save_path`)
     end
   end
   run(`mkdir $save_path`)
+end
+
+"""
+    `skip_empty_lines(f)`
+
+Returns the next non-empty line if stream `f`. Returns `nothing` if it reaches
+end of file.
+"""
+function skip_empty_lines(f)
+
+    # Return nothing if end of file
+    if eof(f)
+        return nothing
+    end
+
+    ln = readline(f)
+
+    if length(ln) != 0
+        return ln
+    else
+        return skip_empty_lines(f)
+    end
+
 end

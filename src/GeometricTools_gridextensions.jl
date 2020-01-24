@@ -26,7 +26,7 @@ Returns the value of node of coordinates `coor` (1-indexed) in the field
 'field_name'.
 """
 function get_fieldval(self::GridExtentions, field_name::String, coor::Array{Int64,1})
-println(self._ndivscells)
+
   if self.field[field_name]["entry_type"]=="node"
     return get_fieldval(self, field_name, sub2ind(self._ndivsnodes, coor...))
 
@@ -50,7 +50,6 @@ function get_fieldval(self::GridExtentions, field_name::String, i::Int64)
           " Available fields: $(keys(self.field))")
   end
 
-  println(i)
   return self.field[field_name]["field_data"][i]
 end
 
@@ -117,15 +116,34 @@ end
 Outputs a vtk file of this grid. See generateVTK for a descrition of optional
 arguments `args...`.
 """
-function save(grid::GridExtentions, filename::String; args...)
-  # Determins whether to add 0 to points for vtk file
+function save(grid::GridExtentions, filename::String; O=nothing, Oaxis=nothing,
+                                                                        args...)
+  # Determines whether to add 0 to points for vtk file
   if grid.dims<=3
     aux1 = zeros(Float64, 3-grid.dims)
   else
     error("$(grid.dims)-dimensional grids can't be exported as VTKs!")
   end
 
-  points = [vcat(get_node(grid, i), aux1) for i in 1:grid.nnodes]
+  if O != nothing || Oaxis != nothing
+
+    if grid.dims != 3
+      error("Requested space transformation on grid of $(grid.dims) "*
+            "dimensions. There is not such implementation yet!")
+    end
+    O = O==nothing ? zeros(3) : O
+    Oaxis = Oaxis==nothing ? eye(3) : Oaxis
+    check_coord_sys(Oaxis)
+    invOaxis = Oaxis'
+
+    points = [countertransform(get_node(grid, i), invOaxis, O) for i in 1:grid.nnodes]
+
+  else
+
+    points = [vcat(get_node(grid, i), aux1) for i in 1:grid.nnodes]
+
+  end
+
   cells = [get_cell(grid, i)-1 for i in 1:grid.ncells]
 
   point_data = []
@@ -148,7 +166,7 @@ function save(grid::GridExtentions, filename::String; args...)
 
   ctype = grid._override_vtkcelltype
 
-  generateVTK(filename, points; cells=cells,
+  return generateVTK(filename, points; cells=cells,
                       point_data=size(point_data,1)!=0 ? point_data : nothing,
                       cell_data=size(cell_data,1)!=0 ? cell_data : nothing,
                       _griddims=dims,

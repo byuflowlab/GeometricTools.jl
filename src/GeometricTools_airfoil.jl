@@ -106,3 +106,76 @@ function rediscretize_airfoil(x::Array{T,1}, y::Array{T,1},
 
   return new_x, new_y
 end
+
+"""
+    Returns the y-coordinates of upper and lower surfaces of a 4-digit NACA
+    airfoil. x input and y outputs are normalized by the chord.
+
+    * First digit describing maximum camber as percentage of the chord.
+    * Second digit describing the distance of maximum camber from the airfoil
+            leading edge in tens of percents of the chord.
+    * Last two digits describing maximum thickness of the airfoil as percent of
+            the chord.
+
+    https://en.wikipedia.org/wiki/NACA_airfoil#Four-digit_series
+"""
+function naca4digits(d1::Int64, d2::Int64, d34::Int64, xs::Array{Float64, 1})
+
+    m = d1/100
+    p = d2/10
+    t = d34/100
+
+    yt = zeros(xs)
+
+    for (i,x) in enumerate(xs)
+        yt[i] = 5*t * (0.2969*sqrt(x) - 0.126*x - 0.3516*x^2 + 0.2843*x^3
+                        - 0.1015*x^4)
+    end
+
+    if d1==0 && d2==0
+        return xs, xs, yt, -yt
+
+    elseif d1==0 || d2==0
+        error("Invalid airfoil definition d1=$d1, d2=$d2")
+
+    else
+
+        yc = zeros(xs)
+        thetas = zeros(xs)
+
+        for (i,x) in enumerate(xs)
+            if x<0 || x>1
+                error("Got invalid x-coordinate: $x")
+            elseif x <= p
+                yc[i] = m/p^2 * (2*p*x - x^2)
+                thetas[i] = atan(2*m/p^2 * (p-x))
+            else
+                yc[i] = m/(1-p)^2 * ((1-2*p) + 2*p*x - x^2)
+                thetas[i] = atan(2*m/(1-p)^2 * (p-x))
+            end
+        end
+
+        xU = xs .- yt.*sin.(thetas)
+        xL = xs .+ yt.*sin.(thetas)
+        yU = yc .+ yt.*cos.(thetas)
+        yL = yc .- yt.*cos.(thetas)
+
+        return xU, xL, yU, yL
+    end
+end
+
+
+function naca4digits(d1::Int64, d2::Int64, d34::Int64, n::Int64, r::Float64;
+                                                                    off::Real=0)
+    xs = [float(x) for x in discretize(x->x, off, 1, n, r; central=true)]
+    xs[end] = 1.0
+    xU, xL, yU, yL = naca4digits(d1, d2, d34, xs)
+    xU[end] = 1.0
+    xL[end] = 1.0
+
+    if off==0
+        return vcat(reverse(xU), xL[2:end]), vcat(reverse(yU), yL[2:end])
+    else
+        return vcat(reverse(xU), xL), vcat(reverse(yU), yL)
+    end
+end

@@ -58,7 +58,8 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
                         twists::Array{T,1},
                         LE_x::Array{T,1}, LE_z::Array{T,1};
                         # MORE GEOMETRIC OPTIONS
-                        tilt_z=nothing, symmetric::Bool=false,
+                        tilt_z=nothing, tilt_y=nothing,
+                        symmetric::Bool=false,
                         loop_dim::Int64=1,
                         # OUTPUT OPTIONS
                         save_path=nothing, paraview::Bool=true,
@@ -76,8 +77,8 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
   end
 
   for (nam,val) in [("chords",chords), ("twists",twists), ("LE_x",LE_x),
-                    ("LE_z",LE_z), ("tilt_z",tilt_z)]
-    if nam=="tilt_z" && tilt_z==nothing
+                    ("LE_z",LE_z), ("tilt_z",tilt_z), ("tilt_y",tilt_y)]
+    if (nam=="tilt_z" && tilt_z==nothing) || (nam=="tilt_y" && tilt_y==nothing)
       nothing
     else
       if size(b_pos,1)!=size(val,1)
@@ -128,11 +129,13 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
     le_x = LE_x[inds[2]]            # x/bscale LE position
     le_z = LE_z[inds[2]]            # z/bscale LE position
 
+    inds1 = (sec_NDIVS+1) - (inds[1]-1) # Here it flips the airfoil contour
+
     # Merges airfoil contours at this span position
     weight, sec_in, sec_out = calc_vals(span*sign(span)^symmetric, crosssections)
 
     # Point over airfoil contour
-    point = weight*sec_out[inds[1], :]+(1-weight)*sec_in[inds[1], :]
+    point = weight*sec_out[inds1, :]+(1-weight)*sec_in[inds1, :]
     point = vcat(point, 0)
 
     # Scales the airfoil contour by the normalized chord length
@@ -140,7 +143,8 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
 
     # Applies twist to the airfoil point
     tlt_z = tilt_z!=nothing ?  tilt_z[inds[2]] : 0.0
-    point = rotation_matrix(-twist, -tlt_z, 0)*point
+    tlt_y = tilt_y!=nothing ?  tilt_y[inds[2]] : 0.0
+    point = rotation_matrix(-twist, -tlt_z, -tlt_y)*point
 
     # Places the point relative to LE and scales by span scale
     point = [point[1]+le_x, span+point[3], point[2]+le_z]*bscale

@@ -238,7 +238,7 @@ variable must be given in increasing order.
 
 See Parametrization section in documentation for more details.
 """
-function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false,
+function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false, atol=0,
                                             kspl="automatic", bc="extrapolate")
   # ERROR CASES
   if size(x)!=size(y)!=size(z)  # Invalid contour
@@ -264,6 +264,7 @@ function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false,
   # s=0.0001                 # Spline smoothness
   k = kspl=="automatic" ? min(size(x)[1]-1, 5) : kspl  # Spline order
   spl = []                   # Spline of each variable respect the injective
+
   for var in dep
     this_spl = Dierckx.Spline1D(inj, var; k=k, bc=bc, s=s)
     push!(spl, this_spl)
@@ -274,7 +275,7 @@ function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false,
   dfdx2(x) = Dierckx.derivative(spl[2], x)    # Derivative of f respect x2
   fun(x) = sqrt.(1 .+ (dfdx1(x)).^2 .+ (dfdx2(x)).^2)   # Integrand
                                                   # Integral between xmin and x
-  fun_s(this_x) = QuadGK.quadgk(fun, inj[1], this_x)[1]
+  fun_s(this_x) = QuadGK.quadgk(fun, inj[1], this_x; atol=atol)[1]
 
   # Defines the normalized path function
   stot = fun_s(inj[end])      # Total length of the path
@@ -336,8 +337,21 @@ Rotates and translates the vector V. Receives the i', j', k' unit vectors of an
 euclidean system with origin T, and returns ``V'=M(V-T)`` (In this version, the
 unit vectors have been organized as a matrix M=[i'; j'; k']).
 """
-function transform(V::AbstractArray{P,1}, M::AbstractArray{P,2}, T::AbstractArray{P,1}) where{P<:Real}
-  return M*(V-T)
+function transform(V::Array{T1,1}, M::Array{T2,2}, T::Array{T3,1}
+                                        ) where{T1<:Real, T2<:Real, T3<:Real}
+    return [
+                M[1,1]*(V[1]-T[1]) + M[1,2]*(V[2]-T[2]) + M[1,3]*(V[3]-T[3]),
+                M[2,1]*(V[1]-T[1]) + M[2,2]*(V[2]-T[2]) + M[2,3]*(V[3]-T[3]),
+                M[3,1]*(V[1]-T[1]) + M[3,2]*(V[2]-T[2]) + M[3,3]*(V[3]-T[3])
+            ]
+end
+
+function transform!(out::Array{T1, 1}, V::Array{T2,1},
+                            M::Array{T3,2}, T::Array{T4,1}
+                           ) where{T1<:Real, T2<:Real, T3<:Real, T4<:Real}
+    out[1] = M[1,1]*(V[1]-T[1]) + M[1,2]*(V[2]-T[2]) + M[1,3]*(V[3]-T[3])
+    out[2] = M[2,1]*(V[1]-T[1]) + M[2,2]*(V[2]-T[2]) + M[2,3]*(V[3]-T[3])
+    out[3] = M[3,1]*(V[1]-T[1]) + M[3,2]*(V[2]-T[2]) + M[3,3]*(V[3]-T[3])
 end
 
 function transform(Vs::AbstractArray{Array{P,1},1}, M::AbstractArray{P,2}, T::AbstractArray{P,1}
@@ -358,9 +372,21 @@ into the system (i', j', k') with origin T, and returns the original
 ``V=M^{-1}V' + T``. To ease repetitive computation, instead of giving the unit
 vectors, give the inverse of their matrix.
 """
-function countertransform(Vp::AbstractArray{P,1}, invM::AbstractArray{P,2}, T::Array{P,1}
-                                                                ) where{P<:Real}
-  return invM*Vp + T
+function countertransform(Vp::Array{T1,1}, invM::Array{T2,2}, T::Array{T3,1}
+                                        ) where{T1<:Real, T2<:Real, T3<:Real}
+    return [
+                invM[1,1]*Vp[1] + invM[1,2]*Vp[2] + invM[1,3]*Vp[3] + T[1],
+                invM[2,1]*Vp[1] + invM[2,2]*Vp[2] + invM[2,3]*Vp[3] + T[2],
+                invM[3,1]*Vp[1] + invM[3,2]*Vp[2] + invM[3,3]*Vp[3] + T[3]
+            ]
+end
+
+function countertransform!(out::Array{T1, 1}, Vp::Array{T2,1},
+                            invM::Array{T3,2}, T::Array{T4,1}
+                           ) where{T1<:Real, T2<:Real, T3<:Real, T4<:Real}
+   out[1] = invM[1,1]*Vp[1] + invM[1,2]*Vp[2] + invM[1,3]*Vp[3] + T[1]
+   out[2] = invM[2,1]*Vp[1] + invM[2,2]*Vp[2] + invM[2,3]*Vp[3] + T[2]
+   out[3] = invM[3,1]*Vp[1] + invM[3,2]*Vp[2] + invM[3,3]*Vp[3] + T[3]
 end
 
 function countertransform(Vps::AbstractArray{Array{P,1},1}, invM::AbstractArray{P,2},
@@ -544,7 +570,7 @@ julia> Xp = M*X
 ```
 """
 function rotation_matrix2(roll::Real, pitch::Real, yaw::Real)
-  return return rotation_matrix(yaw, pitch, roll)
+  return rotation_matrix(yaw, pitch, roll)
 end
 ##### END OF ALGEBRA ###########################################################
 
