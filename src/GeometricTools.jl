@@ -11,6 +11,7 @@
 module GeometricTools
 
 # ------------ GENERIC MODULES -------------------------------------------------
+using Printf
 import Statistics
 # import PyCall
 # import PyPlot

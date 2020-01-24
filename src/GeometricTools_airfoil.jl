@@ -42,36 +42,36 @@ function readcontour(file_name; header_len=1, delim=" ", path="",
   end
 end
 
-# "Plots the contour of an airfoil given in x,y"
-# function plot_airfoil(x::Array{Float64,1}, y::Array{Float64,1};
-#                       label="Airfoil", style="-k", figfactor=1.0,
-#                       title_str="Airfoil geometry", legend_loc="best",
-#                       side_legend=(1.15, 1.1), zoom_factor=1.0, alpha=1.0)
-#   # Sizes the figure
-#   figsize = [7*1.5,5*0.5]*figfactor
-#   xmin, xmax = [-0.05, 1.05]*zoom_factor
-#   yrange = (xmax-xmin)/figsize[1] * figsize[2]
-#   ymin, ymax = -yrange/2, yrange/2
-#   fig1 = plt.figure(title_str, figsize=(figsize[1], figsize[2]))
-#   plt.xlim([xmin, xmax])
-#   plt.ylim([ymin, ymax])
-#
-#   if label!="Airfoil"
-#     plt.plot(x,y, style, label=label, alpha=alpha)
-#     if side_legend!=nothing
-#       plt.legend(bbox_to_anchor=side_legend)
-#     else
-#       plt.legend(loc="best")
-#     end
-#   else
-#     plt.plot(x,y, style)
-#   end
-#   plt.xlabel("x")
-#   plt.ylabel("y")
-#   plt.grid(true, color="0.8", linestyle="--")
-#   plt.title(title_str)
-#
-# end
+"Plots the contour of an airfoil given in x,y"
+function plot_airfoil(x::Array{Float64,1}, y::Array{Float64,1};
+                      label="Airfoil", style="-k", figfactor=1.0,
+                      title_str="Airfoil geometry", legend_loc="best",
+                      side_legend=(1.15, 1.1), zoom_factor=1.0, alpha=1.0)
+  # Sizes the figure
+  figsize = [7*1.5,5*0.5]*figfactor
+  xmin, xmax = [-0.05, 1.05]*zoom_factor
+  yrange = (xmax-xmin)/figsize[1] * figsize[2]
+  ymin, ymax = -yrange/2, yrange/2
+  fig1 = plt.figure(title_str, figsize=(figsize[1], figsize[2]))
+  plt.xlim([xmin, xmax])
+  plt.ylim([ymin, ymax])
+
+  if label!="Airfoil"
+    plt.plot(x,y, style, label=label, alpha=alpha)
+    if side_legend!=nothing
+      plt.legend(bbox_to_anchor=side_legend)
+    else
+      plt.legend(loc="best")
+    end
+  else
+    plt.plot(x,y, style)
+  end
+  plt.xlabel("x")
+  plt.ylabel("y")
+  plt.grid(true, color="0.8", linestyle="--")
+  plt.title(title_str)
+
+end
 
 function rediscretize_airfoil(x::Array{T,1}, y::Array{T,1},
                               upperNDIVS::multidisctype,

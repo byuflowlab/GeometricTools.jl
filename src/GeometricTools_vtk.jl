@@ -575,7 +575,7 @@ function generateVTK(filename::String, points;
   if time!=nothing
     line0 = "\nFIELD FieldData 1"
     line1 = "\nSIM_TIME 1 1 double"
-    line2 = "\n$(round.(time, rnd_d))"
+    line2 = "\n$(round.(time, digits=rnd_d))"
     write(f, line0*line1*line2)
   end
 
@@ -588,8 +588,8 @@ function generateVTK(filename::String, points;
   # POINTS
   write(f, string("\n", "POINTS ", np, " float"))
   for i in 1:np
-    print(f, "\n", round.(points[i][1], rnd_d), " ",
-            round.(points[i][2], rnd_d), " ", round.(points[i][3], rnd_d))
+    print(f, "\n", round.(points[i][1], digits=rnd_d), " ",
+            round.(points[i][2], digits=rnd_d), " ", round.(points[i][3], digits=rnd_d))
   end
 
   # We do this to avoid outputting points as cells if outputting a Grid
@@ -671,12 +671,12 @@ function generateVTK(filename::String, points;
     if field_type=="scalar"
       write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
       for entry in data
-        print(f, "\n", round.(entry, rnd_d))
+        print(f, "\n", round.(entry, digits=rnd_d))
       end
     elseif field_type=="vector"
       write(f, "\n\nVECTORS $field_name float")
       for entry in data
-        print(f, "\n", round.(entry[1], rnd_d), " ", round.(entry[2], rnd_d), " ", round.(entry[3], rnd_d))
+        print(f, "\n", round.(entry[1], digits=rnd_d), " ", round.(entry[2], digits=rnd_d), " ", round.(entry[3], digits=rnd_d))
       end
     else
       error("Unknown field type $(field_type).")
@@ -699,12 +699,12 @@ function generateVTK(filename::String, points;
       if field_type=="scalar"
         write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
         for entry in data
-          print(f, "\n", round.(entry, rnd_d))
+          print(f, "\n", round.(entry, digits=rnd_d))
         end
       elseif field_type=="vector"
         write(f, "\n\nVECTORS $field_name float")
         for entry in data
-          print(f, "\n", round.(entry[1], rnd_d), " ", round.(entry[2], rnd_d), " ", round.(entry[3], rnd_d))
+          print(f, "\n", round.(entry[1], digits=rnd_d), " ", round.(entry[2], digits=rnd_d), " ", round.(entry[3], digits=rnd_d))
         end
       else
         error("Unknown field type $(field_type).")
