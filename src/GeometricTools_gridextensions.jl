@@ -144,7 +144,7 @@ function save(grid::GridExtentions, filename::String; O=nothing, Oaxis=nothing,
 
   end
 
-  cells = [get_cell(grid, i)-1 for i in 1:grid.ncells]
+  cells = [get_cell(grid, i) .- 1 for i in 1:grid.ncells]
 
   point_data = []
   cell_data = []

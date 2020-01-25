@@ -275,42 +275,17 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
 
 
   # ----------------- SPLINE VERIFICATION --------------------------------------
-  # if verify_spline
-  #  fig = plt.figure("spl_verif", figsize=(7*2,5*1))
-  #
-  #  plt.subplot(121)
-  #  plt.plot(LE_x[:,1], LE_x[:,2], "og", label="Org LE x", alpha=0.5)
-  #  plt.plot(LE_z[:,1], LE_z[:,2], "ob", label="Org LE z", alpha=0.5)
-  #  plt.plot(b_pos, new_LE_x, "--g", label="Spline LE x")
-  #  plt.plot(b_pos, new_LE_z, "--b", label="Spline LE z")
-  #  plt.xlabel(plt.L"y/b_{scale}")
-  #  plt.ylabel(plt.L"x/b_{scale}, z/b_{scale}")
-  #  plt.grid(true, color="0.8", linestyle="--")
-  #  plt.legend(loc="best")
-  #
-  #  plt.subplot(122)
-  #  p1 = plt.plot(twists[:,1], twists[:,2], "og", label="Org Twist", alpha=0.5)
-  #  p2 = plt.plot(b_pos, new_twists, "--g", label="Spline twist")
-  #  pextra = []
-  #  if tilt_z!=nothing
-  #    pextra1 = plt.plot(tilt_z[:,1], tilt_z[:,2], "or", label="Org tilt z",
-  #                                                                    alpha=0.5)
-  #    pextra2 = plt.plot(b_pos, new_tlt_z, "--r", label="Spline tilt z")
-  #    pextra = vcat(pextra, [pextra1[1], pextra2[1]])
-  #  end
-  #  plt.ylabel("Twist (deg)")
-  #
-  #  plt.grid(true, color="0.8", linestyle="--")
-  #  plt.xlabel(plt.L"y/b_{scale}")
-  #
-  #  plt.twinx()
-  #  p3 = plt.plot(chords[:,1], chords[:,2], "ob", label="Org Chord", alpha=0.5)
-  #  p4 = plt.plot(b_pos, new_chords, "--b", label="Spline chord")
-  #  plt.ylabel(plt.L"c/b_{scale}")
-  #
-  #  ps = vcat([p1[1], p2[1], p3[1], p4[1]], pextra)
-  #  plt.legend(ps, [p[:get_label]() for p in ps], loc="best")
-  # end
+  if verify_spline
+    if isdefined(Main, :PyPlot)
+      plot_loft_splines(b_pos, LE_x, LE_z, new_LE_x, new_LE_z, twists, new_twists,
+        tilt_z, new_tlt_z, chords, new_chords)
+    else
+      @eval Main import PyPlot
+      Base.invokelatest(plot_loft_splines, b_pos, LE_x, LE_z, new_LE_x, new_LE_z, twists, new_twists,
+        tilt_z, new_tlt_z, chords, new_chords)
+    end
+
+  end
 
   # ----------------- LOFTING --------------------------------------------------
   return generate_loft(crosssections, bscale, b_pos, new_chords, new_twists,
@@ -427,12 +402,12 @@ Receives a contour to revolve around an axis generating a surface of revolution.
   * `low_a::Float64=0`            : Lower bound of angle (deg) of revolution.
   * `up_a::Float64=0`             : Upper bound of angle (deg) of revolution.
 """
-function surface_revolution(profile::Array{T,2}, thetaNDIVS::Int64;
-                              loop_dim::Int64=0, axis_angle::Real=0,
-                              low_a::Real=0, up_a::Real=360,
+function surface_revolution(profile::AbstractMatrix{T}, thetaNDIVS::Integer;
+                              loop_dim::Integer=0, axis_angle::Number=0,
+                              low_a::Number=0, up_a::Number=360,
                               # OUTPUT OPTIONS
                               save_path=nothing, paraview::Bool=true,
-                              file_name::String="myrev"
+                              file_name::AbstractString="myrev"
                               ) where{T<:Real}
   #ERROR CASES
   if size(profile,2)!=2
@@ -462,7 +437,7 @@ function surface_revolution(profile::Array{T,2}, thetaNDIVS::Int64;
     M3D = M'
     points = hcat([M2D*profile[i,:] for i in 1:size(profile,1)]...)'
   else
-    M3D = eye(3)
+    M3D = I
     points = profile
   end
 

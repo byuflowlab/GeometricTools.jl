@@ -557,12 +557,10 @@ function generateVTK(filename::String, points;
 
   aux = num!=nothing ? ".$num" : ""
   ext = aux*".vtk"
-  if path !=""
-    _path = string(path, (path[end]!="/" ? "/" : ""))
-  else
-    _path = path
+  if !isfile(path)
+    mkpath(path)
   end
-  f = open(string(_path, filename, ext), "w")
+  f = open(joinpath(path, filename*ext), "w")
 
   # HEADER
   header = "# vtk DataFile Version 4.0" # File version and identifier

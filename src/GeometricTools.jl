@@ -10,33 +10,30 @@
 """
 module GeometricTools
 
-# ------------ GENERIC MODULES -------------------------------------------------
 using Printf
+using CSV
+using LinearAlgebra
+using Requires
 import Statistics
-# import PyCall
-# import PyPlot
+import PyCall
 import Dierckx
 import Roots
 import QuadGK
 
-# const patch = PyCall.PyNULL()
-#
-# function __init__()
-#     copy!(patch, PyCall.pyimport_conda("matplotlib.patches", "patches"))
-# end
-
-# plt = PyPlot
-
-# ------------ GLOBAL VARIABLES ------------------------------------------------
+const patch = PyCall.PyNULL()
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
                                                 # Type of multidiscretize input
-const multidisctype = Array{Tuple{Float64,Int64,Float64,Bool},1}
+const multidisctype = Vector{Tuple{Float64,Int64,Float64,Bool}}
 
-# ------------ HEADERS ---------------------------------------------------------
+function __init__()
+    copy!(patch, PyCall.pyimport_conda("matplotlib.patches", "patches"))
+    @require PyPlot="d330b81b-6aea-500a-939a-2ce795aea3ee" include("GeometricTools_plotting.jl")
+end
+
 for header_name in ["vtk", "geometry", "misc", "gridabstract", "airfoil",
                     "surfacing", "plot3d", "vtk_shapes", "conics",
                     "DEPRECATED"]
-  include("GeometricTools_"*header_name*".jl")
+    include("GeometricTools_"*header_name*".jl")
 end
 
 end # END OF MODULE

@@ -111,7 +111,7 @@ end
 Returns the position of the node of subscript coordinates `coor` (1-indexed)
 """
 function get_node(self::Grid, coor::Array{Int64,1})
-  return get_node(self, sub2ind(self._ndivsnodes, coor...))
+  return get_node(self, LinearIndices(self._ndivsnodes)[coor...])
 end
 
 """
@@ -119,7 +119,7 @@ end
 
 Returns the nodes indices of i-th cell in the grid (1-indexed)
 """
-function get_cell(self::Grid, i::Int64)
+function get_cell(self::Grid, i::Integer)
   if i>self.ncells
     error("Requested invalid cell index $i; max is $(self.ncells).")
   elseif i<1
@@ -127,7 +127,7 @@ function get_cell(self::Grid, i::Int64)
   end
   dims = Tuple(d != 0 ? d : 1 for d in self._ndivscells)
   # return get_cell(self, collect(ind2sub(self._ndivscells, i)))
-  return get_cell(self, collect(ind2sub(dims, i)))
+  return get_cell(self, collect(Tuple(CartesianIndices(dims)[i])))
 end
 
 """
@@ -138,7 +138,7 @@ Returns the node indices of the cell with subscript coordinates `coor`
 in 2D, or VTK_LINE (=3) in 1D---except that points are 1-indexed instead of
 0-indexed.
 """
-function get_cell(self::Grid, coor_in::Array{Int64,1})
+function get_cell(self::Grid, coor_in::AbstractVector{<:Integer})
 
   # Correct 0 coordinate in quasi-dimensions
   coor = [ self._ndivscells[i]==0 && coor_in[i]==0 ? 1 : coor_in[i]
@@ -174,24 +174,24 @@ function get_cell(self::Grid, coor_in::Array{Int64,1})
   aux1 = zeros(Int64, qdims)
 
   if dims==1
-    return [sub2ind(self._ndivsnodes, (coor+vcat([0], aux1))...),
-            sub2ind(self._ndivsnodes, (coor+vcat([d1], aux1))...)]
+    return [LinearIndices(self._ndivsnodes)[(coor+vcat([0], aux1))...],
+            LinearIndices(self._ndivsnodes)[(coor+vcat([d1], aux1))...]]
 
   elseif dims==2
-    return [sub2ind(self._ndivsnodes, (coor+vcat([0,0], aux1))...),
-            sub2ind(self._ndivsnodes, (coor+vcat([d1,0], aux1))...),
-            sub2ind(self._ndivsnodes, (coor+vcat([d1,d2], aux1))...),
-            sub2ind(self._ndivsnodes, (coor+vcat([0,d2], aux1))...)]
+    return [LinearIndices(self._ndivsnodes)[(coor+vcat([0,0], aux1))...],
+            LinearIndices(self._ndivsnodes)[(coor+vcat([d1,0], aux1))...],
+            LinearIndices(self._ndivsnodes)[(coor+vcat([d1,d2], aux1))...],
+            LinearIndices(self._ndivsnodes)[(coor+vcat([0,d2], aux1))...]]
 
   elseif dims==3
-    return [sub2ind(self._ndivsnodes, (coor+vcat([0,0,0], aux1))...),
-            sub2ind(self._ndivsnodes, (coor+vcat([d1,0,0], aux1))...),
-            sub2ind(self._ndivsnodes, (coor+vcat([d1,d2,0], aux1))...),
-            sub2ind(self._ndivsnodes, (coor+vcat([0,d2,0], aux1))...),
-            sub2ind(self._ndivsnodes, (coor+vcat([0,0,d3], aux1))...),
-            sub2ind(self._ndivsnodes, (coor+vcat([d1,0,d3], aux1))...),
-            sub2ind(self._ndivsnodes, (coor+vcat([d1,d2,d3], aux1))...),
-            sub2ind(self._ndivsnodes, (coor+vcat([0,d2,d3], aux1))...)]
+    return [LinearIndices(self._ndivsnodes)[(coor+vcat([0,0,0], aux1))...],
+            LinearIndices(self._ndivsnodes)[(coor+vcat([d1,0,0], aux1))...],
+            LinearIndices(self._ndivsnodes)[(coor+vcat([d1,d2,0], aux1))...],
+            LinearIndices(self._ndivsnodes)[(coor+vcat([0,d2,0], aux1))...],
+            LinearIndices(self._ndivsnodes)[(coor+vcat([0,0,d3], aux1))...],
+            LinearIndices(self._ndivsnodes)[(coor+vcat([d1,0,d3], aux1))...],
+            LinearIndices(self._ndivsnodes)[(coor+vcat([d1,d2,d3], aux1))...],
+            LinearIndices(self._ndivsnodes)[(coor+vcat([0,d2,d3], aux1))...]]
 
   else
     error("Definition of $(self.ndims)-dimensional cells not implemented yet!")
@@ -211,7 +211,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
   end
 
   fig = PyPlot.figure(fig_name)
-  ax = fig[:gca](projection="3d")
+  ax = fig.gca(projection="3d")
   vectors_to_plot = []
 
   nc = grid.ncells
@@ -280,7 +280,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
       end
   end
   x,y,z,u,v,w = [coor for coor in xyzuvw]
-  ax[:quiver](x,y,z, u,v,w, arrow_length_ratio=0.0, alpha=alpha);
+  ax.quiver(x,y,z, u,v,w, arrow_length_ratio=0.0, alpha=alpha);
 
   # Labels nodes
   if labelnodes
@@ -366,7 +366,7 @@ function transform2!(grid::Grid, f; reset_fields::Bool=true)
     if reset_fields; grid.field = Dict{String, Dict{String, Any}}(); end;
 
     for i in 1:grid.nnodes
-      grid.nodes[:,i] = f(ind2sub(grid._ndivsnodes, i))
+      grid.nodes[:,i] = f(CartesianIndices(grid._ndivsnodes)[i])
     end
 end
 
@@ -381,7 +381,7 @@ function transform3!(grid::Grid, f; reset_fields::Bool=true)
     if reset_fields; grid.field = Dict{String, Dict{String, Any}}(); end;
 
     for i in 1:grid.nnodes
-      grid.nodes[:,i] = f(grid.nodes[:,i], ind2sub(grid._ndivsnodes, i))
+      grid.nodes[:,i] = f(grid.nodes[:,i], CartesianIndices(grid._ndivsnodes)[i])
     end
 end
 
