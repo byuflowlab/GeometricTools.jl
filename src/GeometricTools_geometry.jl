@@ -8,18 +8,23 @@
   * License   : MIT License
 =###############################################################################
 
-
-
-
+abstract type AbstractDiscretization end
+struct Uniform{T} <: AbstractDiscretization end
+struct FirstOverLast{T} <: AbstractDiscretization
+    ratio::T
+end
+struct FirstOverCentral{T} <: AbstractDiscretization
+    ratio::T
+end
 ################################################################################
 # MESHING AND DISCRETIZATION
 ################################################################################
 """
-  `discretize(f, xlow, xhigh, n::Int64, r::Float64; central::Bool=false)`
+  `discretize(f, start, stop, n, discretization)`
 
-Discretizes the continuous function `f` between the range `xlow` and `xhigh`
-into `n` intervals, with `r` the ratio between first and last interval if
-`central=false` or between first and central interval if `central=true`.
+Discretizes the continuous function `f` between the range `start` and `stop`
+into `n` intervals, with the discretization strategy specified by
+`discretization`.
 
   **Examples**
 
@@ -28,88 +33,158 @@ into `n` intervals, with `r` the ratio between first and last interval if
 
   ```julia
     julia> f(x) = (x, sqrt(1-round(x,digits=8)^2), 0)  # Semi-circunference of radius 1
-    julia> discretize(f, -1, 1, 100, 1.0)
+    julia> discretize(f, -1, 1, 100)
   ```
 """
-function discretize(f, xlow, xhigh, n::Int64, r::Float64; central::Bool=false,
-                      check::Bool=true)
+discretize(start, stop, n, ::Uniform) = f.(range(start, stop, length=n))
 
-  # ERROR CASES
-  if n == 0
-    return Any[]
-  elseif n < 0
-    error("Invalid number of intervals (n < 0)")
-  elseif r <= 0
-    error("Invalid expansion ratio (r <= 0)")
-  end
+function discretize(start, stop, n, discretization::FirstOverLast)
+    r = discretization.ratio # Ratio between first and last point
+    len = 2/(n*(r+1))*(1 .+ (r-1)/(n-1)*(0:n-1))
+    cumlen = vcat(0, cumsum(len))
+    x = start .+ (stop-start)*cumlen
+    return x
+end
 
-  out = Any[f(xlow)]
-
-  l = xhigh - xlow        # Length of domain to be discretized
-  cumlen = 0              # Cumulative length already walked
-
-  for i in 1:n
-
-    # Case of uniform discretization
-    if r==1.0
-      len = l/n
-
-    # Linear increment discretization (see notebook entry 20170519)
-    # Case of no central expansion
-    elseif !central
-      p = l/( (n*(n-1)/2)*(r+1)/(r-1) )
-      d1 = p*(n-1)/(r-1)
-      len = d1 + p*(i-1)
-      # println("i=$i\tp=$p\td1=$d1\tlen=$len")
-
-    # Case of central expansion
+function discretize(start, stop, n, discretization::FirstOverCentral)
+    c = 0.5
+    r = discretization.r
+    n1 = round(Int, n*c)
+    n2 = round(Int, n*(1-c))
+    if n1 + n2 == n
+        x1 = discretize(0, c, n1, FirstOverLast(r))
+        x2 = discretize(c, 1, n2, FirstOverLast(1/r))
+        x = vcat(x1, x2[2:end])
     else
-      _central = 0.5
-      # Left of the center
-      if i<=floor(n*_central)
+        n1 = ceil(n*c)
+        c1 = c/(1+2*r/(n1*(1-c)*(r-1)))
+        x1 = discretize(0, c1, n1, FirstOverLast(r))
+        n2 = n-n1+1
+        c2 = (1-c)/(1+2*r/(n2*c*(r-1)))
+        x2 = discretize(c2, 1, n2, FirstOverLast(1/r))
+        x = vcat(x1[1:end-1], x2[2:end])
+    end
+
+
+    if n%2 == 0
+        # get center interval(s)
+        l1 = l*c
+        n1 = round(Int, n*c)
+        i1 = 1:n1
+        l2 = l*(1-c)
+        n2 = n-n1
+        i2 = n2:-1:1
+    else
+        l1 = l*c/(1+2*r/(c*n*(r+1)))
+        n1 =
+    # discretize two sides
+
+
+    len = 2*l/(n*(r+1))*(1 .+ (r-1)/(n-1)*(0:n-1))
+    cumlen = vcat(0, cumsum(len))
+    x = start .+ cumlen
+
+    discretize(0, 1, , FirstOverLast(discretization.r))
+
+
+    # Left of the center
+    if i<=floor(n*_central)
         _l = l*_central
         _n = floor(n*_central)
         _r = r
-        _i = i
-      # Right of the center
-      else
+        _i = 1:floor(n*_central)
+        # Right of the center
+    else
         _l = l*(1-_central)
         _n = n-floor(n*_central)
-        _r = 1/r
-        _i = i-floor(n*_central)
-      end
-      p = _l/( (_n*(_n-1)/2)*(_r+1)/(_r-1) )
-      d1 = p*(_n-1)/(_r-1)
-      len = d1 + p*(_i-1)
-      # println("$i\t$_r\t$cumlen\t_n=$_n\t_i=$_i")
+        _r = r
+        _i = n-floor(n_central):-1:1
+    end
+    p = _l/( (_n*(_n-1)/2)*(_r+1)/(_r-1) )
+    d1 = p*(_n-1)/(_r-1)
+    len = d1 + p*(_i-1)
+    # println("$i\t$_r\t$cumlen\t_n=$_n\t_i=$_i")
+
+
+    l = stop - start         # Length of domain to be discretized
+    r = discretization.ratio # Ratio between first and last point
+    len = 2*l/(n*(r+1))*(1 .+ (r-1)/(n-1)*(0:n-1))
+    cumlen = vcat(0, cumsum(len))
+    x = start .+ cumlen
+    return f.(x)
+end
+
+
+
+    return ran
+
+    l = stop - start        # Length of domain to be discretized
+    cumlen = 0              # Cumulative length already walked
+
+    for i in 1:n
+        # Case of uniform discretization
+        if r == 1.0
+            len = l/n
+
+            # Linear increment discretization (see notebook entry 20170519)
+            # Case of no central expansion
+        elseif !central
+            p = l/( (n*(n-1)/2)*(r+1)/(r-1) )
+            d1 = p*(n-1)/(r-1)
+            len = d1 + p*(i-1)
+
+            d1 = 2*l/(n*(r+1))
+            dlast = 2*l*r/(n*(r+1))
+            # println("i=$i\tp=$p\td1=$d1\tlen=$len")
+
+            # Case of central expansion
+        else
+            _central = 0.5
+            # Left of the center
+            if i<=floor(n*_central)
+                _l = l*_central
+                _n = floor(n*_central)
+                _r = r
+                _i = i
+                # Right of the center
+            else
+                _l = l*(1-_central)
+                _n = n-floor(n*_central)
+                _r = 1/r
+                _i = i-floor(n*_central)
+            end
+            p = _l/( (_n*(_n-1)/2)*(_r+1)/(_r-1) )
+            d1 = p*(_n-1)/(_r-1)
+            len = d1 + p*(_i-1)
+            # println("$i\t$_r\t$cumlen\t_n=$_n\t_i=$_i")
+        end
+
+        cumlen += len
+        this_x = start + (cumlen/l)*(stop-start)
+        # println("i=$i\tx=$this_x\tlen=$len")
+        this_f = f(this_x)
+        push!(out, this_f)
     end
 
-    cumlen += len
-    this_x = xlow + (cumlen/l)*(xhigh-xlow)
-    # println("i=$i\tx=$this_x\tlen=$len")
-    this_f = f(this_x)
-    push!(out, this_f)
-  end
+    # Verifies correct discretization
+    if check && abs((cumlen-l)/l)>0.0001
+        error("Critical logic error! cumlen!=l ($cumlen!=$l)")
+    end
 
-  # Verifies correct discretization
-  if check && abs((cumlen-l)/l)>0.0001
-    error("Critical logic error! cumlen!=l ($cumlen!=$l)")
-  end
-
-  return out
+    return out
 end
 
 """
-  `multidiscretize(f, xlow, xhigh, sections)`
+  `multidiscretize(f, start, stop, sections)`
 
-Discretizes the continuous function `f` between the range `xlow` and `xhigh`
+Discretizes the continuous function `f` between the range `start` and `stop`
 into multiple sections of refinement as specified in `sections`.
 
   ** Arguments **
   * `f`         : Continuous function of the form `f(x)` to be discretized
-                  between `xlow` and `xhigh`,
-  * `xlow`      : Lower bound.
-  * `xhigh`     : Upper bound.
+                  between `start` and `stop`,
+  * `start`      : Lower bound.
+  * `stop`     : Upper bound.
   * `sections`  : Array `[sec1, sec2, ...]`specifying the
                   sections of discretization in the format
                   `sec = (c::Float64, n::Int64, r::Float64, central::Bool)`,
@@ -130,18 +205,18 @@ into multiple sections of refinement as specified in `sections`.
     julia> points = multidiscretize(f, 0, pi, [sec, sec, sec])
   ```
 """
-function multidiscretize(f, xlow, xhigh, sections::multidisctype;
+function multidiscretize(f, start, stop, sections::multidisctype;
                                                               check::Bool=true)
-  out = Any[f(xlow)]
+  out = Any[f(start)]
   ctot = sum([sec[1] for sec in sections]) # Sum of all `c`s
 
   # Iterates over sections
-  prev_xhigh = xlow
+  prev_xhigh = start
   for (c,n,r,central) in sections
 
     this_c = c/ctot # Makes sure that the sum of `c`s will add 1
     this_xlow = prev_xhigh
-    this_xhigh = prev_xhigh + this_c*(xhigh-xlow)
+    this_xhigh = prev_xhigh + this_c*(stop-start)
 
     this_out = discretize(f, this_xlow, this_xhigh, n, r; central=central,
                                   check=check)
