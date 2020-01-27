@@ -11,7 +11,6 @@
 module GeometricTools
 
 using Printf
-using CSV
 using LinearAlgebra
 using Requires
 import Statistics

@@ -8,23 +8,63 @@
   * License   : MIT License
 =###############################################################################
 
+"""
+  `AbstractDiscretization`
+
+Super type for discretization strategies used with `discretize` and `multidiscretize`.
+
+**Available discretization strategies**
+- `Uniform`
+- `Cosine`
+- `FirstOverLast`
+- `FirstOverCentral`
+"""
 abstract type AbstractDiscretization end
-struct Uniform{T} <: AbstractDiscretization end
+Base.broadcastable(m::AbstractDiscretization) = Ref(m)
+
+"""
+  `Uniform()`
+
+Uses uniform intervals over the discretization interval
+"""
+struct Uniform <: AbstractDiscretization end
+
+"""
+  `Cosine()`
+
+Uses smaller intervals at the beginning and end of the range using `cos`
+"""
+struct Cosine <: AbstractDiscretization end
+
+"""
+  `FirstOverLast(ratio)`
+
+Uses the specified `ratio` of the first over the last interval length to set
+interval sizes
+"""
 struct FirstOverLast{T} <: AbstractDiscretization
     ratio::T
 end
-struct FirstOverCentral{T} <: AbstractDiscretization
+
+"""
+  `FirstOverSpecified(ratio, transition)`
+
+Uses the specified `ratio` of the first/last interval length over the interval length
+at the normalized location `transition` (0 < `transition` < 1) to set interval sizes.
+"""
+struct FirstOverSpecified{T} <: AbstractDiscretization
     ratio::T
+    location::T
 end
+
 ################################################################################
 # MESHING AND DISCRETIZATION
 ################################################################################
 """
-  `discretize(f, start, stop, n, discretization)`
+  `discretize(start, stop, n, discretization::AbstractDiscretization)`
 
-Discretizes the continuous function `f` between the range `start` and `stop`
-into `n` intervals, with the discretization strategy specified by
-`discretization`.
+Discretizes the range from `start` to `stop` using n intervals with the
+discretization strategy specified by `discretization`.
 
   **Examples**
 
@@ -33,166 +73,74 @@ into `n` intervals, with the discretization strategy specified by
 
   ```julia
     julia> f(x) = (x, sqrt(1-round(x,digits=8)^2), 0)  # Semi-circunference of radius 1
-    julia> discretize(f, -1, 1, 100)
+    julia> f.(discretize(-1, 1, 100, Uniform()))
   ```
 """
-discretize(start, stop, n, ::Uniform) = f.(range(start, stop, length=n))
+function discretize(start, stop, n, discretization::AbstractDiscretization)
+    error("`discretize` not defined for discretization method $discretization")
+end
+
+discretize(start, stop, n, ::Uniform) = range(start, stop, length=n+1)
+
+function discretize(start, stop, n, ::Cosine)
+   s = (1 .- cos.(0:pi/n:pi))/2
+   x = start .+ (stop-start)*s
+   return x
+end
 
 function discretize(start, stop, n, discretization::FirstOverLast)
-    r = discretization.ratio # Ratio between first and last point
-    len = 2/(n*(r+1))*(1 .+ (r-1)/(n-1)*(0:n-1))
-    cumlen = vcat(0, cumsum(len))
-    x = start .+ (stop-start)*cumlen
-    return x
+    if n <= 1
+        return [start, stop]
+    else
+        r = discretization.ratio
+        len = 2/(n*(r+1))*(1 .+ (r-1)/(n-1)*(0:n-1))
+        s = vcat(0, cumsum(len))
+        return start .+ (stop-start)*s
+    end
 end
 
-function discretize(start, stop, n, discretization::FirstOverCentral)
-    c = 0.5
-    r = discretization.r
-    n1 = round(Int, n*c)
-    n2 = round(Int, n*(1-c))
+function discretize(start, stop, n, discretization::FirstOverSpecified)
+    r1 = discretization.ratio
+    t = discretization.location
+    n1 = max(round(Int, n*t), 1)
+    n2 = max(round(Int, n*(1-t)), 1)
     if n1 + n2 == n
-        x1 = discretize(0, c, n1, FirstOverLast(r))
-        x2 = discretize(c, 1, n2, FirstOverLast(1/r))
-        x = vcat(x1, x2[2:end])
+        s1 = discretize(0, t, n1, FirstOverLast(r1))
+        r2 = 2/n2*(1-t)/(s1[end]-s1[end-1])-1
+        s2 = discretize(t, 1, n2, FirstOverLast(r2))
+        s = vcat(s1, s2[2:end])
     else
-        n1 = ceil(n*c)
-        c1 = c/(1+2*r/(n1*(1-c)*(r-1)))
-        x1 = discretize(0, c1, n1, FirstOverLast(r))
-        n2 = n-n1+1
-        c2 = (1-c)/(1+2*r/(n2*c*(r-1)))
-        x2 = discretize(c2, 1, n2, FirstOverLast(1/r))
-        x = vcat(x1[1:end-1], x2[2:end])
-    end
-
-
-    if n%2 == 0
-        # get center interval(s)
-        l1 = l*c
-        n1 = round(Int, n*c)
-        i1 = 1:n1
-        l2 = l*(1-c)
-        n2 = n-n1
-        i2 = n2:-1:1
-    else
-        l1 = l*c/(1+2*r/(c*n*(r+1)))
-        n1 =
-    # discretize two sides
-
-
-    len = 2*l/(n*(r+1))*(1 .+ (r-1)/(n-1)*(0:n-1))
-    cumlen = vcat(0, cumsum(len))
-    x = start .+ cumlen
-
-    discretize(0, 1, , FirstOverLast(discretization.r))
-
-
-    # Left of the center
-    if i<=floor(n*_central)
-        _l = l*_central
-        _n = floor(n*_central)
-        _r = r
-        _i = 1:floor(n*_central)
-        # Right of the center
-    else
-        _l = l*(1-_central)
-        _n = n-floor(n*_central)
-        _r = r
-        _i = n-floor(n_central):-1:1
-    end
-    p = _l/( (_n*(_n-1)/2)*(_r+1)/(_r-1) )
-    d1 = p*(_n-1)/(_r-1)
-    len = d1 + p*(_i-1)
-    # println("$i\t$_r\t$cumlen\t_n=$_n\t_i=$_i")
-
-
-    l = stop - start         # Length of domain to be discretized
-    r = discretization.ratio # Ratio between first and last point
-    len = 2*l/(n*(r+1))*(1 .+ (r-1)/(n-1)*(0:n-1))
-    cumlen = vcat(0, cumsum(len))
-    x = start .+ cumlen
-    return f.(x)
-end
-
-
-
-    return ran
-
-    l = stop - start        # Length of domain to be discretized
-    cumlen = 0              # Cumulative length already walked
-
-    for i in 1:n
-        # Case of uniform discretization
-        if r == 1.0
-            len = l/n
-
-            # Linear increment discretization (see notebook entry 20170519)
-            # Case of no central expansion
-        elseif !central
-            p = l/( (n*(n-1)/2)*(r+1)/(r-1) )
-            d1 = p*(n-1)/(r-1)
-            len = d1 + p*(i-1)
-
-            d1 = 2*l/(n*(r+1))
-            dlast = 2*l*r/(n*(r+1))
-            # println("i=$i\tp=$p\td1=$d1\tlen=$len")
-
-            # Case of central expansion
+        n1 = ceil(n*t)
+        n2 = ceil(n*(1-t))
+        # first part
+        t1 = t/(1 - r1/(n1*(r1+1)))
+        s1 = discretize(0, t1, n1, FirstOverLast(r1))
+        # second part
+        t2 = t - (t1-t)
+        r2 = 2/n2*(1-t2)/(s1[end]-s1[end-1])-1
+        s2 = discretize(t2, 1, n2, FirstOverLast(r2))
+        if n1 <= 0
+          s = s2
+        elseif n2 <= 0
+          s = s1
         else
-            _central = 0.5
-            # Left of the center
-            if i<=floor(n*_central)
-                _l = l*_central
-                _n = floor(n*_central)
-                _r = r
-                _i = i
-                # Right of the center
-            else
-                _l = l*(1-_central)
-                _n = n-floor(n*_central)
-                _r = 1/r
-                _i = i-floor(n*_central)
-            end
-            p = _l/( (_n*(_n-1)/2)*(_r+1)/(_r-1) )
-            d1 = p*(_n-1)/(_r-1)
-            len = d1 + p*(_i-1)
-            # println("$i\t$_r\t$cumlen\t_n=$_n\t_i=$_i")
+          s = vcat(s1[1:end-1], s2[2:end])
         end
-
-        cumlen += len
-        this_x = start + (cumlen/l)*(stop-start)
-        # println("i=$i\tx=$this_x\tlen=$len")
-        this_f = f(this_x)
-        push!(out, this_f)
     end
-
-    # Verifies correct discretization
-    if check && abs((cumlen-l)/l)>0.0001
-        error("Critical logic error! cumlen!=l ($cumlen!=$l)")
-    end
-
-    return out
+    return start .+ s*(stop-start)
 end
 
 """
-  `multidiscretize(f, start, stop, sections)`
+  `multidiscretize(start, stop, c, n, discretization)`
 
-Discretizes the continuous function `f` between the range `start` and `stop`
-into multiple sections of refinement as specified in `sections`.
+Discretizes the range from `start` to `stop` into multiple sections of refinement.
 
   ** Arguments **
-  * `f`         : Continuous function of the form `f(x)` to be discretized
-                  between `start` and `stop`,
-  * `start`      : Lower bound.
-  * `stop`     : Upper bound.
-  * `sections`  : Array `[sec1, sec2, ...]`specifying the
-                  sections of discretization in the format
-                  `sec = (c::Float64, n::Int64, r::Float64, central::Bool)`,
-                  with `c` the normalized length of this section (the sum of all
-                  c must equal one), `n` the number of intervals in this section
-                  , `r` the increment ratio between first and last interval if
-                  `central=false` or between first and central interval if
-                  `central=true`.
+  * `start`: Lower bound.
+  * `stop`: Upper bound.
+  * `c`: Vector of normalized lengths of each section (must sum to one)
+  * `n`: Number of intervals in each section
+  * `discretization`: Discretization strategy for each section
 
   **Examples**
 
@@ -201,34 +149,28 @@ into multiple sections of refinement as specified in `sections`.
 
   ```julia
     julia> f(theta) = (cos(theta), sin(theta), 0)
-    julia> sec = (1/3, 30, 1/8, true)
-    julia> points = multidiscretize(f, 0, pi, [sec, sec, sec])
+    julia> c = [1/3, 1/3, 1/3]
+    julia> n = 30 # or [30, 30, 30]
+    julia> discretization = FirstOverLast(1/8) # or fill(FirstOverLast(1/8), 3)
+    julia> points = f.(multidiscretize(0, pi, n, discretization, ))
   ```
 """
-function multidiscretize(f, start, stop, sections::multidisctype;
-                                                              check::Bool=true)
-  out = Any[f(start)]
-  ctot = sum([sec[1] for sec in sections]) # Sum of all `c`s
+function multidiscretize(start, stop, c, n, discretization)
 
-  # Iterates over sections
-  prev_xhigh = start
-  for (c,n,r,central) in sections
+    # ensure the sum of `c` will add to one
+    c ./= sum(c)
 
-    this_c = c/ctot # Makes sure that the sum of `c`s will add 1
-    this_xlow = prev_xhigh
-    this_xhigh = prev_xhigh + this_c*(stop-start)
+    # get edges
+    edges = cumsum(vcat(0, c))
 
-    this_out = discretize(f, this_xlow, this_xhigh, n, r; central=central,
-                                  check=check)
-    out = vcat(out, this_out[2:end])
+    # discretize each section
+    ss = discretize.(edges[1:end-1], edges[2:end], n, discretization)
 
-    prev_xhigh = this_xhigh
-  end
+    # stack each section
+    s = vcat(0, [s[2:end] for s in ss]...)
 
-  return out
+    return start .+ s*(stop-start)
 end
-
-
 
 """
   Receives a closed 2D contour and splits it up in upper and lower surfaces as
@@ -238,50 +180,30 @@ end
   splitting up a closed contour into two sections that are injective in x, and
   that can be received by `parameterize()`.
 """
-function splitcontour(x,y)
+function splitcontour(x, y)
 
-  # Flag indicating whether the contour start at the trailing or leading edge
-  start_TE = x[1]==maximum(x)
+    le = argmin(x)
+    te = argmax(x)
 
-  # Find the opposite end of the contour
-  end_i = -1
-  for (i, xi) in enumerate(x)
-    if i==1
-      nothing
-    # Case of starting from the trailing edge
-    elseif start_TE && xi > x[i-1]
-      end_i = i-1
-      break
-    # Case of leading edge
-    elseif !start_TE  && xi < x[i-1]
-      end_i = i-1
-      break
+    # Split and sort from leading edge to trailing edge
+    if le > te
+        x_sec1, y_sec1 = x[le:-1:1], y[le:-1:1]
+        x_sec2, y_sec2 = x[le:end], y[le:end]
+    else
+        x_sec1, y_sec1 = x[1:te], y[1:te]
+        x_sec2, y_sec2 = x[end:-1:te], y[end:-1:te]
     end
-  end
 
-  # ERROR CASE
-  if end_i==-1
-    error("Logic error! End of contour not found!")
-  end
+    # Determine upper and lower surfaces
+    if sum(y_sec1)/length(y_sec1) > sum(y_sec2)/length(y_sec2)
+        upper = (x_sec1, y_sec1)
+        lower = (x_sec2, y_sec2)
+    else
+        upper = (x_sec2, y_sec2)
+        lower = (x_sec1, y_sec1)
+    end
 
-  # Splits them up
-  x_sec1, y_sec1 = x[1:end_i], y[1:end_i]
-  x_sec2, y_sec2 = x[end_i:end], y[end_i:end]
-
-  # Sorts them from LE to TE
-  if x_sec1[1] > minimum(x); reverse!(x_sec1); reverse!(y_sec1); end;
-  if x_sec2[1] > minimum(x); reverse!(x_sec2); reverse!(y_sec2); end;
-
-  # Determines upper and lower surfaces
-  if Statistics.mean(y_sec1) > Statistics.mean(y_sec2)
-    upper = [x_sec1, y_sec1]
-    lower = [x_sec2, y_sec2]
-  else
-    upper = [x_sec2, y_sec2]
-    lower = [x_sec1, y_sec1]
-  end
-
-  return upper, lower
+    return upper, lower
 end
 
 
