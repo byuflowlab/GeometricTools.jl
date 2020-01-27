@@ -32,21 +32,14 @@ function line_intersect(x1, y1, x2, y2, x3, y3, x4, y4)
 end
 
 """
-    `generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real,
-Cx::Real, Cy::Real, Sx::Real, Sy::Real)`
+    `generate_conic_fun(Ax, Ay, Bx, By, Cx, Cy, Sx, Sy)`
 
      Returns a conic curve function with control point A, B, and C,
 and shoulder point S. See Raymer's Aircraft Design, lofting chapter (p. 128).
 """
-function generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real,
-                            Cx::Real, Cy::Real, Sx::Real, Sy::Real)
+function generate_conic_fun(Ax, Ay, Bx, By, Cx, Cy, Sx, Sy)
 
-    """
-        Receives a value between 0 and 1, and returns the
-    corresponding point along the conic curve, with 0 being A
-    and 1 B.
-    """
-    function conic_fun(s)
+    conic_fun = function(s)
         if s<0 || s>1
             error("Invalid conic parameter $s. Value between 0 and 1 expected.")
         end
@@ -72,8 +65,7 @@ end
 
 
 """
-    `generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real,
-Cx::Real, Cy::Real, rho::Real)`
+    `generate_conic_fun(Ax, Ay, Bx, By, Cx, Cy, rho)`
      Returns a conic curve function with control point A, B, and C,
 and shape parameter rho. See Raymer's Aircraft Design, lofting chapter (p. 132).
 
@@ -82,8 +74,7 @@ Parabola:  rho = 0.5
 Ellipse:   rho < 0.5
 Circle:    rho = 0.4142 and AC = BC
 """
-function generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real,
-                            Cx::Real, Cy::Real, rho::Real)
+function generate_conic_fun(Ax, Ay, Bx, By, Cx, Cy, rho)
 
     # D: Midpoint between A and B
     Dx = Ax + 0.5*(Bx-Ax)
@@ -98,42 +89,29 @@ end
 
 
 """
-    `conic_cross_section(Ps::Array{Array{T1, 1},1}, CPs::Array{Array{T2, 1},1},
+    `conic_cross_section(points::Array{Array{T1, 1},1}, CPs::Array{Array{T2, 1},1},
 rhos::Array{T3, 1}, ss::Array{Array{T4, 1},1})`
 
-    Receives a collection of points `Ps` along an open contour, and
+    Receives a collection of points `points` along an open contour, and
 stretching control points `CPs`, shape parameters `rhos`, and probing
 parameters `ss` associated to every section of the contour, and it returns
 a compound-conic cross section (it is a closed loop, so the number of
 sections is equal to the number of points)
 """
-function conic_cross_section(Ps::Array{Array{T1, 1},1},
-                             CPs::Array{Array{T2, 1},1},
-                             rhos::Array{T3, 1},
-                             ss::Array{Array{T4, 1},1}
-                            ) where {T1<:Real, T2<:Real, T3<:Real, T4<:Real}
-    nPs = size(Ps, 1)
+function conic_cross_section(p, cp, rho, s)
 
-    if size(CPs, 1)!=nPs
-        error("Invalid CPs. Expected $nPs, got $(size(CPs, 1)).")
-    elseif size(rhos, 1)!=nPs
-        error("Invalid rhos. Expected $nPs, got $(size(rhos, 1)).")
-    elseif size(ss, 1)!=nPs
-        error("Invalid ss. Expected $nPs, got $(size(ss, 1)).")
+    n = size(p, 1)
+
+    if size(cp, 1) != n
+        error("Invalid cp. Expected $n, got $(size(cp, 1)).")
+    elseif size(rhos, 1) != n
+        error("Invalid rho. Expected $n, got $(size(rho, 1)).")
+    elseif size(ss, 1) != n
+        error("Invalid s. Expected $n, got $(size(s, 1)).")
     end
 
-    points = []
-
-    for i in 1:nPs
-        A = Ps[i]
-        B = Ps[i%nPs + 1]
-
-        conic_fun = generate_conic_fun(Ps[i]..., Ps[i%nPs + 1]...,
-                                                CPs[i]..., rhos[i])
-        for s in ss[i]
-            push!(points, [conic_fun(s)...])
-        end
-    end
+    conic_funs = generate_conic_fun.(p, p[vcat(2:end,1)], rho, s)
+    points = vcat([conic_fun.(s) for conic_fun in conic_funs]...)
 
     return points
 end

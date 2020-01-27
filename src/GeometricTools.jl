@@ -13,6 +13,7 @@ module GeometricTools
 using Printf
 using LinearAlgebra
 using Requires
+using StaticArrays
 import Statistics
 import PyCall
 import Dierckx

@@ -42,37 +42,33 @@ end
 #TODO: This is type unstable, since it returns either a vector or a matrix.  Should
 # we make this type stable?
 
-function rediscretize_airfoil(x::AbstractVector{T}, y::AbstractVector{T},
-    upperNDIVS::multidisctype, lowerNDIVS::multidisctype; spl_s::Real=0.00001,
-    spl_k::Integer=4, verify_spline::Bool=true, pltargs...) where{T<:Real}
+function rediscretize_airfoil(x, y, c_u, n_u, disc_u, c_l, n_l, disc_l)
 
-    # Separate upper and lower sides to make the contour injective in x
+    # Separate upper and lower sides
     upper, lower = splitcontour(x, y)
 
     # Parameterize both sides independently
-    fun_upper = parameterize(upper[1], upper[2], zeros(eltype(upper[1]), size(upper[1])); inj_var=1,
-                                                      s=spl_s, kspl=spl_k)
-    fun_lower = parameterize(lower[1], lower[2], zeros(eltype(lower[1]), size(lower[1])); inj_var=1,
-                                                      s=spl_s, kspl=spl_k)
+    fun_upper = parameterize(upper[1], upper[2])
+    fun_lower = parameterize(lower[1], lower[2])
 
-    # Discretizes both sides
-    new_upper = multidiscretize(fun_upper, 0, 1, upperNDIVS)
-    new_lower = multidiscretize(fun_lower, 0, 1, lowerNDIVS)
+    # Discretize both sides
+    new_upper = fun_upper.(multidiscretize(0, 1, c_u, n_u, disc_u))
+    new_lower = fun_lower.(multidiscretize(0, 1, c_l, n_l, disc_l))
 
-    # Merges sides back together
-    points = vcat(reverse(new_upper), new_lower[2:end])
+    # Merge sides back together
+    points = vcat(reverse(new_upper[1]), new_lower[1][2:end])
     new_x = [p[1] for p in points]
     new_y = [p[2] for p in points]
 
     # Plots
     if verify_spline
         if isdefined(Main, :PyPlot)
-            plot_airfoil(x, y; label="Original", style="--^k", alpha=0.5, pltargs...)
-            plot_airfoil(new_x, new_y; label="Parameterized", style=":.b", pltargs...)
+            plot_airfoil(x, y; label="Original", style="--^k", alpha=0.5)
+            plot_airfoil(new_x, new_y; label="Parameterized", style=":.b")
         else
             @eval Main import PyPlot
-            Base.invokelatest(plot_airfoil, x, y; label="Original", style="--^k", alpha=0.5, pltargs...)
-            Base.invokelatest(plot_airfoil, new_x, new_y; label="Parameterized", style=":.b", pltargs...)
+            Base.invokelatest(plot_airfoil, x, y; label="Original", style="--^k", alpha=0.5)
+            Base.invokelatest(plot_airfoil, new_x, new_y; label="Parameterized", style=":.b")
         end
     end
 

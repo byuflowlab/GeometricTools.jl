@@ -8,19 +8,25 @@
   * License   : MIT License
 =###############################################################################
 
+struct Field{D}
+    field_name::String
+    field_type::String
+    entry_type::String
+    field_data::Vector{D}
+end
 
 ################################################################################
 # GRID
 ################################################################################
 """
-  `Grid(P_min, P_max, NDIVS)`
+  `Grid(pmin, pmax, ndivs)`
 
 Generates an n-dimensional grid.
 
   **Arguments**
-  * `P_min::Array{Float64,1}`   : Minimum point of the domain.
-  * `P_max::Array{Float64,1}`   : Maximum point of the domain.
-  * `NDIVS::Array{Int64,1}`     : Number of divisions in each coordinate.
+  * `pmin::Array{Float64,1}`   : Minimum point of the domain.
+  * `pmax::Array{Float64,1}`   : Maximum point of the domain.
+  * `ndivs::Array{Int64,1}`     : Number of divisions in each coordinate.
 
   **Properties**
   * `dims::Int64`               : Number of dimensions.
@@ -38,44 +44,41 @@ Generates an n-dimensional grid.
 NOTE: All indexing is done linearly, meaning that `nodes` is indexed from 1 to
       `nnodes`, and all data fields follow the same indexing.
 
-NOTE2: `NDIVS` can either be an array of integers with NDIVS[i] indicating the
+NOTE2: `ndivs` can either be an array of integers with ndivs[i] indicating the
       number of divisions in the i-th coordinate, or it can be an array of
-      sections (see `multidiscretize()` doc) with NDIVS[i] = [sec1, sec2, ...]
+      sections (see `multidiscretize()` doc) with ndivs[i] = [sec1, sec2, ...]
       indicating the discretization into sections in the i-th coordinate.
 """
-mutable struct Grid <: AbstractGrid
-
+struct Grid{TF,NDIV} <: AbstractGrid
   # User inputs
-  P_min::Array{T,1} where {T<:Real}   # Minimum point of the domain
-  P_max::Array{T,1} where {T<:Real}   # Maximum point of the domain
-  NDIVS::Array{T,1} where {T<:Any}    # Number of divisions in each coordinate
+  pmin::Vector{TF}                       # Minimum point of the domain
+  pmax::Vector{TF}                       # Maximum point of the domain
+  ndivs::Vector{NDIV}                    # Number of divisions in each coordinate
   # Optional inputs
-  loop_dim::Int64                     # Index of dimension to close in loop
-
+  loop_dim::Int                          # Index of dimension to close in loop
   # Properties
-  dims::Int64                         # Number of dimensions
-  nnodes::Int64                       # Number of nodes
-  ncells::Int64                       # Number of cells
-  nodes::Array{T,2} where{T<:Real}    # Position of each node
-  # bbox::Array{Int64, 1}               # Bounding box (cells in each dimension)
-  field::Dict{String, Dict{String, Any}}  # Calculated fields
-
-  # Internal data
+  dims::Int                              # Number of dimensions
+  nnodes::Int                            # Number of nodes
+  ncells::Int                            # Number of cells
+  nodes::Matrix{TF}                      # Position of each node
+  scalar_field::Dict{String, Field{Float64}}         # Calculated scalar fields
+  vector_field::Dict{String, Field{Vector{Float64}}} # Calculated vector fields
+  # Internal
   _ndivsnodes::Tuple                  # Number of nodes in each coordinate
   _ndivscells::Tuple                  # Number of cells in each coordinate
   _override_vtkcelltype::Int64        # Option for overriding vtk outputs
 
-  Grid(P_min, P_max, NDIVS, loop_dim=0,
-              dims=_calc_dims(P_min),
-                nnodes=_calc_nnodes(NDIVS, loop_dim),
-                ncells=_calc_ncells(NDIVS),
-                nodes=_generate_grid(P_min, P_max, NDIVS, loop_dim),
-                # bbox=_calc_ndivs(NDIVS),
-                field=Dict{String, Dict{String, Any}}(),
-              _ndivsnodes=Tuple(_calc_ndivsnodes(NDIVS, loop_dim)),
-                _ndivscells=Tuple(_calc_ndivs(NDIVS)),
-                _override_vtkcelltype=-1
-      ) = _check(P_min, P_max, NDIVS, loop_dim) ? new(P_min, P_max, NDIVS,
+  Grid(pmin, pmax, ndivs, loop_dim=0,
+       dims=_calc_dims(pmin),
+       nnodes=_calc_nnodes(ndivs, loop_dim),
+       ncells=_calc_ncells(ndivs),
+       nodes=_generate_grid(pmin, pmax, ndivs, loop_dim),
+       # bbox=_calc_ndivs(ndivs),
+       field=Dict{String, Dict{String, Any}}(),
+       _ndivsnodes=Tuple(_calc_ndivsnodes(ndivs, loop_dim)),
+       _ndivscells=Tuple(_calc_ndivs(ndivs)),
+       _override_vtkcelltype=-1
+      ) = _check(pmin, pmax, ndivs, loop_dim) ? new(pmin, pmax, ndivs,
               loop_dim,
               dims,
                 nnodes,
@@ -89,30 +92,19 @@ mutable struct Grid <: AbstractGrid
       ) : error("Logic error!")
 end
 
-
 """
   `get_node(grid, i)`
 
 Returns the position of the i-th node (1-indexed) in the grid
 """
-function get_node(self::Grid, i::Int64)
-  if i>self.nnodes
-    error("Requested invalid node index $i; max is $(self.nnodes).")
-  elseif i<1
-    error("Invalid index $i (it must be greater than 0).")
-  end
-
-  return self.nodes[:, i]
-end
+get_node(grid::Grid, i::Integer) = grid.nodes[:, i]
 
 """
   `get_node(grid, coor)`
 
 Returns the position of the node of subscript coordinates `coor` (1-indexed)
 """
-function get_node(self::Grid, coor::Array{Int64,1})
-  return get_node(self, LinearIndices(self._ndivsnodes)[coor...])
-end
+get_node(grid::Grid, coor::AbstractVector{Integer}) = get_node(grid, LinearIndices(self._ndivsnodes)[coor...])
 
 """
   `get_cell(grid, i)`
@@ -120,13 +112,7 @@ end
 Returns the nodes indices of i-th cell in the grid (1-indexed)
 """
 function get_cell(self::Grid, i::Integer)
-  if i>self.ncells
-    error("Requested invalid cell index $i; max is $(self.ncells).")
-  elseif i<1
-    error("Invalid index $i (it must be greater than 0).")
-  end
   dims = Tuple(d != 0 ? d : 1 for d in self._ndivscells)
-  # return get_cell(self, collect(ind2sub(self._ndivscells, i)))
   return get_cell(self, collect(Tuple(CartesianIndices(dims)[i])))
 end
 
@@ -167,7 +153,7 @@ function get_cell(self::Grid, coor_in::AbstractVector{<:Integer})
   end
   d1, d2, d3 = vcat(disps, ones(Int64, 3-self.dims))
 
-  # Checks for quasi-dimensions (NDIVS[i]==0)
+  # Checks for quasi-dimensions (ndivs[i]==0)
   qdims = length( [1 for ndiv in self._ndivscells if ndiv==0] )
   cdims = length(coor)
   dims = self.dims - qdims
@@ -387,41 +373,41 @@ end
 
 
 ##### INTERNAL FUNCTIONS  ######################################################
-function _check(P_min::Array{T,1} where {T<:Real},
-                P_max::Array{T,1} where {T<:Real} ,
-                NDIVS::Array{T,1} where {T<:Any},
+function _check(pmin::Array{T,1} where {T<:Real},
+                pmax::Array{T,1} where {T<:Real} ,
+                ndivs::Array{T,1} where {T<:Any},
                 loop_dim::Int64)
 
   # Error cases
-  if size(P_min)!=size(P_max)
-    error("`P_min` and `P_max` must have the same dimensions "*
-                                          "($(size(P_min))!=$(size(P_max)))")
-  elseif loop_dim>size(P_min,1) || loop_dim<0
+  if size(pmin)!=size(pmax)
+    error("`pmin` and `pmax` must have the same dimensions "*
+                                          "($(size(pmin))!=$(size(pmax)))")
+  elseif loop_dim>size(pmin,1) || loop_dim<0
     error("Invalid loop dimension $loop_dim"*
-                                      " in $(size(P_min,1))-dimensional grid.")
+                                      " in $(size(pmin,1))-dimensional grid.")
 
-  elseif typeof(NDIVS)==Array{Int64,1}
-    if _calc_dims(P_min)!=length(NDIVS)
+  elseif typeof(ndivs)==Array{Int64,1}
+    if _calc_dims(pmin)!=length(ndivs)
       error("Division for each dimension must be given "*
-                                          "$(length(P_min))!=$(length(NDIVS))")
+                                          "$(length(pmin))!=$(length(ndivs))")
     end
-    for (i, this_div) in enumerate(NDIVS)
+    for (i, this_div) in enumerate(ndivs)
       if this_div<0
         error("Invalid division $this_div in $i-dimension.")
       end
     end
   end
-  _ndivs = _calc_ndivs(NDIVS)
-  for i in 1:_calc_dims(P_min)
+  _ndivs = _calc_ndivs(ndivs)
+  for i in 1:_calc_dims(pmin)
     if _ndivs[i]==0
-      if P_min[i]!=P_max[i]
-        error("Value in `P_min` must be equal to `P_max` in quasi-dimension $i"*
-                                            "($(P_min[i])!=$(P_max[i]))")
+      if pmin[i]!=pmax[i]
+        error("Value in `pmin` must be equal to `pmax` in quasi-dimension $i"*
+                                            "($(pmin[i])!=$(pmax[i]))")
       end
     else
-      if P_min[i]>=P_max[i]
-        error("Values in `P_min` must be less than values in `P_max` "*"
-                                            ($(P_min[i])>=$(P_max[i]))")
+      if pmin[i]>=pmax[i]
+        error("Values in `pmin` must be less than values in `pmax` "*"
+                                            ($(pmin[i])>=$(pmax[i]))")
       end
     end
   end
@@ -429,62 +415,62 @@ function _check(P_min::Array{T,1} where {T<:Real},
   return true
 end
 
-function _calc_ndivs(NDIVS::Array{T,1} where {T<:Any})
-  if typeof(NDIVS)==Array{Int64,1}
-    return deepcopy(NDIVS)
+function _calc_ndivs(ndivs::Array{T,1} where {T<:Any})
+  if typeof(ndivs)==Array{Int64,1}
+    return deepcopy(ndivs)
 
-  elseif typeof(NDIVS)==Array{Array{Tuple{Float64,Int64,Float64,Bool},1},1}
-    return [ sum([sec[2] for sec in secs]) for secs in NDIVS ]
+  elseif typeof(ndivs)==Array{Array{Tuple{Float64,Int64,Float64,Bool},1},1}
+    return [ sum([sec[2] for sec in secs]) for secs in ndivs ]
 
   else
-      error("`NDIVS` expected to be type `Array{Int64,1}` or"*
+      error("`ndivs` expected to be type `Array{Int64,1}` or"*
               " `Array{Array{Tuple{Float64,Int64,Float64,Bool},1},1}`; got "*
-              "$(typeof(NDIVS))")
+              "$(typeof(ndivs))")
   end
 
 end
 
 
-"Calculates total number of nodes given NDIVS"
-function _calc_nnodes(NDIVS::Array{T,1} where {T<:Any}, loop_dim::Int64)
-  ndivs = _calc_ndivsnodes(NDIVS, loop_dim)
+"Calculates total number of nodes given ndivs"
+function _calc_nnodes(ndivs::Array{T,1} where {T<:Any}, loop_dim::Int64)
+  ndivs = _calc_ndivsnodes(ndivs, loop_dim)
   return prod([ elem==0 ? 1 : elem for elem in ndivs])
 end
 
 "Calculates number of nodes in each dimension"
-function _calc_ndivsnodes(NDIVS::Array{T,1} where {T<:Any}, loop_dim::Int64)
-  ndivs = _calc_ndivs(NDIVS)
+function _calc_ndivsnodes(ndivs::Array{T,1} where {T<:Any}, loop_dim::Int64)
+  ndivs = _calc_ndivs(ndivs)
   if loop_dim!=0
     ndivs[loop_dim] -= 1
   end
   return ndivs .+ 1
 end
 
-"Calculates the number of cells given NDIVS"
-function _calc_ncells(NDIVS::Array{T,1} where {T<:Any})
-  return prod([ elem==0 ? 1 : elem for elem in _calc_ndivs(NDIVS)])
+"Calculates the number of cells given ndivs"
+function _calc_ncells(ndivs::Array{T,1} where {T<:Any})
+  return prod([ elem==0 ? 1 : elem for elem in _calc_ndivs(ndivs)])
 end
 
 function _calc_dims(P::Array{T,1} where {T<:Real})
   return length(P)
 end
 
-function _generate_grid(P_min::Array{T,1} where {T<:Real},
-                        P_max::Array{T,1} where {T<:Real},
-                        NDIVS::Array{T,1} where {T<:Any},
+function _generate_grid(pmin::Array{T,1} where {T<:Real},
+                        pmax::Array{T,1} where {T<:Real},
+                        ndivs::Array{T,1} where {T<:Any},
                         loop_dim::Int64)
 
-  dims = _calc_dims(P_min)
-  nnodes = _calc_nnodes(NDIVS, loop_dim)
+  dims = _calc_dims(pmin)
+  nnodes = _calc_nnodes(ndivs, loop_dim)
   nodes = zeros(Float64, dims, nnodes)
-  ndivs = Tuple(_calc_ndivs(NDIVS))
+  ndivs = Tuple(_calc_ndivs(ndivs))
 
-  # Discretizes each coordinate according to NDIVS
-  if typeof(NDIVS)==Array{Int64,1}
-    spacing = [range(P_min[i], stop=P_max[i], length=ndivs[i]+1) for i in 1:dims]
+  # Discretizes each coordinate according to ndivs
+  if typeof(ndivs)==Array{Int64,1}
+    spacing = [range(pmin[i], stop=pmax[i], length=ndivs[i]+1) for i in 1:dims]
 
-  elseif typeof(NDIVS)==Array{Array{Tuple{Float64,Int64,Float64,Bool},1},1}
-    spacing = [multidiscretize(x->x, P_min[i], P_max[i], NDIVS[i]) for i in 1:dims]
+  elseif typeof(ndivs)==Array{Array{Tuple{Float64,Int64,Float64,Bool},1},1}
+    spacing = [multidiscretize(x->x, pmin[i], pmax[i], ndivs[i]) for i in 1:dims]
 
   else
     error("Not implemented yet")
@@ -492,8 +478,8 @@ function _generate_grid(P_min::Array{T,1} where {T<:Real},
 
   # Creates the grid
   ind2 = 1
-  ndivsnodes = Tuple(_calc_ndivsnodes(NDIVS, 0))
-  for ind in 1:_calc_nnodes(NDIVS, 0)
+  ndivsnodes = Tuple(_calc_ndivsnodes(ndivs, 0))
+  for ind in 1:_calc_nnodes(ndivs, 0)
     sub = CartesianIndices(ndivsnodes)[ind]
 
     if loop_dim==0 || sub[loop_dim]!=ndivsnodes[loop_dim]

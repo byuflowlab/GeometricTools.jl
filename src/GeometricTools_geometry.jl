@@ -213,112 +213,71 @@ end
 # PARAMETRIZATION
 ################################################################################
 """
-  `parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false)`
+  `parameterize(x, y)`
 
 Receives a contour (line) and returns a parametrization function f(s) of the
 contour. The parametrization is done on the path of the splined
 contour such that f(0.5) returns the point (x,y,z) where half of the entire
-contour has been walked, and f(1.0) returns the last point in the contour. To
-perform this parametrization, the contour must be injective in least one of the
-variables (x, y, or z) (i.e., all values of the variable are unique), and that
-variable must be given in increasing order.
+contour has been walked, and f(1.0) returns the last point in the contour.
 
   **Arguments**
-  * `x::Array{Float64,1}`    : x-coordinates of the contour.
-  * `y::Array{Float64,1}`    : y-coordinates of the contour.
-  * `z::Array{Float64,1}`    : z-coordinates of the contour.
+  * `x`    : x-coordinates of the contour.
+  * `y`    : y-coordinates of the contour.
 
-  **Optional Arguments**
-  * `inj_var::Int64`         : Indicates the variable that is injective, with
-                                  1=x, 2=y, and 3=z.
-  * `s::Float64`             : Spline smoothness.
-
-See Parametrization section in documentation for more details.
 """
-function parameterize(x, y, z; inj_var::Int64=1, s=0.0001, debug=false, atol=0,
-                                            kspl="automatic", bc="extrapolate")
-  # ERROR CASES
-  if size(x)!=size(y)!=size(z)  # Invalid contour
-    error("Invalid contour. "*
-              "$(size(x))!=$(size(y))!=$(size(z)) (size(x)!=size(y)!=size(z))")
-  elseif !(inj_var in [1,2,3])  # Invalid input
-    error("Invalid `inj_var`=$inj_var (!(inj_var in [1,2,3]))")
-  end
+function parameterize(x, y)
 
-  # Identifies injective and dependant variables
-  inj = nothing   # Injective variable
-  dep = []        # Dependant variables
-  for (i,var) in enumerate([x, y, z])
-    if i==inj_var
-      inj = var
-    else
-      push!(dep, var)
+    # get arc length parameterization
+    s = cumsum(vcat(0, sqrt.((x[2:end].-x[1:end]-1).^2 + (y[2:end].-y[1:end-1]).^2))
+
+    # normalize to vary from 0 to 1
+    s .= s./s[end]
+
+    # now spline the function wrt x, y, and z
+    xspl = Akima(s, x)
+    yspl = Akima(s, y)
+
+    # return splined function
+    fstar = let xspl=xspl, yspl=yspl
+        (t) -> xspl(t), yspl(t)
     end
-  end
 
-  # Splines
-  # bc="extrapolate"           # Out of boundary case
-  # s=0.0001                 # Spline smoothness
-  k = kspl=="automatic" ? min(size(x)[1]-1, 5) : kspl  # Spline order
-  spl = []                   # Spline of each variable respect the injective
+    return fstar
+end
 
-  for var in dep
-    this_spl = Dierckx.Spline1D(inj, var; k=k, bc=bc, s=s)
-    push!(spl, this_spl)
-  end
+"""
+  `parameterize(x, y, z)`
 
-  # Defines the path function
-  dfdx1(x) = Dierckx.derivative(spl[1], x)    # Derivative of f respect x1
-  dfdx2(x) = Dierckx.derivative(spl[2], x)    # Derivative of f respect x2
-  fun(x) = sqrt.(1 .+ (dfdx1(x)).^2 .+ (dfdx2(x)).^2)   # Integrand
-                                                  # Integral between xmin and x
-  fun_s(this_x) = QuadGK.quadgk(fun, inj[1], this_x; atol=atol)[1]
+Receives a contour (line) and returns a parametrization function f(s) of the
+contour. The parametrization is done on the path of the splined
+contour such that f(0.5) returns the point (x,y,z) where half of the entire
+contour has been walked, and f(1.0) returns the last point in the contour.
 
-  # Defines the normalized path function
-  stot = fun_s(inj[end])      # Total length of the path
-  norm_s(x) = fun_s(x)/stot         # Normalized path function
+  **Arguments**
+  * `x`    : x-coordinates of the contour.
+  * `y`    : y-coordinates of the contour.
+  * `z`    : z-coordinates of the contour.
 
-  # Defines the inverse normalized function
-  function inv_norm_s(sstar; debug=false)
-      # ERROR CASES
-      if sstar<-0.001 || sstar>1.001 # Outside of domain
-          error("Invalid normalized path length $(sstar) (sstar<0 || sstar>1)")
-      end
+"""
+function parameterize(x, y, z)
 
-      # Finds the x that matches the target (sstar)
-      this_fun(x) = sstar - norm_s(x)   # Zeroed function
-      bracket = [ inj[1]*(1-0.01*sign(inj[1])),# Bracket of the zero
-                  inj[end]*(1+0.01*sign(inj[end]))]
+    # get arc length parameterization
+    s = cumsum(vcat(0, sqrt.((x[2:end].-x[1:end]-1).^2 + (y[2:end].-y[1:end-1]).^2 + (z[2:end].-z[1:end-1]).^2)))
 
-      if debug
-          println("sstar=$sstar\tbracket=$bracket")
-          println("flow=$(this_fun(bracket[1]))")
-          println("fup=$(this_fun(bracket[2]))")
-      end
+    # normalize to vary from 0 to 1
+    s .= s./s[end]
 
-      # Zero
-      this_x = Roots.find_zero(this_fun, bracket, Roots.Bisection())
+    # now spline the function wrt x, y, and z
+    xspl = Akima(s, x)
+    yspl = Akima(s, y)
+    zspl =  Akima(s, z)
 
-      return this_x
-  end
+    # return splined function
+    fstar = let xspl=xspl, yspl=yspl, zspl=zspl
+        (t) -> xspl(t), yspl(t), zspl(t)
+    end
 
-  # Redefine the original function in terms of the new parametrization s*
-  function fstar(sstar)
-      x = inv_norm_s(sstar; debug=debug)       # Finds the x that matches the path
-      out = []                    # Output
-      dep_i = 1                   # Next spline to evaluate
-      for i in 1:3
-        if i==inj_var
-          push!(out, x)           # Injective variable
-        else
-          push!(out, spl[dep_i](x))   # Dependant variables
-          dep_i += 1
-        end
-      end
-      return out
-  end
-
-  return fstar
+    return fstar
 end
 
 ##### END OF PARAMETRIZATION ###################################################
@@ -334,31 +293,7 @@ Rotates and translates the vector V. Receives the i', j', k' unit vectors of an
 euclidean system with origin T, and returns ``V'=M(V-T)`` (In this version, the
 unit vectors have been organized as a matrix M=[i'; j'; k']).
 """
-function transform(V::Array{T1,1}, M::Array{T2,2}, T::Array{T3,1}
-                                        ) where{T1<:Real, T2<:Real, T3<:Real}
-    return [
-                M[1,1]*(V[1]-T[1]) + M[1,2]*(V[2]-T[2]) + M[1,3]*(V[3]-T[3]),
-                M[2,1]*(V[1]-T[1]) + M[2,2]*(V[2]-T[2]) + M[2,3]*(V[3]-T[3]),
-                M[3,1]*(V[1]-T[1]) + M[3,2]*(V[2]-T[2]) + M[3,3]*(V[3]-T[3])
-            ]
-end
-
-function transform!(out::Array{T1, 1}, V::Array{T2,1},
-                            M::Array{T3,2}, T::Array{T4,1}
-                           ) where{T1<:Real, T2<:Real, T3<:Real, T4<:Real}
-    out[1] = M[1,1]*(V[1]-T[1]) + M[1,2]*(V[2]-T[2]) + M[1,3]*(V[3]-T[3])
-    out[2] = M[2,1]*(V[1]-T[1]) + M[2,2]*(V[2]-T[2]) + M[2,3]*(V[3]-T[3])
-    out[3] = M[3,1]*(V[1]-T[1]) + M[3,2]*(V[2]-T[2]) + M[3,3]*(V[3]-T[3])
-end
-
-function transform(Vs::AbstractArray{Array{P,1},1}, M::AbstractArray{P,2}, T::AbstractArray{P,1}
-                                                                ) where{P<:Real}
-  out = Array{Float64,1}[]
-  for V in Vs
-    push!(out, transform(V, M, T))
-  end
-  return out
-end
+transform(V::AbstractVector, M::AbstractMatrix, T::AbstractVector) = M*(V-T)
 
 """
   `countertransform(Vp::Array{Float64,1}, invM::Array{Float64,2},
@@ -369,31 +304,7 @@ into the system (i', j', k') with origin T, and returns the original
 ``V=M^{-1}V' + T``. To ease repetitive computation, instead of giving the unit
 vectors, give the inverse of their matrix.
 """
-function countertransform(Vp::Array{T1,1}, invM::Array{T2,2}, T::Array{T3,1}
-                                        ) where{T1<:Real, T2<:Real, T3<:Real}
-    return [
-                invM[1,1]*Vp[1] + invM[1,2]*Vp[2] + invM[1,3]*Vp[3] + T[1],
-                invM[2,1]*Vp[1] + invM[2,2]*Vp[2] + invM[2,3]*Vp[3] + T[2],
-                invM[3,1]*Vp[1] + invM[3,2]*Vp[2] + invM[3,3]*Vp[3] + T[3]
-            ]
-end
-
-function countertransform!(out::Array{T1, 1}, Vp::Array{T2,1},
-                            invM::Array{T3,2}, T::Array{T4,1}
-                           ) where{T1<:Real, T2<:Real, T3<:Real, T4<:Real}
-   out[1] = invM[1,1]*Vp[1] + invM[1,2]*Vp[2] + invM[1,3]*Vp[3] + T[1]
-   out[2] = invM[2,1]*Vp[1] + invM[2,2]*Vp[2] + invM[2,3]*Vp[3] + T[2]
-   out[3] = invM[3,1]*Vp[1] + invM[3,2]*Vp[2] + invM[3,3]*Vp[3] + T[3]
-end
-
-function countertransform(Vps::AbstractArray{Array{P,1},1}, invM::AbstractArray{P,2},
-                                                  T::AbstractArray{P,1}) where{P<:Real}
-  out = Array{Float64,1}[]
-  for Vp in Vps
-    push!(out, countertransform(Vp, invM, T))
-  end
-  return out
-end
+countertransform(Vp, invM, T) = invM*Vp+T
 
 """
   `check_coord_sys(M::Array{Float64,2}; raise_error::Bool=true)`
@@ -401,239 +312,139 @@ end
 Checks that the unit vectors given as the matrix `M=[i;j;k]` define a coordinate
 system
 """
-function check_coord_sys(M::Array{T,2}; raise_error::Bool=true) where{T<:Real}
-  # Checks normalization
-  for i in 1:size(M)[1]
-    if abs(norm(M[i,:])-1) > 0.00000001
-      println(M)
-      if raise_error
-        error("Not unitary axis: $(M[i,:])")
-      else
-        return false
-      end
+function check_coord_sys(M::AbsractMatrix; raise_error=true)
+    # Checks normalization
+    for i in 1:size(M)[1]
+        if abs(norm(M[i,:])-1) > 0.00000001
+            println(M)
+            if raise_error
+                error("Not unitary axis: $(M[i,:])")
+            else
+                return false
+            end
+        end
     end
-  end
 
-  # Checks ortogonality
-  for i in size(M)[1]
-    xi = M[i, :]
-    xip1 = M[(i%size(M)[1])+1, :]
-    proj = abs(dot(xi, xip1))
-    if proj>0.00000001
-      if raise_error
-        error("Non-ortogonal system $M")
-      else
-        return false
-      end
+    # Checks ortogonality
+    for i in size(M)[1]
+        xi = M[i, :]
+        xip1 = M[(i%size(M)[1])+1, :]
+        proj = abs(dot(xi, xip1))
+        if proj>0.00000001
+            if raise_error
+                error("Non-orthogonal system $M")
+            else
+                return false
+            end
+        end
     end
-  end
-  return true
+    return true
 end
 
-function check_coord_sys(M::Array{Array{T,1},1}; raise_error::Bool=true
-                                                                ) where{T<:Real}
-  dims = 3
-  newM = zeros(Float64, dims,dims)
-  for i in 1:dims
-    newM[i, :] = M[i]
-  end
-  return check_coord_sys(newM; raise_error=raise_error)
+function check_coord_sys(M::AbstractVector{<:AbstractVector}; raise_error=true)
+    dims = 3
+    newM = zeros(Float64, dims,dims)
+    for i in 1:dims
+        newM[i, :] = M[i]
+    end
+    return check_coord_sys(newM; raise_error=raise_error)
 end
 
 """
-  `axis_rotation(r::Array{Float64, 1}, angle_deg::Float64)`
+  `axis_rotation(r, angle)`
 
-Returns the transformation matrix of rotation around an arbitrary axis of unit
-vector `r`
+Returns the transformation matrix of rotation around an arbitrary axis of unit vector `r`
 """
-function axis_rotation(r::Array{T, 1}, angle_deg::Real) where{T<:Real}
+function axis_rotation(r, angle)
   ux, uy, uz = r
-  C = cos(angle_deg*pi/180)
-  S = sin(angle_deg*pi/180)
-  t = 1 - C
-  M = [t*ux^2+C t*ux*uy-S*uz t*ux*uz+S*uy;
-        t*ux*uy+S*uz t*uy^2+C t*uy*uz-S*ux;
-        t*ux*uz-S*uy t*uy*uz+S*ux t*uz^2+C]
+  c = cos(angle)
+  s = sin(angle)
+  t = 1 - c
+  M =  @SMatrix [t*ux^2+c     t*ux*uy-s*uz t*ux*uz+s*uy;
+                 t*ux*uy+s*uz     t*uy^2+c t*uy*uz-s*ux;
+                 t*ux*uz-s*uy t*uy*uz+s*ux     t*uz^2+c]
   return M
 end
 
 """
-  `rotation_matrix(yaw::Real, pitch::Real, roll::Real)`
+  `rotation_matrix(yaw, pitch, roll)`
 
-Receives yaw, pitch, and roll angles (in degrees) and returns the rotation
+Receives yaw, pitch, and roll angles (in radians) and returns the rotation
 matrix corresponding to this rotation.
 (see http://planning.cs.uiuc.edu/node102.html)
 
 NOTE: Naming follows aircraft convention, with
-* yaw:    rotation about z-axis.
-* pitch:  rotation about y-axis.
 * roll:   rotation about x-axis.
+* pitch:  rotation about y-axis.
+* yaw:    rotation about z-axis.
 """
-function rotation_matrix(yaw::Real, pitch::Real, roll::Real)
-  a, b, g = yaw*pi/180, pitch*pi/180, roll*pi/180
-  Rz = [cos(a) -sin(a) 0; sin(a) cos(a) 0; 0 0 1]
-  Ry = [cos(b) 0 sin(b); 0 1 0; -sin(b) 0 cos(b)]
-  Rx = [1 0 0; 0 cos(g) -sin(g); 0 sin(g) cos(g)]
+function rotation_matrix(roll, pitch, yaw)
+  cr = cos(roll)
+  sr = sin(roll)
+  cp = cos(pitch)
+  sp = sin(pitch)
+  cy = cos(yaw)
+  sy = sin(yaw)
+  Rx = @SMatrix [1 0 0; 0 cr -sr; 0 sr cr]
+  Ry = @SMatrix [cp 0 sp; 0 1 0; -sp 0 cp]
+  Rz = @SMatrix [cy -sy 0; sy cy 0; 0 0 1]
   return Rz*Ry*Rx
 end
-
-"""
-  `rotation_matrix2(roll::Real, pitch::Real, yaw::Real)`
-
-Receives yaw, pitch, and roll angles (in degrees) and returns the rotation
-matrix corresponding to this rotation.
-(see http://planning.cs.uiuc.edu/node102.html)
-
-NOTE: Naming follows aircraft convention, with
-* roll:   rotation about x-axis.
-* pitch:  rotation about y-axis.
-* yaw:    rotation about z-axis.
-
-**Examples**
-```jldoctest
-julia> M = gt.rotation_matrix(0, 0, 0)
-3×3 Array{Float64,2}:
-  1.0  0.0  0.0
-  0.0  1.0  0.0
-  0.0  0.0  1.0
-
-julia> M = gt.rotation_matrix(90, 0, 0)
-3×3 Array{Float64,2}:
-  1.0  0.0   0.0
-  0.0  0.0  -1.0
-  0.0  1.0   0.0
-
-julia> X = [0, 1, 0];
-julia> Xp = M*X
-3-element Array{Float64,1}:
-  0.0
-  0.0
-  1.0
-
-julia> M = gt.rotation_matrix(0, 90, 0)
-3×3 Array{Float64,2}:
-  0.0  0.0  1.0
-  0.0  1.0  0.0
- -1.0  0.0  0.0
-
-julia> X = [1, 0, 0];
-julia> Xp = M*X
-3-element Array{Float64,1}:
-  0.0
-  0.0
- -1.0
-
-
-julia> M = gt.rotation_matrix(0, 0, 90)
-3×3 Array{Float64,2}:
-  0.0  -1.0  0.0
-  1.0   0.0  0.0
-  0.0   0.0  1.0
-
-julia> X = [1, 0, 0];
-julia> Xp = M*X
-3-element Array{Float64,1}:
-  0.0
-  1.0
-  0.0
-
-
-julia> M = gt.rotation_matrix(0, 45, 0)
-3×3 Array{Float64,2}:
-  0.707  0.0  0.707
-  0.0    1.0  0.0
- -0.707  0.0  0.707
-
-julia> X = [1, 0, 0];
-julia> Xp = M*X
-3-element Array{Float64,1}:
-  0.707
-  0.0
- -0.707
-
-
-julia> M = gt.rotation_matrix(0, 45, 45)
-3×3 Array{Float64,2}:
-  0.5    -0.707  0.5
-  0.5     0.707  0.5
- -0.707   0.0    0.707
-
-julia> X = [1, 0, 0];
-julia> Xp = M*X
-3-element Array{Float64,1}:
-  0.5
-  0.5
- -0.707
-```
-"""
-function rotation_matrix2(roll::Real, pitch::Real, yaw::Real)
-  return rotation_matrix(yaw, pitch, roll)
-end
-##### END OF ALGEBRA ###########################################################
-
-
-
-
 
 ################################################################################
 # ORTHOGONAL SPACE TRANSFORMATIONS
 ################################################################################
 
 # ORTHOGONAL SYSTEMS (See https://en.wikipedia.org/wiki/Orthogonal_coordinates)
-function cylindrical3D(X)
-    r, theta, z = X
-    return [ r*cos(theta), r*sin(theta), z ]
+cylindrical2D(r, theta) = @SVector [ r*cos(theta),  r*sin(theta)]
+cylindrical3D(r, theta, z) = @SVector [ r*cos(theta), r*sin(theta), z ]
+function spherical3D(r, theta, phi)
+    st = sin(theta)
+    ct = cos(theta)
+    sp = sin(phi)
+    cp = cos(phi)
+    return @SVector [r*st*cp, r*st*sp, r*ct]
 end
-function cylindrical2D(X)
-    r, theta = X
-    return [ r*cos(theta),  r*sin(theta)]
+parabolic3D(u,v,z) = @SVector [ 1/2*(u^2-v^2), u*v, z ]
+paraboloidal3D(u,v,phi) = @SVector [u*v*cos(phi), u*v*sin(phi), 1/2*(u^2-v^2)]
+elliptic3D(u, v, z; a=1) = @SVector [a*cosh(u)*cos(v), a*sinh(u)*sin(v), z]
+function prolate3D(xi, etha, phi; a=1)
+    shx = sinh(xi)
+    chx = cosh(xi)
+    se = sin(etha)
+    ce = cos(etha)
+    sp = sin(phi)
+    cp = cos(phi)
+    return @SVector [a*shx*se*cp, a*shx*se*sp, a*chx*ce]
 end
-function spherical3D(X)
-    r, theta, phi = X
-    return [  r*sin(theta)*cos(phi),
-              r*sin(theta)*sin(phi),
-              r*cos(theta) ]
+function oblate3D(xi, etha, phi; a=1)
+    shx = sinh(xi)
+    chx = cosh(xi)
+    se = sin(etha)
+    ce = cos(etha)
+    sp = sin(phi)
+    cp = cos(phi)
+    return @SVector [a*chx*ce*cp, a*chx*ce*sp, a*shx*se]
 end
-function parabolic3D(X)
-    u,v,z = X
-    return [ 1/2*(u^2-v^2), u*v, z ]
+function bipolar3D(u, v, z; a=1)
+    su = sin(u)
+    cu = cos(u)
+    shv = sinh(v)
+    chv = cosh(v)
+    return @SVector [a*shv/(chv-cu), a*su/(chv-cu), z]
 end
-function paraboloidal3D(X)
-    u,v,phi = X
-    return [u*v*cos(phi), u*v*sin(phi), 1/2*(u^2-v^2)]
+function toroidal3D(u, v, p; a=1)
+    su = sin(u)
+    cu = cos(u)
+    shv = sinh(v)
+    chv = cosh(v)
+    sp = sin(phi)
+    cp = cos(phi)
+    return @SVector [a*shv*cp/( chv-cu ), a*shv*sp/( chv-cu ), a*su/( chv-cu )]
 end
-function elliptic3D(X; a=1)
-    u,v,z = X
-    return [a*cosh(u)*cos(v), a*sinh(u)*sin(v), z]
-end
-function prolate3D(X; a=1)
-    xi,etha,phi = X
-    return [a*sinh(xi)*sin(etha)*cos(phi),
-            a*sinh(xi)*sin(etha)*sin(phi),
-            a*cosh(xi)*cos(etha)]
-end
-function oblate3D(X; a=1)
-    xi,etha,phi = X
-    return [a*cosh(xi)*cos(etha)*cos(phi),
-            a*cosh(xi)*cos(etha)*sin(phi),
-            a*sinh(xi)*sin(etha)]
-end
-function bipolar3D(X; a=1)
-    u,v,z = X
-    return [a*sinh(v)/(cosh(v)-cos(u)),
-            a*sin(u)/(cosh(v)-cos(u)),
-            z]
-end
-function toroidal3D(X; a=1)
-    u,v,phi = X
-    return [a*sinh(v)*cos(phi)/( cosh(v)-cos(u) ),
-            a*sinh(v)*sin(phi)/( cosh(v)-cos(u) ),
-            a*sin(u)/( cosh(v)-cos(u) )]
-end
-function conical3D(X; b=2, c=1)
-    r,mu,nu = X
-    return [r*mu*nu/(b*c),
-            r/b*sqrt( (mu^2-b^2)*(nu^2-b^2) / (b^2-c^2) ),
-            r/c*sqrt( (mu^2-c^2)*(nu^2-c^2) / (c^2-b^2) )]
+function conical3D(r, mu, nu; b=2, c=1)
+    return @SVector [r*mu*nu/(b*c),
+                     r/b*sqrt( (mu^2-b^2)*(nu^2-b^2) / (b^2-c^2) ),
+                     r/c*sqrt( (mu^2-c^2)*(nu^2-c^2) / (c^2-b^2) )]
 end
 ##### END OF SPACE TRANSFORMATIONS #############################################
