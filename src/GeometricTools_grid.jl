@@ -49,48 +49,78 @@ NOTE2: `ndivs` can either be an array of integers with ndivs[i] indicating the
       sections (see `multidiscretize()` doc) with ndivs[i] = [sec1, sec2, ...]
       indicating the discretization into sections in the i-th coordinate.
 """
-struct Grid{TF,NDIV} <: AbstractGrid
-  # User inputs
-  pmin::Vector{TF}                       # Minimum point of the domain
-  pmax::Vector{TF}                       # Maximum point of the domain
-  ndivs::Vector{NDIV}                    # Number of divisions in each coordinate
-  # Optional inputs
-  loop_dim::Int                          # Index of dimension to close in loop
-  # Properties
-  dims::Int                              # Number of dimensions
-  nnodes::Int                            # Number of nodes
-  ncells::Int                            # Number of cells
-  nodes::Matrix{TF}                      # Position of each node
-  scalar_field::Dict{String, Field{Float64}}         # Calculated scalar fields
-  vector_field::Dict{String, Field{Vector{Float64}}} # Calculated vector fields
-  # Internal
-  _ndivsnodes::Tuple                  # Number of nodes in each coordinate
-  _ndivscells::Tuple                  # Number of cells in each coordinate
-  _override_vtkcelltype::Int64        # Option for overriding vtk outputs
-
-  Grid(pmin, pmax, ndivs, loop_dim=0,
-       dims=_calc_dims(pmin),
-       nnodes=_calc_nnodes(ndivs, loop_dim),
-       ncells=_calc_ncells(ndivs),
-       nodes=_generate_grid(pmin, pmax, ndivs, loop_dim),
-       # bbox=_calc_ndivs(ndivs),
-       field=Dict{String, Dict{String, Any}}(),
-       _ndivsnodes=Tuple(_calc_ndivsnodes(ndivs, loop_dim)),
-       _ndivscells=Tuple(_calc_ndivs(ndivs)),
-       _override_vtkcelltype=-1
-      ) = _check(pmin, pmax, ndivs, loop_dim) ? new(pmin, pmax, ndivs,
-              loop_dim,
-              dims,
-                nnodes,
-                ncells,
-                nodes,
-                # bbox,
-                field,
-              _ndivsnodes,
-                _ndivscells,
-                _override_vtkcelltype
-      ) : error("Logic error!")
+struct Grid{N,TF,D} <: AbstractGrid
+    pmin::NTuple{N, TF}                    # Minimum point in the domain
+    pmax::NTuple{N, TF}                    # Maximum point in the domain
+    c::NTuple{N, Int}
+    n::NTuple{N, Int}
+    discretization::NTuple{N, D}
+    loop_dim::NTuple{N, Bool}
+    nodes::Matrix{TF}                      # Position of each node
+    scalar_fields::Dict{String, Field{Float64}}         # Scalar fields
+    vector_fields::Dict{String, Field{Vector{Float64}}} # Vector fields
 end
+
+function Grid{N, TF}(pmin, pmax, c, n, discretization, loop_dim = zeros(Bool, size(pmin))) where N<:Integer
+
+    # get number of nodes
+    nnodes = prod(n[findall(n .> 0)])
+
+    # get spacing in each dimension
+    spacing = multidiscretize.(pmin, pmax, c, n, discretization)
+
+    # Create the grid
+    nodes = zeros(TF, N, nnodes)
+
+    # Fill in the grid
+    idx = 1
+    for i = 1:nnodes
+        cidx = CartesianIndices(n)[i]
+        if !(any(cidx .== n) .& loop_dim)
+            for j = 1:N
+              nodes[j, idx] = spacing[j][i]
+            end
+            idx += 1
+        end
+    end
+
+    # Creates the grid
+    ind2 = 1
+    ndivsnodes = Tuple(_calc_ndivsnodes(ndivs, 0))
+    for ind in 1:_calc_nnodes(ndivs, 0)
+      sub = CartesianIndices(ndivsnodes)[ind]
+
+      if loop_dim==0 || sub[loop_dim]!=ndivsnodes[loop_dim]
+        p = [spacing[dim][sub[dim]] for dim in 1:dims]
+        nodes[:, ind2] = p
+        ind2 += 1
+      end
+    end
+
+
+end
+  ,  ndivs, loop_dim=0,
+     dims=_calc_dims(pmin),
+     nnodes=_calc_nnodes(ndivs, loop_dim),
+     ncells=_calc_ncells(ndivs),
+     nodes=_generate_grid(pmin, pmax, ndivs, loop_dim),
+     # bbox=_calc_ndivs(ndivs),
+     field=Dict{String, Dict{String, Any}}(),
+     _ndivsnodes=Tuple(_calc_ndivsnodes(ndivs, loop_dim)),
+     _ndivscells=Tuple(_calc_ndivs(ndivs)),
+     _override_vtkcelltype=-1
+    ) = _check(pmin, pmax, ndivs, loop_dim) ? new(pmin, pmax, ndivs,
+            loop_dim,
+            dims,
+              nnodes,
+              ncells,
+              nodes,
+              # bbox,
+              field,
+            _ndivsnodes,
+              _ndivscells,
+              _override_vtkcelltype
+    ) : error("Logic error!")
 
 """
   `get_node(grid, i)`
@@ -455,15 +485,12 @@ function _calc_dims(P::Array{T,1} where {T<:Real})
   return length(P)
 end
 
-function _generate_grid(pmin::Array{T,1} where {T<:Real},
-                        pmax::Array{T,1} where {T<:Real},
-                        ndivs::Array{T,1} where {T<:Any},
-                        loop_dim::Int64)
-
-  dims = _calc_dims(pmin)
-  nnodes = _calc_nnodes(ndivs, loop_dim)
-  nodes = zeros(Float64, dims, nnodes)
-  ndivs = Tuple(_calc_ndivs(ndivs))
+function generate_grid(pmin, pmax, c, n, discretization, loop_dim)
+    dims = length(pmin)
+    nnodes = prod(n[findall(n .> 0)])
+    nnodes = _calc_nnodes(ndivs, loop_dim)
+    nodes = zeros(Float64, dims, nnodes)
+    ndivs = Tuple(_calc_ndivs(ndivs))
 
   # Discretizes each coordinate according to ndivs
   if typeof(ndivs)==Array{Int64,1}
