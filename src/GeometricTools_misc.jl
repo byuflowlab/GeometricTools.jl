@@ -38,6 +38,19 @@ function create_path(save_path::String, prompt::Bool)
 end
 
 """
+Output of verbose
+"""
+function verbalize(strn, v_lvl::Int, v::Bool; prnt=print, tab="\t", endline="\n")
+    if v
+        for i in 1:v_lvl
+            prnt(tab)
+        end
+        prnt(strn)
+        prnt(endline)
+    end
+end
+
+"""
     `skip_empty_lines(f)`
 
 Returns the next non-empty line if stream `f`. Returns `nothing` if it reaches

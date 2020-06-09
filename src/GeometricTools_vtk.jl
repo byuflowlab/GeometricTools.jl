@@ -346,7 +346,9 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
     # Read cells
     cells = Array{Int, 1}[]
     for ci in 1:nc
-        ln = parse.(Int, split(readline(f), " "))
+        aux = readline(f)
+        while contains(aux, "  "); aux = replace(aux, "  ", " "); end;
+        ln = parse.(Int, split(aux, " "))
         nn = ln[1]                     # Number of nodes
         push!(cells, ln[2:end])
     end
