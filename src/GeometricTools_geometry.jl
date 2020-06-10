@@ -335,7 +335,7 @@ end
 
 Rotates and translates the vector V. Receives the i', j', k' unit vectors of an
 euclidean system with origin T, and returns ``V'=M(V-T)`` (In this version, the
-unit vectors have been organized as a matrix M=[i'; j'; k']).
+unit vectors have been organized as a matrix `M=[i'; j'; k']`).
 """
 function transform(V::Array{T1,1}, M::Array{T2,2}, T::Array{T3,1}
                                         ) where{T1<:Real, T2<:Real, T3<:Real}

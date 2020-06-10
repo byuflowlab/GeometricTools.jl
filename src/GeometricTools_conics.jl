@@ -32,11 +32,10 @@ function line_intersect(x1, y1, x2, y2, x3, y3, x4, y4)
 end
 
 """
-    `generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real,
-Cx::Real, Cy::Real, Sx::Real, Sy::Real)`
+    `generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real, Cx::Real, Cy::Real, Sx::Real, Sy::Real)`
 
-     Returns a conic curve function with control point A, B, and C,
-and shoulder point S. See Raymer's Aircraft Design, lofting chapter (p. 128).
+     Returns a conic curve function with control point A, B, and C, and shoulder point S. 
+        See Raymer's Aircraft Design, lofting chapter (p. 128).
 """
 function generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real,
                             Cx::Real, Cy::Real, Sx::Real, Sy::Real)
@@ -72,15 +71,15 @@ end
 
 
 """
-    `generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real,
-Cx::Real, Cy::Real, rho::Real)`
-     Returns a conic curve function with control point A, B, and C,
-and shape parameter rho. See Raymer's Aircraft Design, lofting chapter (p. 132).
+    `generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real, Cx::Real, Cy::Real, rho::Real)`
 
-Hyperbola: rho > 0.5
-Parabola:  rho = 0.5
-Ellipse:   rho < 0.5
-Circle:    rho = 0.4142 and AC = BC
+    Returns a conic curve function with control point A, B, and C, and shape parameter rho. 
+        See Raymer's Aircraft Design, lofting chapter (p. 132).
+
+    Hyperbola: rho > 0.5
+    Parabola:  rho = 0.5
+    Ellipse:   rho < 0.5
+    Circle:    rho = 0.4142 and AC = BC
 """
 function generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real,
                             Cx::Real, Cy::Real, rho::Real)
