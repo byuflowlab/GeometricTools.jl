@@ -38,7 +38,7 @@ function lines2vtk(lines::AbstractVector{<:AbstractVector{T}}) where T
         end
     end
 
-    return points, vtk_lines
+    return vtk_points, vtk_lines
 end
 
 
@@ -69,7 +69,7 @@ end
 """
   `lines2vtkcells(line1, line2)`
 
-Given two lines with the same amount of points, it generate cells in VTK format
+Given two lines with the same amount of points, it generates cells in VTK format
 by matching the points between lines. For instance:
 
   ```julia
@@ -92,7 +92,7 @@ function lines2vtkcells(line1::AbstractVector{<:AbstractVector{T}}, line2::Abstr
     npoints = size(line1, 1)                      # Number of points per line
     ncells = npoints-1                            # Number of cells
     points = vcat(line1, line2)                   # Points
-    vtk_cells = Vector{Vector{T}}(undef, ncells)  # Cells
+    vtk_cells = Vector{Vector{Int64}}(undef, ncells)  # Cells
 
     # Builds cells
     for i in 1:ncells
@@ -165,7 +165,6 @@ function lines2vtkmulticells(line1::AbstractVector{<:AbstractVector{T}},
 
     prev_line2 = this_line2
     prev_point_data2 = this_point_data2
-  end
 
   return points, vtk_cells, point_data
 end

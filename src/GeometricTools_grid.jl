@@ -13,6 +13,9 @@ struct Grid{N,TF}# <: AbstractGrid
     vector_fields::Dict{String, Field{Vector{TF}}} # Vector fields
 end
 
+"""
+`Grid(f, spacing, loop_dim)`
+"""
 function Grid{N,TF}(f, spacing::NTuple{N, <:AbstractVector}, loop_dim::NTuple{N, Bool}) where {N,TF}
 
     # get number of divisions
@@ -104,6 +107,9 @@ end
 get_scalar_field(grid::Grid{N,<:Any}, field_name::String, i::Integer) where N =
     grid.scalar_field[field_name]["field_data"][i]
 
+"""
+`add_scalar_field(grid, field_name, I)`
+"""
 function get_scalar_field(grid::Grid{N,<:Any}, field_name::String, I::Vararg{<:Integer, N}) where N
     if self.field[field_name]["entry_type"]=="node"
         i = LinearIndices(get_nnodes(grid.ndivs))[I...]
@@ -118,6 +124,9 @@ end
 get_vector_field(grid::Grid{N,<:Any}, field_name::String, i::Integer) where N =
     grid.vector_field[field_name]["field_data"][i]
 
+"""
+`add_vector_field(grid, field_name, I)`
+"""
 function get_vector_field(grid::Grid{N,<:Any}, field_name::String, I::Vararg{<:Integer, N}) where N
     if self.field[field_name]["entry_type"]=="node"
         i = LinearIndices(get_nnodes(grid.ndivs))[I...]
@@ -129,6 +138,9 @@ function get_vector_field(grid::Grid{N,<:Any}, field_name::String, I::Vararg{<:I
     return get_vector_field(grid, field_name, i)
 end
 
+"""
+`add_scalar_field!(grid, field_name, field_data, entry_type; warn_on_overwrite=true)`
+"""
 function add_scalar_field!(grid::Grid, field_name, field_data, entry_type; warn_on_overwrite=true)
 
     check_entry_type(grid, field_data, entry_type)
@@ -142,6 +154,9 @@ function add_scalar_field!(grid::Grid, field_name, field_data, entry_type; warn_
     return grid
 end
 
+"""
+`add_vector_field!(grid, field_name, field_data, entry_type; warn_on_overwrite=true)`
+"""
 function add_vector_field!(grid::Grid, field_name, field_data, entry_type; warn_on_overwrite=true)
 
     check_entry_type(grid, field_data, entry_type)
@@ -155,6 +170,9 @@ function add_vector_field!(grid::Grid, field_name, field_data, entry_type; warn_
     return grid
 end
 
+"""
+`check_entry_type(grid, field_data, entry_type)`
+"""
 function check_entry_type(grid::Grid, field_data, entry_type)
     if !(entry_type in ["node", "cell", "system"])
         error("Unkown entry type $(entry_type)")
@@ -173,6 +191,9 @@ function check_entry_type(grid::Grid, field_data, entry_type)
     return nothing
 end
 
+"""
+`add_scalar_field!(f, grid, field_nname, entry_type; warn_on_overwrite=true)`
+"""
 function add_scalar_field!(f, grid::Grid, field_name, entry_type; warn_on_overwrite=true)
 
     if entry_type=="node"
@@ -186,6 +207,9 @@ function add_scalar_field!(f, grid::Grid, field_name, entry_type; warn_on_overwr
     return add_scalar_field!(grid, field_name, field_data, entry_type, warn_on_overwrite=warn_on_overwrite)
 end
 
+"""
+`add_vector_field!(f, grid, field_name, entry_type; warn_on_overwrite=true)`
+"""
 function add_vector_field!(f, grid::Grid, field_name, entry_type; warn_on_overwrite=true)
 
     if entry_type=="node"
@@ -205,7 +229,7 @@ end
 Outputs a vtk file of this grid. See generateVTK for a descrition of optional
 arguments `args...`.
 """
-function save(grid::Grid{N,TF}, filename, args...)
+function save(grid::Grid, filename, args...)
     return generateVTK()
 end
 

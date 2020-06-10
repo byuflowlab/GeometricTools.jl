@@ -99,17 +99,17 @@ function parametric_mesh(; prompt=true)
   xlow, xhigh = 0, revs*2*pi      # Bounds of parametric edges
   n = 100                         # Number of cells
   r = 1.0                         # Expansion ratio
-  line1 = gt.discretize(f1, xlow, xhigh, n, r)
-  line2 = gt.discretize(f2, xlow, xhigh, n, r)
+  discretization = gt.FirstOverLast(r)
+  line1 = f1.(gt.discretize(xlow, xhigh, n, discretization))
+  line2 = f2.(gt.discretize(xlow, xhigh, n, discretization))
 
   # Dummy point data for good looking visuals
   pd1 = [i for i in 1:size(line1)[1]]
   pd2 = size(line1)[1] .+ [i for i in 1:size(line2)[1]]
 
   # Generates cells in VTK Legacy format
-  out = gt.lines2vtkcells(line1, line2; point_data1=pd1, point_data2=pd2)
-  points, vtk_cells, point_data = out
-
+  points, vtk_cells = gt.lines2vtkcells(line1, line2)
+  point_data = gt.linevalues2vtkcells(pd1, pd2)
 
   # Formats the point data for generateVTK
   data = []
@@ -119,7 +119,6 @@ function parametric_mesh(; prompt=true)
                   "field_data" => point_data
                   )
        )
-
 
    # Generates the vtk file
    gt.generateVTK(file_name, points; cells=vtk_cells, point_data=data)
@@ -157,8 +156,9 @@ function parametric_mesh2(; prompt=true)
   xlow, xhigh = 0, revs*2*pi      # Bounds of parametric edges
   n = 100                         # Number of cells
   r = 1.0                         # Expansion ratio
-  line1 = gt.discretize(f1, xlow, xhigh, n, r)
-  line2 = gt.discretize(f2, xlow, xhigh, n, r)
+  discretization = gt.FirstOverLast(r)
+  line1 = f1.(gt.discretize(xlow, xhigh, n, discretization))
+  line2 = f2.(gt.discretize(xlow, xhigh, n, discretization))
 
   # Discretize width between lines
   nwidth = 25                     # Number of rows between edges
@@ -171,9 +171,8 @@ function parametric_mesh2(; prompt=true)
   pd2 = size(line1)[1] .+ [i for i in 1:size(line2)[1]]
 
   # Generates cells in VTK Legacy format
-  out = gt.lines2vtkmulticells(line1, line2, sections;
-                                            point_data1=pd1, point_data2=pd2)
-  points, vtk_cells, point_data = out
+  points, vtk_cells, point_data = gt.multilines2vtkmulticells(line1, line2, sections, point_datas=[pd1, pd2])
+  # point_data = gt.multilines2vtkmulticells(pd1, pd2)
 
   # Formats the point data for generateVTK
   data = []

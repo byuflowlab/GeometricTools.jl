@@ -14,6 +14,7 @@ using Printf
 using LinearAlgebra
 using Requires
 using StaticArrays
+using FLOWMath
 import Statistics
 import PyCall
 import Dierckx

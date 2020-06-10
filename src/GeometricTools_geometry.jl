@@ -228,7 +228,7 @@ contour has been walked, and f(1.0) returns the last point in the contour.
 function parameterize(x, y)
 
     # get arc length parameterization
-    s = cumsum(vcat(0, sqrt.((x[2:end].-x[1:end]-1).^2 + (y[2:end].-y[1:end-1]).^2))
+    s = cumsum(vcat(0, sqrt.((x[2:end] .- x[1:end]-1) .^ 2 + (y[2:end] .- y[1:end-1]) .^ 2)))
 
     # normalize to vary from 0 to 1
     s .= s./s[end]
@@ -262,10 +262,10 @@ contour has been walked, and f(1.0) returns the last point in the contour.
 function parameterize(x, y, z)
 
     # get arc length parameterization
-    s = cumsum(vcat(0, sqrt.((x[2:end].-x[1:end]-1).^2 + (y[2:end].-y[1:end-1]).^2 + (z[2:end].-z[1:end-1]).^2)))
+    s = cumsum(vcat(0, sqrt.((x[2:end] .- x[1:end-1]) .^ 2 + (y[2:end] .- y[1:end-1]) .^ 2 + (z[2:end] .- z[1:end-1]) .^ 2)))
 
     # normalize to vary from 0 to 1
-    s .= s./s[end]
+    s .= s ./ s[end]
 
     # now spline the function wrt x, y, and z
     xspl = Akima(s, x)
@@ -312,7 +312,7 @@ countertransform(Vp, invM, T) = invM*Vp+T
 Checks that the unit vectors given as the matrix `M=[i;j;k]` define a coordinate
 system
 """
-function check_coord_sys(M::AbsractMatrix; raise_error=true)
+function check_coord_sys(M::AbstractMatrix; raise_error=true)
     # Checks normalization
     for i in 1:size(M)[1]
         if abs(norm(M[i,:])-1) > 0.00000001
