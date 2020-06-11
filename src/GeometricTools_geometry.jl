@@ -436,7 +436,7 @@ end
 function check_coord_sys(M::Array{Array{T,1},1}; raise_error::Bool=true
                                                                 ) where{T<:Real}
   dims = 3
-  newM = zeros(Float64, dims,dims)
+  newM = Array{Float64}(undef, dims, dims)
   for i in 1:dims
     newM[i, :] = M[i]
   end
