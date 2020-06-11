@@ -373,7 +373,7 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
                 warn("Reading data type $datatype as Float64!")
             end
 
-            fielddata[dataname][arrayname] = Array{Floaat64}(undef, nt, nc) #pre-allocate
+            fielddata[dataname][arrayname] = Array{Float64}(undef, nt, nc) #pre-allocate
 
             for ti in 1:nt      # Read tuples
                 comps = parse.(Float64, split(readline(f), " ")) # Read components
