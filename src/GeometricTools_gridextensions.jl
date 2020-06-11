@@ -28,10 +28,10 @@ Returns the value of node of coordinates `coor` (1-indexed) in the field
 function get_fieldval(self::GridExtentions, field_name::String, coor::Array{Int64,1})
 
   if self.field[field_name]["entry_type"]=="node"
-    return get_fieldval(self, field_name, sub2ind(self._ndivsnodes, coor...))
+    return get_fieldval(self, field_name, Base._sub2ind(self._ndivsnodes, coor...)) #TODO: use LinearIndex instead of _sub2ind() (next line too)
 
   elseif self.field[field_name]["entry_type"]=="cell"
-    return get_fieldval(self, field_name, sub2ind(self._ndivscells, coor...))
+    return get_fieldval(self, field_name, Base._sub2ind(self._ndivscells, coor...))
 
   else
     error("Entry type $(self.field[field_name]["entry_type"]) not implemented.")
@@ -132,7 +132,7 @@ function save(grid::GridExtentions, filename::String; O=nothing, Oaxis=nothing,
             "dimensions. There is not such implementation yet!")
     end
     O = O==nothing ? zeros(3) : O
-    Oaxis = Oaxis==nothing ? eye(3) : Oaxis
+    Oaxis = Oaxis==nothing ? Array(1.0I, 3, 3) : Oaxis
     check_coord_sys(Oaxis)
     invOaxis = Oaxis'
 

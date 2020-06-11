@@ -11,8 +11,8 @@
 import Statistics
 using PyPlot
 
-const module_path,_ = splitdir(@__FILE__);      # Path to this module
-const data_path = module_path*"/../docs/data/"       # Path to data folder
+module_path,_ = splitdir(@__FILE__);      # Path to this module
+data_path = module_path*"/../docs/data/"       # Path to data folder
 
 import GeometricTools
 gt = GeometricTools

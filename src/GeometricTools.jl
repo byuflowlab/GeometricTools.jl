@@ -12,7 +12,7 @@ module GeometricTools
 using Printf
 using LinearAlgebra
 using Requires
-import Statistics
+using Statistics
 import PyCall
 import Dierckx
 import Roots
