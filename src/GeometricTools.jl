@@ -1,6 +1,5 @@
 """
-  Methods for the manipulation of geometric data and formatting into VTK
-    format.
+  Methods for the manipulation of geometric data.
 
   # AUTHORSHIP
     * Author    : Eduardo J Alvarez
