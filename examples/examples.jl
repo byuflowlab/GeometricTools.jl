@@ -7,24 +7,17 @@
 #   * Created   : Nov 2017
 #   * License   : MIT License
 =###############################################################################
+# ------------ MODULE IMPORTS ------------------------------------------------
+import Statistics
+using PyPlot
 
-module GeometricTools_examples
+const module_path,_ = splitdir(@__FILE__);      # Path to this module
+const data_path = module_path*"/../docs/data/"       # Path to data folder
 
-  # ------------ MODULE IMPORTS ------------------------------------------------
-  import Statistics
-  using PyPlot
+import GeometricTools
+gt = GeometricTools
 
-  const module_path,_ = splitdir(@__FILE__);      # Path to this module
-  const data_path = module_path*"/../docs/data/"       # Path to data folder
-  push!(LOAD_PATH, joinpath(module_path,"../src/"))   # Point to VTKtools source
-
-  using GeometricTools
-  # include("../src/GeometricTools.jl")
-  gt = GeometricTools
-
-  # ------------ HEADERS -------------------------------------------------------
-  for header_name in ["simple", "airfoil", "wing", "blade", "taylor_wing"]
-    include("example_"*header_name*".jl")
-  end
-
+# ------------ HEADERS -------------------------------------------------------
+for header_name in ["simple", "airfoil", "wing", "blade", "taylor_wing"]
+include("example_"*header_name*".jl")
 end
