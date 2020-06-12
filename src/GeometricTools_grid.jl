@@ -476,7 +476,7 @@ function _generate_grid(P_min::Array{T,1} where {T<:Real},
 
   dims = _calc_dims(P_min)
   nnodes = _calc_nnodes(NDIVS, loop_dim)
-  nodes = zeros(Float64, dims, nnodes)
+  nodes = Array{Float64}(undef, dims, nnodes)
   ndivs = Tuple(_calc_ndivs(NDIVS))
 
   # Discretizes each coordinate according to NDIVS

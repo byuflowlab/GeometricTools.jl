@@ -373,7 +373,7 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
                 @warn("Reading data type $datatype as Float64!")
             end
 
-            fielddata[dataname][arrayname] = zeros(Float64, nt, nc)
+            fielddata[dataname][arrayname] = Array{Float64}(undef, nt, nc) #pre-allocate
 
             for ti in 1:nt      # Read tuples
                 comps = parse.(Float64, split(readline(f), " ")) # Read components
@@ -395,7 +395,7 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
     preal = split(ln, " ")[3]           # Point data real type
 
     # Read points
-    points = zeros(3, np)
+    points = Array{Float64}(undef, 3, np) #pre-allocate
     for pi in 1:np
         points[:, pi] .= parse.(Float64, split(readline(f), " "))
     end
@@ -438,7 +438,7 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
 
 
     # Read cells
-    cell_types = zeros(Int, nc2)
+    cell_types = Vector{Int}(undef, nc2) #pre-allocate
     for ci in 1:nc2
         cell_types[ci] = parse(Int, readline(f))    # Cell type
     end
@@ -495,13 +495,13 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
                     error("Only LOOKUP_TABLE currently supported; found $entrytype.")
                 end
 
-                this_data = zeros(nd)
+                this_data = Vector{Float64}(undef, nd) #pre-allocate
                 for i in 1:nd
                      this_data[i] = parse(Float64, readline(f))
                 end
             elseif datatype == "VECTORS"
 
-                this_data = zeros(3, nd)
+                this_data = Array{Float64}(undef, 3, nd) #pre-allocate
                 for i in 1:nd
                      this_data[:, i] = parse.(Float64, split(readline(f), " "))
                 end

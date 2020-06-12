@@ -1,7 +1,7 @@
 """
     `generate_vtk_cuboid(filename::String, x1::Real, x2::Real, x3::Real;
                                     O::Array{T1, 1}=zeros(Float64, 3),
-                                    Oaxis::Array{T1, 1}=eye(Float64, 3),
+                                    Oaxis::Array{T1, 1}=Array{Float64}(I, 3, 3),
                                     optargs...)`
 
     Returns a cuboid of sides `x1`, `x2`, `x3` with origin `O` and orientation
@@ -10,7 +10,7 @@ unit vector of the i-th axis.
 """
 function generate_vtk_cuboid(filename::String, x1::Real, x2::Real, x3::Real;
                                 O::Array{T1, 1}=zeros(Float64, 3),
-                                Oaxis::Array{T2, 2}=eye(Float64, 3),
+                                Oaxis::Array{T2, 2}=Array{Float64}(I, 3, 3),
                                 optargs...) where {T1<:Real, T2<:Real}
 
     check_coord_sys(Oaxis)
@@ -50,7 +50,7 @@ the third axis. `Oaxis[i, :]` contains the unit vector of the i-th axis.
 function generate_vtk_cyl(filename::String, r::Real, h::Real;
                                 np::Int64=36,
                                 O::Array{T1, 1}=zeros(Float64, 3),
-                                Oaxis::Array{T2, 2}=eye(Float64, 3),
+                                Oaxis::Array{T2, 2}=Array{Float64}(I, 3, 3),
                                 optargs...) where {T1<:Real, T2<:Real}
 
     check_coord_sys(Oaxis)
