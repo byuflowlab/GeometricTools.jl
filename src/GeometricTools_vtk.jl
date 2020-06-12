@@ -370,7 +370,7 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
             datatype = splt[4]          # Data type
 
             if datatype!="double"
-                warn("Reading data type $datatype as Float64!")
+                @warn("Reading data type $datatype as Float64!")
             end
 
             fielddata[dataname][arrayname] = zeros(Float64, nt, nc)

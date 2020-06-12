@@ -59,7 +59,7 @@ function generate_vtk_cyl(filename::String, r::Real, h::Real;
 
     # Generate lower face
     points = [countertransform([r*cos(a),r*sin(a),0], invOaxis, O)
-                                    for a in linspace(0, 2*pi, np+1)[1:end-1]]
+                                    for a in range(0, 2*pi, length=np+1)[1:end-1]]
     # Generate upper face and add centerline points
     points = vcat([O], points, [O+cen], [p+cen for p in points])
 
