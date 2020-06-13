@@ -134,7 +134,7 @@ function save(grid::GridExtentions, filename::String; O=nothing, Oaxis=nothing,
     O = O==nothing ? zeros(3) : O
     Oaxis = Oaxis==nothing ? Array(1.0I, 3, 3) : Oaxis
     check_coord_sys(Oaxis)
-    invOaxis = Oaxis'
+    invOaxis = collect(Oaxis')
 
     points = [countertransform(get_node(grid, i), invOaxis, O) for i in 1:grid.nnodes]
 

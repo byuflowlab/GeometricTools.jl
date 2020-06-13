@@ -14,7 +14,7 @@ function generate_vtk_cuboid(filename::String, x1::Real, x2::Real, x3::Real;
                                 optargs...) where {T1<:Real, T2<:Real}
 
     check_coord_sys(Oaxis)
-    invOaxis = Oaxis'
+    invOaxis = collect(Oaxis)'
 
     # Defining points
     p0 = countertransform([0,0,0], invOaxis, O)
@@ -54,7 +54,7 @@ function generate_vtk_cyl(filename::String, r::Real, h::Real;
                                 optargs...) where {T1<:Real, T2<:Real}
 
     check_coord_sys(Oaxis)
-    invOaxis = Oaxis'
+    invOaxis = collect(Oaxis)'
     cen = countertransform([0, 0, h], invOaxis, zeros(3)) # Centerline to upper face
 
     # Generate lower face

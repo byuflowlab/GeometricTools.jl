@@ -434,8 +434,8 @@ function surface_revolution(profile::AbstractMatrix{T}, thetaNDIVS::Integer;
   if axis_angle!=0
     M = rotation_matrix(0,0,-axis_angle)
     M2D = M[2:3,2:3]
-    M3D = M'
-    points = hcat([M2D*profile[i,:] for i in 1:size(profile,1)]...)'
+    M3D = collect(M)'
+    points = collect(hcat([M2D*profile[i,:] for i in 1:size(profile,1)]...))'
   else
     M3D = I
     points = profile
