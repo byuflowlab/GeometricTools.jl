@@ -24,8 +24,8 @@ function readcontour(file_name; header_len=1, delim=" ", path="", output="arrays
                 # Parses each line
             else
                 this_x, this_y = split(line, delim; keepempty=false)
-                push!(x, Meta.parse(Float64, this_x))
-                push!(y, Meta.parse(Float64, this_y))
+                push!(x, Base.parse(Float64, this_x))
+                push!(y, Base.parse(Float64, this_y))
             end
 
         end

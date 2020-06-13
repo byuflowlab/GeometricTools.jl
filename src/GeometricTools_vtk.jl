@@ -356,7 +356,7 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
     # Read fields
     while ln[1:5]=="FIELD"      # Iterate over fields
         dataname = split(ln, " ")[2]    # Data name
-        narr = Meta.parse(Int, split(ln, " ")[3])  # Number of arrays
+        narr = Base.parse(Int, split(ln, " ")[3])  # Number of arrays
 
         fielddata[dataname] = Dict{String, Array{Float64}}()
 
@@ -365,8 +365,8 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
             splt = split(ln, " ")
 
             arrayname = splt[1]         # Array name
-            nc = Meta.parse(Int, splt[2])    # Number of components
-            nt = Meta.parse(Int, splt[3])    # Number of tuples
+            nc = Base.parse(Int, splt[2])    # Number of components
+            nt = Base.parse(Int, splt[3])    # Number of tuples
             datatype = splt[4]          # Data type
 
             if datatype!="double"
@@ -376,7 +376,7 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
             fielddata[dataname][arrayname] = Array{Float64}(undef, nt, nc) #pre-allocate
 
             for ti in 1:nt      # Read tuples
-                comps = Meta.parse.(Float64, split(readline(f), " ")) # Read components
+                comps = Base.parse.(Float64, split(readline(f), " ")) # Read components
                 if length(comps)!=nc
                     error("LOGIC ERROR! Expected $nc components, got $(length(comps)).")
                 end
@@ -391,13 +391,13 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
         error("Expected to find POINTS, found $(ln[1:7]).")
     end
 
-    np = Meta.parse(Int, split(ln, " ")[2])  # Number of points
+    np = Base.parse(Int, split(ln, " ")[2])  # Number of points
     preal = split(ln, " ")[3]           # Point data real type
 
     # Read points
     points = Array{Float64}(undef, 3, np) #pre-allocate
     for pi in 1:np
-        points[:, pi] .= Meta.parse.(Float64, split(readline(f), " "))
+        points[:, pi] .= Base.parse.(Float64, split(readline(f), " "))
     end
 
 
@@ -410,15 +410,15 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
         error("Expected to find CELLS, found $(ln[1:7]).")
     end
 
-    nc = Meta.parse(Int, split(ln, " ")[2])      # Number of cells
-    csize = Meta.parse(Int, split(ln, " ")[3])   # Cell list size
+    nc = Base.parse(Int, split(ln, " ")[2])      # Number of cells
+    csize = Base.parse(Int, split(ln, " ")[3])   # Cell list size
 
     # Read cells
     cells = Array{Int, 1}[]
     for ci in 1:nc
         aux = readline(f)
         while occursin("  ", aux); aux = replace(aux, "  "=>" "); end;
-        ln = Meta.parse.(Int, split(aux, " "))
+        ln = Base.parse.(Int, split(aux, " "))
         nn = ln[1]                     # Number of nodes
         push!(cells, ln[2:end])
     end
@@ -431,7 +431,7 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
         error("Expected to find CELL_TYPES, found $(ln[1:7]).")
     end
 
-    nc2 = Meta.parse(Int, split(ln, " ")[2])      # Number of cells again
+    nc2 = Base.parse(Int, split(ln, " ")[2])      # Number of cells again
     if nc != nc2
         error("Found $nc2 cell types but there's $nc cells.")
     end
@@ -440,7 +440,7 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
     # Read cells
     cell_types = Vector{Int}(undef, nc2) #pre-allocate
     for ci in 1:nc2
-        cell_types[ci] = Meta.parse(Int, readline(f))    # Cell type
+        cell_types[ci] = Base.parse(Int, readline(f))    # Cell type
     end
 
     # -------------- DATA FIELDS ------------------------------------------
@@ -452,7 +452,7 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
     while ln != nothing    # Iterate until end of file
 
         dataparent = split(ln, " ")[1]  # Parent of this data
-        nd = Meta.parse(Int, split(ln, " ")[2])   # Number of data entries
+        nd = Base.parse(Int, split(ln, " ")[2])   # Number of data entries
 
         if dataparent == "POINT_DATA"
             if nd != np
@@ -497,13 +497,13 @@ function read_vtk(filename::String; path::String="", fielddata=Dict())
 
                 this_data = Vector{Float64}(undef, nd) #pre-allocate
                 for i in 1:nd
-                     this_data[i] = Meta.parse(Float64, readline(f))
+                     this_data[i] = Base.parse(Float64, readline(f))
                 end
             elseif datatype == "VECTORS"
 
                 this_data = Array{Float64}(undef, 3, nd) #pre-allocate
                 for i in 1:nd
-                     this_data[:, i] = Meta.parse.(Float64, split(readline(f), " "))
+                     this_data[:, i] = Base.parse.(Float64, split(readline(f), " "))
                 end
 
             else

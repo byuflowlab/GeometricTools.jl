@@ -54,7 +54,7 @@ function generate_vtk_cyl(filename::String, r::Real, h::Real;
                                 optargs...) where {T1<:Real, T2<:Real}
 
     check_coord_sys(Oaxis)
-    invOaxis = collect(Oaxis)'
+    invOaxis = collect(Oaxis')
     cen = countertransform([0, 0, h], invOaxis, zeros(3)) # Centerline to upper face
 
     # Generate lower face
