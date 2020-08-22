@@ -97,7 +97,7 @@ function naca4digits(d1, d2, d34, xs)
     p = d2/10
     t = d34/100
 
-    yt = @. 5*t * (0.2969*sqrt(x) - 0.126*x - 0.3516*x^2 + 0.2843*x^3 - 0.1015*x^4)
+    yt = 5*t * (0.2969*sqrt.(xs) .- 0.126*xs .- 0.3516*xs.^2 .+ 0.2843*xs.^3 .- 0.1015*xs.^4)
 
     if d1==0 && d2==0
         return xs, xs, yt, -yt
