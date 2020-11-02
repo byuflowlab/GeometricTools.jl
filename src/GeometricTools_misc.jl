@@ -31,10 +31,13 @@ function create_path(save_path::String, prompt::Bool)
         return
       end
     else
-      run(`rm -rf $save_path`)
+      # run(`rm -rf $save_path`)
+      rm(save_path; force=true, recursive=true)
+
     end
   end
-  run(`mkdir $save_path`)
+  # run(`mkdir $save_path`)
+  mkdir(save_path)
 end
 
 """
