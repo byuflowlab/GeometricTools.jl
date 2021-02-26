@@ -164,9 +164,11 @@ end
 function transform!(self::MultiGrid, args...; optargs...)
 end
 function save(self::MultiGrid, file_name::String, args...; optargs...)
+  str = ""
   for (i, grid) in enumerate(self.grids)
-    save(grid, file_name*"_"*self.grid_names[i], args...; optargs...)
+    str *= save(grid, file_name*"_"*self.grid_names[i], args...; optargs...)
   end
+  return str
 end
 function plot(self::MultiGrid; optargs...)
   for grid in self.grids

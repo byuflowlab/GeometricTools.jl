@@ -565,18 +565,18 @@ function generateVTK(filename::String, points;
   f = open(joinpath(path, filename*ext), "w")
 
   # HEADER
-  header = "# vtk DataFile Version 4.0" # File version and identifier
-  header = string(header, "\n", " ", comments) # Title
-  header = string(header, "\n", "ASCII") # File format
-  header = string(header, "\n", "DATASET UNSTRUCTURED_GRID")
-  write(f, header)
+  header = "# vtk DataFile Version 4.0"  # File version and identifier
+  header *= "\n "*comments               # Title
+  header *= "\nASCII"                    # File format
+  header *= "\nDATASET UNSTRUCTURED_GRID"
+  print(f, header)
 
   # TIME
   if time!=nothing
     line0 = "\nFIELD FieldData 1"
     line1 = "\nSIM_TIME 1 1 double"
     line2 = "\n$(round.(time, digits=rnd_d))"
-    write(f, line0*line1*line2)
+    print(f, line0, line1, line2)
   end
 
   np = size(points)[1]
@@ -586,7 +586,7 @@ function generateVTK(filename::String, points;
   _keep_points = keep_points || (nl==0 && nc==0)
 
   # POINTS
-  write(f, string("\n", "POINTS ", np, " float"))
+  print(f, "\n", "POINTS ", np, " float")
   for i in 1:np
     print(f, "\n", round.(points[i][1], digits=rnd_d), " ",
             round.(points[i][2], digits=rnd_d), " ", round.(points[i][3], digits=rnd_d))
@@ -608,7 +608,7 @@ function generateVTK(filename::String, points;
   for cell in cells
     auxc += size(cell)[1]
   end
-  write(f, "\n\nCELLS $(np+nl+nc) $(2*np+auxl+auxc)")
+  print(f, "\n\nCELLS $(np+nl+nc) $(2*np+auxl+auxc)")
 
   for i in 1:np+nl+nc
     if i<=np
@@ -624,7 +624,7 @@ function generateVTK(filename::String, points;
     end
   end
 
-  write(f, "\n\nCELL_TYPES $(np+nl+nc)")
+  print(f, "\n\nCELL_TYPES $(np+nl+nc)")
   for i in 1:np+nl+nc
     if i<=np
       tpe = 1
@@ -658,7 +658,7 @@ function generateVTK(filename::String, points;
 
   # POINT DATA
   if point_data!=nothing
-      write(f, "\n\nPOINT_DATA $np")
+      print(f, "\n\nPOINT_DATA $np")
   end
   _p_data = point_data!=nothing ? point_data : []
   for field in _p_data
@@ -669,12 +669,12 @@ function generateVTK(filename::String, points;
       @warn("Corrupted field $(field_name)! Field size != number of points.")
     end
     if field_type=="scalar"
-      write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
+      print(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
       for entry in data
         print(f, "\n", round.(entry, digits=rnd_d))
       end
     elseif field_type=="vector"
-      write(f, "\n\nVECTORS $field_name float")
+      print(f, "\n\nVECTORS $field_name float")
       for entry in data
         print(f, "\n", round.(entry[1], digits=rnd_d), " ", round.(entry[2], digits=rnd_d), " ", round.(entry[3], digits=rnd_d))
       end
@@ -686,7 +686,7 @@ function generateVTK(filename::String, points;
 
     # CELL DATA
     if cell_data!=nothing
-        write(f, "\n\nCELL_DATA $nc")
+        print(f, "\n\nCELL_DATA $nc")
     end
     _c_data = cell_data!=nothing ? cell_data : []
     for field in _c_data
@@ -697,12 +697,12 @@ function generateVTK(filename::String, points;
         @warn("Corrupted field $(field_name)! Field size != number of cells.")
       end
       if field_type=="scalar"
-        write(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
+        print(f, "\n\nSCALARS $field_name float\nLOOKUP_TABLE default")
         for entry in data
           print(f, "\n", round.(entry, digits=rnd_d))
         end
       elseif field_type=="vector"
-        write(f, "\n\nVECTORS $field_name float")
+        print(f, "\n\nVECTORS $field_name float")
         for entry in data
           print(f, "\n", round.(entry[1], digits=rnd_d), " ", round.(entry[2], digits=rnd_d), " ", round.(entry[3], digits=rnd_d))
         end
