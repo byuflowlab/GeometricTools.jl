@@ -574,7 +574,9 @@ function generateVTK(filename::String, points;
   # TIME
   if time!=nothing
     line0 = "\nFIELD FieldData 1"
-    line1 = "\nSIM_TIME 1 1 double"
+    # line1 = "\nSIM_TIME 1 1 double"
+    # line1 = "\nTIME 1 1 double"
+    line1 = "\nTimeValue 1 1 double"
     line2 = "\n$(round.(time, digits=rnd_d))"
     print(f, line0, line1, line2)
   end
