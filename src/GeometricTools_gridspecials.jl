@@ -131,6 +131,7 @@ end
     `get_volume(self::GridTriangleSurface)`
 Returns the volume encloused by the grid using Green's theorem. See
 https://en.wikipedia.org/wiki/Green%27s_theorem#Area_Calculation
+https://en.wikipedia.org/wiki/Polyhedron#Volume
 """
 function get_volume(self::GridTriangleSurface)
     V = 0

@@ -350,7 +350,7 @@ function transform!(grid::Grid, f; reset_fields::Bool=true)
     if reset_fields; grid.field = Dict{String, Dict{String, Any}}(); end;
 
     for i in 1:grid.nnodes
-      grid.nodes[:,i] = f(grid.nodes[:,i])
+      grid.nodes[:,i] .= f(view(grid.nodes, :, i))
     end
 end
 
