@@ -29,7 +29,8 @@ function __init__()
 end
 
 for header_name in ["vtk", "geometry", "misc", "gridabstract", "airfoil",
-                    "surfacing", "plot3d", "vtk_shapes", "conics", "statistics",
+                    "surfacing", "plot3d", "vtk_shapes", "conics",
+                    "statistics", "linearalgebra",
                     "DEPRECATED"]
     include("GeometricTools_"*header_name*".jl")
 end

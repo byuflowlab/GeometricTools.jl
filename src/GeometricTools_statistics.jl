@@ -8,24 +8,127 @@
   * License   : MIT License
 =###############################################################################
 
+# ----------- CARTESIAN OPERATIONS ---------------------------------------------
 _agglomerate_mean(name, din, dout, args...) = din[name]
-function _agglomerate_variance(name, din, dout, args...)
+function _agglomerate_variance(name, din, dout, args...; mean_suf="-mean")
     if length(size(din[name]))==1
-        return ( (din[name][i]-dout[name*"-mean"][i])^2 for i in 1:length(din[name]))
+        return ( (din[name][i]-dout[name*mean_suf][i])^2
+                        for i in 1:length(din[name]))
     else
-        return ( (din[name][i,j]-dout[name*"-mean"][i,j])^2 for i in 1:size(din[name],1), j in 1:size(din[name], 2) )
+        return ( (din[name][i,j]-dout[name*mean_suf][i,j])^2
+                       for i in 1:size(din[name],1), j in 1:size(din[name], 2) )
     end
 end
 
-function _agglomerate_correlation(k::Int, name, din, dout, args...)
+"Correlation of k-th direction with all other directions"
+function _agglomerate_correlation(k::Int, name, din, dout, args...; mean_suf="-mean")
     return (
-                (din[name][k, j]-dout[name*"-mean"][k, j])*(din[name][(i-1)%3+1, j]-dout[name*"-mean"][(i-1)%3+1, j]) for i in 1:size(din[name], 1), j in 1:size(din[name], 2)
+                (din[name][k, j]-dout[name*mean_suf][k, j])*(din[name][(i-1)%3+1, j]-dout[name*mean_suf][(i-1)%3+1, j])
+                        for i in 1:size(din[name], 1), j in 1:size(din[name], 2)
            )
 end
 _agglomerate_correlation1(args...; optargs...) = _agglomerate_correlation(1, args...; optargs...)
 _agglomerate_correlation2(args...; optargs...) = _agglomerate_correlation(2, args...; optargs...)
 _agglomerate_correlation3(args...; optargs...) = _agglomerate_correlation(3, args...; optargs...)
 
+
+# ----------- CYLINDRICAL OPERATIONS -------------------------------------------
+"Calculate radial and azimuthal direction at each centroid"
+function _get_rad_azim_dirs(axial_dir, din)
+
+    keyi = findfirst(x->contains(x, "centroid"), collect(keys(din)))
+    if keyi == nothing
+        error("Centroids not found."*
+        " Make sure that centroids are calculated before calling this function")
+    end
+
+    # Fetch position of each element
+    centroid_key = collect(keys(din))[keyi]
+    centroids = din[centroid_key]
+    nelems = size(centroids, 2)
+
+    # Determine radial directions
+    radial_dirs_aux = ( ((centroids[i, j] - dot(view(centroids, :, j), axial_dir)*axial_dir[i])
+                                            for i in 1:3) for j in 1:nelems )
+    radial_dirs = ( collect(R)/norm(R) for R in radial_dirs_aux )
+
+    # Determine azimuthal directions
+    azim_dirs = ( cross(axial_dir, R) for R in radial_dirs )
+
+    return radial_dirs, azim_dirs
+end
+
+function _agglomerate_cyl_mean(axial_dir::Array{<:Real, 1}, name, din, args...)
+
+    radial_dirs, azim_dirs = _get_rad_azim_dirs(axial_dir, din)
+
+    if length(size(din[name]))==1
+        return error("Cylindrical transformation requested on a scalar field!")
+    end
+
+    data = din[name]
+    ndims = size(data, 1)
+    nelems = size(data, 2)
+    axial_dirs = (axial_dir for i in 1:nelems)
+
+    return (
+                dot( view(data, :, j[1]), j[i+1] )
+                    for i in 1:ndims,
+                        j in zip(1:nelems, radial_dirs, azim_dirs, axial_dirs)
+            )
+end
+
+function _agglomerate_cyl_variance(axial_dir::Array{<:Real, 1}, name, din, dout, args...; mean_suf="-cyl-mean")
+
+    radial_dirs, azim_dirs = _get_rad_azim_dirs(axial_dir, din)
+
+    if length(size(din[name]))==1
+        return error("Cylindrical transformation requested on a scalar field!")
+    end
+
+    Din = din[name]
+    Dout = dout[name*mean_suf]
+    ndims = size(Din, 1)
+    nelems = size(Din, 2)
+    axial_dirs = (axial_dir for i in 1:nelems)
+
+    return (
+                (dot( view(Din, :, j[1]), j[i+1] ) - Dout[i,j[1]])^2
+                    for i in 1:ndims,
+                        j in zip(1:nelems, radial_dirs, azim_dirs, axial_dirs)
+            )
+end
+
+"Correlation of k-th direction with all other directions"
+function _agglomerate_cyl_correlation(k::Int, axial_dir::Array{<:Real, 1}, name, din, dout, args...; mean_suf="-cyl-mean")
+
+    radial_dirs, azim_dirs = _get_rad_azim_dirs(axial_dir, din)
+
+    if length(size(din[name]))==1
+        return error("Cylindrical transformation requested on a scalar field!")
+    end
+
+    Din = din[name]
+    Dout = dout[name*mean_suf]
+    ndims = size(Din, 1)
+    nelems = size(Din, 2)
+    axial_dirs = (axial_dir for i in 1:nelems)
+
+    return (
+                (dot( view(Din, :, j[1]), j[k+1] ) - Dout[k,j[1]]) * (dot( view(Din, :, j[1]), j[(i-1)%3+1+1] ) - Dout[(i-1)%3+1, j[1]])
+                    for i in 1:ndims,
+                        j in zip(1:nelems, radial_dirs, azim_dirs, axial_dirs)
+            )
+end
+
+_agglomerate__cyl_correlation1(args...; optargs...) = _agglomerate__cyl_correlation(1, args...; optargs...)
+_agglomerate__cyl_correlation2(args...; optargs...) = _agglomerate__cyl_correlation(2, args...; optargs...)
+_agglomerate__cyl_correlation3(args...; optargs...) = _agglomerate__cyl_correlation(3, args...; optargs...)
+
+
+
+
+# ----------- STATISTICAL OPERATIONS ON VTKS -----------------------------------
 function calculate_statistics_vtk(vtkfiles;                  # List of files to process
                                     read_path="",            # Folder where to read files from
                                     ites=2,                  # Number of processing iterations
