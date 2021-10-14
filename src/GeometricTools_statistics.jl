@@ -121,9 +121,9 @@ function _agglomerate_cyl_correlation(k::Int, axial_dir::Array{<:Real, 1}, name,
             )
 end
 
-_agglomerate__cyl_correlation1(args...; optargs...) = _agglomerate__cyl_correlation(1, args...; optargs...)
-_agglomerate__cyl_correlation2(args...; optargs...) = _agglomerate__cyl_correlation(2, args...; optargs...)
-_agglomerate__cyl_correlation3(args...; optargs...) = _agglomerate__cyl_correlation(3, args...; optargs...)
+_agglomerate_cyl_correlation1(args...; optargs...) = _agglomerate_cyl_correlation(1, args...; optargs...)
+_agglomerate_cyl_correlation2(args...; optargs...) = _agglomerate_cyl_correlation(2, args...; optargs...)
+_agglomerate_cyl_correlation3(args...; optargs...) = _agglomerate_cyl_correlation(3, args...; optargs...)
 
 
 
