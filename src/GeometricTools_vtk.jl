@@ -667,7 +667,7 @@ function generateVTK(filename::String, points;
     field_name = field["field_name"]
     field_type = field["field_type"]
     data = field["field_data"]
-    if size(data)[1]!=np
+    if length(data)!=np
       @warn("Corrupted field $(field_name)! Field size != number of points.")
     end
     if field_type=="scalar"
