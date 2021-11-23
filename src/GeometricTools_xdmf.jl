@@ -44,7 +44,7 @@ Save a three-dimensional structured grid of nodes `nodes` and dimensions `NDIVS`
 function generateXDMF_3Dstructured(filename, nodes::Matrix,
                                     NDIVS::Union{Array{Int, 1}, Tuple};
                                     path="", num=nothing, time=nothing,
-                                    compression_optargs=(compress=3, ),
+                                    compression_optargs=(shuffle=(), deflate=3),
                                     fields=Dict(),
                                     debug=false)
 
@@ -77,7 +77,11 @@ function generateXDMF_3Dstructured(filename, nodes::Matrix,
     HDF5.h5open(joinpath(path, h5fname), "w") do h5
 
         # Write nodes
-        h5["nodes"] = nodes
+        dtype = HDF5.datatype(Float64)
+        dspace = HDF5.dataspace(size(nodes))
+        dset = HDF5.create_dataset(h5, "nodes", dtype, dspace;
+                                    chunk=size(nodes), compression_optargs...)
+        write(dset, nodes)
 
         # Write fields
         for (key, val) in fields
