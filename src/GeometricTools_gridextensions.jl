@@ -70,10 +70,10 @@ function add_field(grid::GridExtentions, field_name::String,
     error("Unkown field type $(field_type)")
   elseif !(entry_type in ["node", "cell", "system"])
     error("Unkown entry type $(entry_type)")
-elseif entry_type=="node" && length(field_data)!=grid.nnodes
+elseif entry_type=="node" && (length(field_data)!=grid.nnodes || size(field_data, 2)!=grid.nnodes)
     error("Invalid node field size."*
             " Expected $(grid.nnodes), got $(length(field_data))")
-  elseif entry_type=="cell" && length(field_data)!=grid.ncells
+  elseif entry_type=="cell" && (length(field_data)!=grid.ncells || size(field_data, 2)!=grid.ncells)
     error("Invalid cell field size."*
             " Expected $(grid.nnodes), got $(length(field_data))")
   end
