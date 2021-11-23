@@ -116,7 +116,7 @@ end
 Outputs a vtk file of this grid. See generateVTK for a descrition of optional
 arguments `args...`.
 """
-function save(grid::GridExtentions, filename::String; O=nothing, Oaxis=nothing,
+function save_vtk(grid::GridExtentions, filename::String; O=nothing, Oaxis=nothing,
                                                                         args...)
   # Determines whether to add 0 to points for vtk file
   if grid.dims<=3
@@ -172,4 +172,26 @@ function save(grid::GridExtentions, filename::String; O=nothing, Oaxis=nothing,
                       _griddims=dims,
                       override_cell_type=ctype,
                       args...)
+end
+
+function save_xdmf(grid::GridExtentions, filename; optargs...)
+
+    # NOTE: loop_dims is currently not supported and this will crash!
+
+    return generateXDMF_3Dstructured(filename, grid.nodes, grid._ndivscells;
+                                        fields=grid.field,
+                                        optargs...)
+end
+
+function save(grid::GridExtentions, filename; format="xdmf", optargs...)
+
+    frmt = lowercase(format)
+
+    if frmt=="xdmf"
+        return save_xdmf(grid, filename; optargs...)
+    elseif frmt=="vtk"
+        return save_vtk(grid, filename; optargs...)
+    else
+        error("Unknown format $(format). Valid formats are \"xdmf\" and \"vtk\".")
+    end
 end

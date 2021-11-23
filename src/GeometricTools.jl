@@ -17,6 +17,7 @@ import PyCall
 import Dierckx
 import Roots
 import QuadGK
+import HDF5
 
 const patch = PyCall.PyNULL()
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
@@ -30,7 +31,7 @@ end
 
 for header_name in ["vtk", "geometry", "misc", "gridabstract", "airfoil",
                     "surfacing", "plot3d", "vtk_shapes", "conics",
-                    "statistics", "linearalgebra",
+                    "statistics", "linearalgebra", "xdmf",
                     "DEPRECATED"]
     include("GeometricTools_"*header_name*".jl")
 end
