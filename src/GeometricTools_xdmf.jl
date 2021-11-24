@@ -52,7 +52,7 @@ function generateXDMF_3Dstructured(filename, nodes::Matrix,
     ncells = prod(NDIVS)
     dims = Iterators.reverse(n+1 for n in NDIVS)
 
-    dims_str = prod("$(n)"*" "^(n!=NDIVS[1]+1) for n in dims)
+    dims_str = prod("$(n)"*" "^(ni!=length(dims)) for (ni, n) in enumerate(dims))
 
     # ERROR CASES
     if size(nodes, 1) != 3
