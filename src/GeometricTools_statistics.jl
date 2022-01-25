@@ -217,6 +217,7 @@ function calculate_statistics_vtk(vtkfiles;                  # List of files to 
                             try
                                 data_out[dataparent][name*"-"*op_name] .+= op(name, subdata, data_out[dataparent], points, cells)
                             catch e
+                                println(op)
                                 println(size(data_out[dataparent][name*"-"*op_name]))
                                 println(size(collect(op(name, subdata, data_out[dataparent], points, cells))))
                                 println()

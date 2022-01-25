@@ -75,3 +75,39 @@ function generate_vtk_cyl(filename::String, r::Real, h::Real;
     # Generate vtk file
     generateVTK(filename, points; cells=cells, optargs...)
 end
+
+
+# function generate_vtk_arrow(filename::String, r::Real, h::Real;
+#                                 l=1.00,                  # Arrow length
+#                                 ar=0.25,                 # Aspect ratio of arrow
+#                                 R1=0.10,                 # Radius of arrow stem
+#                                 R2=0.25,                 # Radius of arrow head
+#                                 nz=100,                  # Number of axial sections
+#                                 ntheta=36,               # Number of angular sections
+#                                 O::Array{T1, 1}=zeros(Float64, 3),   # Start of stem
+#                                 Oaxis::Array{T2, 2}=Array{Float64}(I, 3, 3),  # Orientation
+#                                 optargs...) where {T1<:Real, T2<:Real}
+#
+#     # Create linear arrows
+#     n1s = Int.(round.(nz * (1 ./ (ar .+ 1) )))
+#     n2s = nz .- n1s
+#     ls1 = l .* (1 ./ (ar .+ 1) )
+#     ls2 = l .- ls1
+#
+#     xs1 = range(0, ls1, length=n1s)
+#     xs2 = range(ls1, ls1 + ls2, length=n2s)
+#     ys1 = R1*ones(length(xs1))
+#     ys2 = R2*range(1, 0, length=length(xs2))
+#     xs  = vcat(xs1, xs2)
+#     ys  = vcat(ys1, ys2)
+#
+#     points = hcat(ys, xs)
+#
+#     loop_dim   = 2            # Loops the parametric grid
+#     grid       = gt.surface_revolution(points, theta; loop_dim=loop_dim)
+#
+#     # Translate the arrow
+#     gt.lintransform!(grid, Oaxis, O)
+#
+#     return grid, gt.save(grid, filename; optargs...)
+# end
