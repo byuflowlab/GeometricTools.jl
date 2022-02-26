@@ -177,6 +177,7 @@ end
 function save_xdmf(grid::GridExtentions, filename; optargs...)
 
     # NOTE: loop_dims is currently not supported and this will crash!
+    # NOTE: GridTriangleSurface types are currently not supported and this will crash
 
     return generateXDMF_3Dstructured(filename, grid.nodes, grid._ndivscells;
                                         fields=grid.field,

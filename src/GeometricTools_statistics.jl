@@ -63,7 +63,8 @@ function _agglomerate_cyl_mean(axial_dir::Array{<:Real, 1}, name, din, args...)
     radial_dirs, azim_dirs = _get_rad_azim_dirs(axial_dir, din)
 
     if length(size(din[name]))==1
-        return error("Cylindrical transformation requested on a scalar field!")
+        # error("Cylindrical transformation requested on a scalar field!")
+        return _agglomerate_mean(name, din, args...)
     end
 
     data = din[name]
@@ -83,7 +84,8 @@ function _agglomerate_cyl_variance(axial_dir::Array{<:Real, 1}, name, din, dout,
     radial_dirs, azim_dirs = _get_rad_azim_dirs(axial_dir, din)
 
     if length(size(din[name]))==1
-        return error("Cylindrical transformation requested on a scalar field!")
+        # error("Cylindrical transformation requested on a scalar field!")
+        return _agglomerate_variance(name, din, dout, args...; mean_suf=mean_suf)
     end
 
     Din = din[name]
@@ -105,7 +107,8 @@ function _agglomerate_cyl_correlation(k::Int, axial_dir::Array{<:Real, 1}, name,
     radial_dirs, azim_dirs = _get_rad_azim_dirs(axial_dir, din)
 
     if length(size(din[name]))==1
-        return error("Cylindrical transformation requested on a scalar field!")
+        # error("Cylindrical transformation requested on a scalar field!")
+        return _agglomerate_correlation(k, name, din, dout, args...; mean_suf=mean_suf)
     end
 
     Din = din[name]
