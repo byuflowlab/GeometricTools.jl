@@ -186,12 +186,23 @@ end
 
 function save(grid::GridExtentions, filename; format="xdmf", optargs...)
 
+
     frmt = lowercase(format)
 
-    if frmt=="xdmf"
-        return save_xdmf(grid, filename; optargs...)
-    elseif frmt=="vtk"
+
+
+    if frmt=="vtk"
         return save_vtk(grid, filename; optargs...)
+
+    elseif grid isa GridTriangleSurface
+        @warn("xdmf output format requested, but not available on"*
+              " GridTriangleSurface; will output vtk instead.")
+
+        return save_vtk(grid, filename; optargs...)
+        
+    elseif frmt=="xdmf"
+        return save_xdmf(grid, filename; optargs...)
+
     else
         error("Unknown format $(format). Valid formats are \"xdmf\" and \"vtk\".")
     end

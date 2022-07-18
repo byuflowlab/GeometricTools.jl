@@ -239,17 +239,17 @@ function _ndivscells(orggrid::Grid, dimsplit::Int64)
               ])
 end
 
-function _calc_tangent(nodes::Array{Array{T,1},1}) where{T<:Real}
+function _calc_tangent(nodes::Array{Arr1,1}) where{Arr1<:AbstractArray}
   t = nodes[2] - nodes[1]
   return t/norm(t)
 end
 
-function _calc_normal(nodes::Array{Array{T,1},1}) where{T<:Real}
+function _calc_normal(nodes::Array{Arr1,1}) where{Arr1<:AbstractArray}
   n = cross(nodes[2]-nodes[1], nodes[3]-nodes[1])
   return n/norm(n)
 end
 
-function _calc_unitvectors(nodes::Array{Array{T,1},1}) where{T<:Real}
+function _calc_unitvectors(nodes::Array{Arr1,1}) where{Arr1<:AbstractArray}
   t = _calc_tangent(nodes)
   n = _calc_normal(nodes)
   o = cross(n,t)
