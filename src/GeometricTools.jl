@@ -19,20 +19,16 @@ import Roots
 import QuadGK
 import HDF5
 
-const patch = PyCall.PyNULL()
+import PyPlot as plt
+
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
                                                 # Type of multidiscretize input
 const multidisctype = Vector{Tuple{Float64,Int64,Float64,Bool}}
 
-function __init__()
-    copy!(patch, PyCall.pyimport_conda("matplotlib.patches", "patches"))
-    @require PyPlot="d330b81b-6aea-500a-939a-2ce795aea3ee" include("GeometricTools_plotting.jl")
-end
-
 for header_name in ["vtk", "geometry", "misc", "gridabstract", "airfoil",
                     "surfacing", "plot3d", "vtk_shapes", "conics",
                     "statistics", "linearalgebra", "xdmf",
-                    "DEPRECATED"]
+                    "DEPRECATED", "plotting"]
     include("GeometricTools_"*header_name*".jl")
 end
 

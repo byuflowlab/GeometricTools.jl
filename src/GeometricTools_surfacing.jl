@@ -276,14 +276,14 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
 
   # ----------------- SPLINE VERIFICATION --------------------------------------
   if verify_spline
-    if isdefined(Main, :PyPlot)
+    # if isdefined(Main, :PyPlot)
       plot_loft_splines(b_pos, LE_x, LE_z, new_LE_x, new_LE_z, twists, new_twists,
         tilt_z, new_tlt_z, chords, new_chords)
-    else
-      @eval Main import PyPlot
-      Base.invokelatest(plot_loft_splines, b_pos, LE_x, LE_z, new_LE_x, new_LE_z, twists, new_twists,
-        tilt_z, new_tlt_z, chords, new_chords)
-    end
+    # else
+    #   @eval Main import PyPlot
+    #   Base.invokelatest(plot_loft_splines, b_pos, LE_x, LE_z, new_LE_x, new_LE_z, twists, new_twists,
+    #     tilt_z, new_tlt_z, chords, new_chords)
+    # end
 
   end
 

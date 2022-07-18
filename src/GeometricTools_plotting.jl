@@ -1,5 +1,3 @@
-const plt = PyPlot
-
 "Plots the contour of an airfoil given in x,y"
 function plot_airfoil(x::Array{Float64,1}, y::Array{Float64,1};
                       label="Airfoil", style="-k", figfactor=1.0,

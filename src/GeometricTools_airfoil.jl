@@ -66,14 +66,14 @@ function rediscretize_airfoil(x::AbstractVector{T}, y::AbstractVector{T},
 
     # Plots
     if verify_spline
-        if isdefined(Main, :PyPlot)
+        # if isdefined(Main, :PyPlot)
             plot_airfoil(x, y; label="Original", style="--^k", alpha=0.5, pltargs...)
             plot_airfoil(new_x, new_y; label="Parameterized", style=":.b", pltargs...)
-        else
-            @eval Main import PyPlot
-            Base.invokelatest(plot_airfoil, x, y; label="Original", style="--^k", alpha=0.5, pltargs...)
-            Base.invokelatest(plot_airfoil, new_x, new_y; label="Parameterized", style=":.b", pltargs...)
-        end
+        # else
+        #     @eval Main import PyPlot
+        #     Base.invokelatest(plot_airfoil, x, y; label="Original", style="--^k", alpha=0.5, pltargs...)
+        #     Base.invokelatest(plot_airfoil, new_x, new_y; label="Parameterized", style=":.b", pltargs...)
+        # end
     end
 
     return new_x, new_y
