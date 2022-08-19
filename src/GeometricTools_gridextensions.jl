@@ -16,7 +16,7 @@ function get_cellnodes(self::GridExtentions, i::Int64)
   return [get_node(self, n) for n in get_cell(self, i)]
 end
 function get_cellnodes(self::GridExtentions, coor::Array{Int64,1})
-  return get_cellnodes(self, sub2ind(self._ndivscells, coor...))
+  return get_cellnodes(self, Base._sub2ind(self._ndivscells, coor...))
 end
 
 """
@@ -26,6 +26,9 @@ Returns the value of node of coordinates `coor` (1-indexed) in the field
 'field_name'.
 """
 function get_fieldval(self::GridExtentions, field_name::String, coor::Array{Int64,1})
+  if !(field_name in keys(self.field))
+    error("Field $field_name doesn't exist. Available fields: $(keys(self.field))")
+  end
 
   if self.field[field_name]["entry_type"]=="node"
     return get_fieldval(self, field_name, Base._sub2ind(self._ndivsnodes, coor...)) #TODO: use LinearIndex instead of _sub2ind() (next line too)
@@ -48,6 +51,13 @@ function get_fieldval(self::GridExtentions, field_name::String, i::Int64)
   if !(field_name in keys(self.field))
     error("Field $field_name doesn't exist."*
           " Available fields: $(keys(self.field))")
+  end
+
+  maxi = self.field[field_name]["entry_type"]=="node" ? self.nnodes :
+         self.field[field_name]["entry_type"]=="cell" ? self.ncells :
+         Inf
+  if i <= 0 || i > maxi
+      error("Invalid index $(i); index must be between 1 and $(maxi).")
   end
 
   return self.field[field_name]["field_data"][i]
@@ -199,7 +209,7 @@ function save(grid::GridExtentions, filename; format="xdmf", optargs...)
               " GridTriangleSurface; will output vtk instead.")
 
         return save_vtk(grid, filename; optargs...)
-        
+
     elseif frmt=="xdmf"
         return save_xdmf(grid, filename; optargs...)
 

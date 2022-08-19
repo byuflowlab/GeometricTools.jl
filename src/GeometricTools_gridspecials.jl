@@ -103,6 +103,62 @@ function get_cell(self::GridTriangleSurface, coor::Array{Int64,1})
   end
 end
 
+
+function get_cell_t!(tri_out, tricoor, quadcoor, quad_out, self::GridTriangleSurface,
+                                                i::Int64, lin, ndivscells, cin)
+  if i>self.ncells
+    error("Requested invalid cell index $i; max is $(self.ncells).")
+  end
+
+  for j in 1:length(tricoor); tricoor[j] = cin[i][j]; end;
+  return get_cell_t!(tri_out, quadcoor, quad_out, self, tricoor, lin, ndivscells)
+end
+
+function get_cell_t!(tri_out, quadcoor, quad_out, self::GridTriangleSurface, coor,
+                                                                lin, ndivscells)
+  # ERROR CASES
+  if length(coor)!=self.dims
+    error("$(self.dims)-dimensional grid requires $(self.dims) coordinates,"*
+            " got $(length(coor)).")
+  end
+  for (dim, i) in enumerate(coor)
+    if i>ndivscells[dim]
+      if i==1 && ndivscells[dim]==0
+        nothing
+      else
+        error("Requested cell $coor but max cell in"*
+              " $dim-dimension is $(ndivscells[dim])")
+      end
+    end
+  end
+
+
+  # Converts this coordinates to the coordinates of the quadrilateral panel
+  # quadcoor = Int64[ceil(ind/2^(i==self.dimsplit)) for (i,ind) in enumerate(coor)]
+  for (i, ind) in enumerate(coor)
+      quadcoor[i] = ceil(Int, ind/2^(i==self.dimsplit))
+  end
+
+  # Gets the nodes of the quadrilateral panel
+  # quadnodes = get_cell(self.orggrid, quadcoor)
+  get_cell_t!(quad_out, self.orggrid, quadcoor, lin, ndivscells)
+
+  # Splits the quadrilateral into a triangle
+  if coor[self.dimsplit]%2!=0
+    # return [quadnodes[1], quadnodes[2], quadnodes[3]]
+    tri_out[1] = quad_out[1]
+    tri_out[2] = quad_out[2]
+    tri_out[3] = quad_out[3]
+    return tri_out
+  else
+    # return [quadnodes[3], quadnodes[4], quadnodes[1]]
+    tri_out[1] = quad_out[3]
+    tri_out[2] = quad_out[4]
+    tri_out[3] = quad_out[1]
+    return tri_out
+  end
+end
+
 """
     `get_area(self::GridTriangleSurface, i_or_coor::Union{Int, Array{Int,1}})`
 Returns the area of the i-th cell.
@@ -169,7 +225,7 @@ function get_normal(self::GridTriangleSurface, i::Int64)
   return _calc_normal(get_cellnodes(self, i))
 end
 function get_normal(self::GridTriangleSurface, coor::Array{Int64,1})
-  return get_normal(self, sub2ind(self._ndivsnodes, coor...))
+  return get_normal(self, Base._sub2ind(self._ndivsnodes, coor...))
 end
 
 
@@ -239,20 +295,70 @@ function _ndivscells(orggrid::Grid, dimsplit::Int64)
               ])
 end
 
+_calc_tnorm(nodes, panel) = sqrt((nodes[1, panel[2]] - nodes[1, panel[1]])^2 + (nodes[2, panel[2]] - nodes[2, panel[1]])^2 + (nodes[3, panel[2]] - nodes[3, panel[1]])^2)
+_calc_t1(nodes, panel) = (nodes[1, panel[2]] - nodes[1, panel[1]]) / _calc_tnorm(nodes, panel)
+_calc_t2(nodes, panel) = (nodes[2, panel[2]] - nodes[2, panel[1]]) / _calc_tnorm(nodes, panel)
+_calc_t3(nodes, panel) = (nodes[3, panel[2]] - nodes[3, panel[1]]) / _calc_tnorm(nodes, panel)
+
+_calc_tnorm(nodes) = sqrt((nodes[2][1] - nodes[1][1])^2 + (nodes[2][2] - nodes[1][2])^2 + (nodes[2][3] - nodes[1][3])^2)
+_calc_t1(nodes) = (nodes[2][1] - nodes[1][1]) / _calc_tnorm(nodes)
+_calc_t2(nodes) = (nodes[2][2] - nodes[1][2]) / _calc_tnorm(nodes)
+_calc_t3(nodes) = (nodes[2][3] - nodes[1][3]) / _calc_tnorm(nodes)
 function _calc_tangent(nodes::Array{Arr1,1}) where{Arr1<:AbstractArray}
-  t = nodes[2] - nodes[1]
-  return t/norm(t)
+    # t = nodes[2] - nodes[1]
+    # return t/norm(t)
+    return [_calc_t1(nodes), _calc_t2(nodes), _calc_t3(nodes)]
 end
 
+_calc_n1aux(nodes, panel) = (nodes[2, panel[2]]-nodes[2, panel[1]])*(nodes[3, panel[3]]-nodes[3, panel[1]]) - (nodes[3, panel[2]]-nodes[3, panel[1]])*(nodes[2, panel[3]]-nodes[2, panel[1]])
+_calc_n2aux(nodes, panel) = (nodes[3, panel[2]]-nodes[3, panel[1]])*(nodes[1, panel[3]]-nodes[1, panel[1]]) - (nodes[1, panel[2]]-nodes[1, panel[1]])*(nodes[3, panel[3]]-nodes[3, panel[1]])
+_calc_n3aux(nodes, panel) = (nodes[1, panel[2]]-nodes[1, panel[1]])*(nodes[2, panel[3]]-nodes[2, panel[1]]) - (nodes[2, panel[2]]-nodes[2, panel[1]])*(nodes[1, panel[3]]-nodes[1, panel[1]])
+_calc_nnorm(nodes, panel) = sqrt(_calc_n1aux(nodes, panel)^2 + _calc_n2aux(nodes, panel)^2 + _calc_n3aux(nodes, panel)^2)
+_calc_n1(nodes, panel) = _calc_n1aux(nodes, panel) / _calc_nnorm(nodes, panel)
+_calc_n2(nodes, panel) = _calc_n2aux(nodes, panel) / _calc_nnorm(nodes, panel)
+_calc_n3(nodes, panel) = _calc_n3aux(nodes, panel) / _calc_nnorm(nodes, panel)
+
+_calc_n1aux(nodes) = (nodes[2][2]-nodes[1][2])*(nodes[3][3]-nodes[1][3]) - (nodes[2][3]-nodes[1][3])*(nodes[3][2]-nodes[1][2])
+_calc_n2aux(nodes) = (nodes[2][3]-nodes[1][3])*(nodes[3][1]-nodes[1][1]) - (nodes[2][1]-nodes[1][1])*(nodes[3][3]-nodes[1][3])
+_calc_n3aux(nodes) = (nodes[2][1]-nodes[1][1])*(nodes[3][2]-nodes[1][2]) - (nodes[2][2]-nodes[1][2])*(nodes[3][1]-nodes[1][1])
+_calc_nnorm(nodes) = sqrt(_calc_n1aux(nodes)^2 + _calc_n2aux(nodes)^2 + _calc_n3aux(nodes)^2)
+_calc_n1(nodes) = _calc_n1aux(nodes) / _calc_nnorm(nodes)
+_calc_n2(nodes) = _calc_n2aux(nodes) / _calc_nnorm(nodes)
+_calc_n3(nodes) = _calc_n3aux(nodes) / _calc_nnorm(nodes)
 function _calc_normal(nodes::Array{Arr1,1}) where{Arr1<:AbstractArray}
-  n = cross(nodes[2]-nodes[1], nodes[3]-nodes[1])
-  return n/norm(n)
+  # n = cross(nodes[2]-nodes[1], nodes[3]-nodes[1])
+  # return n/norm(n)
+  return [_calc_n1(nodes), _calc_n2(nodes), _calc_n3(nodes)]
+end
+
+
+_calc_o1aux(nodes, panel) = _calc_n2(nodes, panel)*_calc_t3(nodes, panel) - _calc_n3(nodes, panel)*_calc_t2(nodes, panel)
+_calc_o2aux(nodes, panel) = _calc_n3(nodes, panel)*_calc_t1(nodes, panel) - _calc_n1(nodes, panel)*_calc_t3(nodes, panel)
+_calc_o3aux(nodes, panel) = _calc_n1(nodes, panel)*_calc_t2(nodes, panel) - _calc_n2(nodes, panel)*_calc_t1(nodes, panel)
+_calc_onorm(nodes, panel) = sqrt(_calc_o1aux(nodes, panel)^2 + _calc_o2aux(nodes, panel)^2 + _calc_o3aux(nodes, panel)^2)
+_calc_o1(nodes, panel) = _calc_o1aux(nodes, panel) / _calc_onorm(nodes, panel)
+_calc_o2(nodes, panel) = _calc_o2aux(nodes, panel) / _calc_onorm(nodes, panel)
+_calc_o3(nodes, panel) = _calc_o3aux(nodes, panel) / _calc_onorm(nodes, panel)
+
+_calc_o1aux(nodes) = _calc_n2(nodes)*_calc_t3(nodes) - _calc_n3(nodes)*_calc_t2(nodes)
+_calc_o2aux(nodes) = _calc_n3(nodes)*_calc_t1(nodes) - _calc_n1(nodes)*_calc_t3(nodes)
+_calc_o3aux(nodes) = _calc_n1(nodes)*_calc_t2(nodes) - _calc_n2(nodes)*_calc_t1(nodes)
+_calc_onorm(nodes) = sqrt(_calc_o1aux(nodes)^2 + _calc_o2aux(nodes)^2 + _calc_o3aux(nodes)^2)
+_calc_o1(nodes) = _calc_o1aux(nodes) / _calc_onorm(nodes)
+_calc_o2(nodes) = _calc_o2aux(nodes) / _calc_onorm(nodes)
+_calc_o3(nodes) = _calc_o3aux(nodes) / _calc_onorm(nodes)
+function _calc_oblique(nodes::Array{Arr1,1}) where{Arr1<:AbstractArray}
+  # t = _calc_tangent(nodes)
+  # n = _calc_normal(nodes)
+  # return cross(n,t)
+  return [_calc_o1(nodes), _calc_o2(nodes), _calc_o3(nodes)]
 end
 
 function _calc_unitvectors(nodes::Array{Arr1,1}) where{Arr1<:AbstractArray}
   t = _calc_tangent(nodes)
   n = _calc_normal(nodes)
-  o = cross(n,t)
+  # o = cross(n,t)
+  o = _calc_oblique(nodes)
   return t, o, n
 end
 ##### END OF TRIANGULAR GRID ###################################################
