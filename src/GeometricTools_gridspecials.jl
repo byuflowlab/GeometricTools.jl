@@ -170,6 +170,16 @@ function get_area(self::GridTriangleSurface, i)
     C = get_node(self, cell[3])
     return 0.5*norm(cross(B-A, C-A))
 end
+function _get_area(nodes, panel)
+
+    p1, p2, p3 = panel
+
+    crss1 = (nodes[2, p2]-nodes[2, p1])*(nodes[3, p3]-nodes[3, p1]) - (nodes[3, p2]-nodes[3, p1])*(nodes[2, p3]-nodes[2, p1])
+    crss2 = (nodes[3, p2]-nodes[3, p1])*(nodes[1, p3]-nodes[1, p1]) - (nodes[1, p2]-nodes[1, p1])*(nodes[3, p3]-nodes[3, p1])
+    crss3 = (nodes[1, p2]-nodes[1, p1])*(nodes[2, p3]-nodes[2, p1]) - (nodes[2, p2]-nodes[2, p1])*(nodes[1, p3]-nodes[1, p1])
+
+    return 0.5*sqrt(crss1^2 + crss2^2 + crss3^2)
+end
 
 """
     `get_area(self::GridTriangleSurface)`

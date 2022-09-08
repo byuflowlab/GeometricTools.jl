@@ -301,10 +301,10 @@ function get_cell_t!(out, self::Grid, coor_in, lin, ndivscells)
         out[2] = lin[c1+d1, c2, c3]
         out[3] = lin[c1+d1, c2+d2, c3]
         out[4] = lin[c1, c2+d2, c3]
-        out[3] = lin[c1, c2, c3+d3]
-        out[4] = lin[c1+d1, c2, c3+d3]
-        out[3] = lin[c1+d1, c2+d2, c3+d3]
-        out[4] = lin[c1, c2+d2, c3+d3]
+        out[5] = lin[c1, c2, c3+d3]
+        out[6] = lin[c1+d1, c2, c3+d3]
+        out[7] = lin[c1+d1, c2+d2, c3+d3]
+        out[8] = lin[c1, c2+d2, c3+d3]
         return out
 
       else
