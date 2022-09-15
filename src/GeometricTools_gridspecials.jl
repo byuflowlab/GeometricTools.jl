@@ -141,7 +141,9 @@ function get_cell_t!(tri_out, quadcoor, quad_out, self::GridTriangleSurface, coo
 
   # Gets the nodes of the quadrilateral panel
   # quadnodes = get_cell(self.orggrid, quadcoor)
+  ndivscells[self.dimsplit] /= 2
   get_cell_t!(quad_out, self.orggrid, quadcoor, lin, ndivscells)
+  ndivscells[self.dimsplit] *= 2
 
   # Splits the quadrilateral into a triangle
   if coor[self.dimsplit]%2!=0
@@ -157,6 +159,86 @@ function get_cell_t!(tri_out, quadcoor, quad_out, self::GridTriangleSurface, coo
     tri_out[3] = quad_out[1]
     return tri_out
   end
+end
+
+
+function get_cell_t(tricoor, quadcoor, self::GridTriangleSurface,
+                                                i::Int, nodei::Int, lin, ndivscells, cin)
+  if i>self.ncells
+    error("Requested invalid cell index $i; max is $(self.ncells).")
+  end
+
+  for j in 1:length(tricoor); tricoor[j] = cin[i][j]; end;
+  return get_cell_t(quadcoor, self, tricoor, nodei, lin, ndivscells)
+end
+
+function get_cell_t(quadcoor, self::GridTriangleSurface, coor, nodei::Int,
+                                                                lin, ndivscells)
+  # ERROR CASES
+  if length(coor)!=self.dims
+    error("$(self.dims)-dimensional grid requires $(self.dims) coordinates,"*
+            " got $(length(coor)).")
+  end
+  for (dim, i) in enumerate(coor)
+    if i>ndivscells[dim]
+      if i==1 && ndivscells[dim]==0
+        nothing
+      else
+        error("Requested cell $coor but max cell in"*
+              " $dim-dimension is $(ndivscells[dim])")
+      end
+    end
+  end
+
+
+  # Converts this coordinates to the coordinates of the quadrilateral panel
+  # quadcoor = Int64[ceil(ind/2^(i==self.dimsplit)) for (i,ind) in enumerate(coor)]
+  for (i, ind) in enumerate(coor)
+      quadcoor[i] = ceil(Int, ind/2^(i==self.dimsplit))
+  end
+
+
+  # Get the node from the quadrilateral panel
+  ndivscells[self.dimsplit] /= 2
+  if coor[self.dimsplit]%2!=0
+
+    # return [quadnodes[1], quadnodes[2], quadnodes[3]]
+    out = get_cell_t(self.orggrid, quadcoor, nodei, lin, ndivscells)
+
+  else
+
+    # return [quadnodes[3], quadnodes[4], quadnodes[1]]
+    out =   nodei == 1 ? get_cell_t(self.orggrid, quadcoor, 3, lin, ndivscells) :
+            nodei == 2 ? get_cell_t(self.orggrid, quadcoor, 4, lin, ndivscells) :
+                         get_cell_t(self.orggrid, quadcoor, 1, lin, ndivscells)
+  end
+  ndivscells[self.dimsplit] *= 2
+
+  return out
+end
+
+function generate_getcellt_args!(grid)
+    # Pre-allocate memory for panel calculation
+    lin = LinearIndices(grid._ndivsnodes)
+    ndivscells = vcat(grid._ndivscells...)
+    cin = CartesianIndices(Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells)))
+    tri_out = zeros(Int, 3)
+    tricoor = zeros(Int, 3)
+    quadcoor = zeros(Int, 3)
+    quad_out = zeros(Int, 4)
+
+    return tri_out, tricoor, quadcoor, quad_out, lin, ndivscells, cin
+end
+
+function generate_getcellt_args(grid)
+    # Pre-allocate memory for panel calculation
+    lin = LinearIndices(grid._ndivsnodes)
+    ndivscells = vcat(grid._ndivscells...)
+    cin = CartesianIndices(Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells)))
+    tricoor = zeros(Int, 3)
+    quadcoor = zeros(Int, 3)
+
+    return tricoor, quadcoor, lin, ndivscells, cin
 end
 
 """

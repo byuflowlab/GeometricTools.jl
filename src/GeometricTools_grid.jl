@@ -314,6 +314,123 @@ function get_cell_t!(out, self::Grid, coor_in, lin, ndivscells)
   # end
 end
 
+"Same than `get_cell(...)` but with low memory allocation using tuples."
+function get_cell_t(self::Grid, coor_in, nodei::Int, lin, ndivscells)
+  # ERROR CASES: Incorrect number of coordinates
+  if length(coor_in)!=self.dims
+    error("$(self.dims)-dimensional grid requires $(self.dims) coordinates,"*
+            " got $(length(coor_in)).")
+  end
+
+  # @inbounds begin
+
+      # Correct 0 coordinate in quasi-dimensions
+      # coor = ( c==0 && self._ndivscells[i]==0 ? 1 : c for (i, c) in enumerate(coor_in))
+      c1::Int = length(coor_in) >= 1 ? coor_in[1]==0 && ndivscells[1]==0 ? 1 : coor_in[1] : -1
+      c2::Int = length(coor_in) >= 2 ? coor_in[2]==0 && ndivscells[2]==0 ? 1 : coor_in[2] : -1
+      c3::Int = length(coor_in) >= 3 ? coor_in[3]==0 && ndivscells[3]==0 ? 1 : coor_in[3] : -1
+
+      # ERROR CASE: Coordinates out of bounds
+      if (c1 > ndivscells[1] && !(c1==1 && ndivscells[1]==0)) ||
+         (c2 > ndivscells[2] && !(c2==1 && ndivscells[2]==0)) ||
+         (c3 > ndivscells[3] && !(c3==1 && ndivscells[3]==0)) ||
+         c1<=0 || c2<=0 || c3<=0
+            error("Requested cell $(coor_in) but max cell is $(ndivscells). $((c1, c2, c3))")
+      end
+
+      # Displacements according to VTK convention, or closed loop
+      # disps = ones(Int64, self.dims)
+      # lpdm = self.loop_dim
+      # if lpdm!=0 && coor[lpdm]==ndivscells[lpdm]
+      #   disps[lpdm] = -ndivscells[lpdm] + 1
+      # end
+      # d1, d2, d3 = vcat(disps, ones(Int64, 3-self.dims))
+
+      lpdm = self.loop_dim
+      d1::Int = self.dims >= 1 && lpdm==1 && c1==ndivscells[lpdm] ? -ndivscells[lpdm] + 1 : 1
+      d2::Int = self.dims >= 2 && lpdm==2 && c2==ndivscells[lpdm] ? -ndivscells[lpdm] + 1 : 1
+      d3::Int = self.dims >= 3 && lpdm==3 && c3==ndivscells[lpdm] ? -ndivscells[lpdm] + 1 : 1
+
+      # Checks for quasi-dimensions (NDIVS[i]==0)
+      qdims = 0
+      for ndiv in ndivscells; if ndiv==0; qdims += 1; end; end;
+      cdims = length(coor_in)
+      dims = self.dims - qdims
+
+      # aux1 = zeros(Int64, qdims)
+      # lin = LinearIndices(self._ndivsnodes)
+
+      if dims==1
+
+        if nodei < 1 || nodei > 2
+            error("Requested invalid node index $(nodei); max is 2.")
+        end
+
+        # return [lin[(coor+vcat([0], aux1))...],
+        #         lin[(coor+vcat([d1], aux1))...]]
+
+        if cdims==1
+            return nodei==1 ?   lin[c1] :
+                                lin[c1+d1]
+        elseif cdims==2
+            return nodei==1 ?   lin[c1, c2] :
+                                lin[c1+d1, c2]
+        elseif cdims==3
+            return nodei==1 ?   lin[c1, c2, c3] :
+                                lin[c1+d1, c2, c3]
+        else
+            error("Logic error: cdims=$cdims")
+        end
+
+      elseif dims==2
+
+        if nodei < 1 || nodei > 4
+            error("Requested invalid node index $(nodei); max is 4.")
+        end
+
+        # return [lin[(coor+vcat([0,0], aux1))...],
+        #         lin[(coor+vcat([d1,0], aux1))...],
+        #         lin[(coor+vcat([d1,d2], aux1))...],
+        #         lin[(coor+vcat([0,d2], aux1))...]]
+
+        if cdims==2
+            return  nodei==1 ? lin[c1, c2] :
+                    nodei==2 ? lin[c1+d1, c2] :
+                    nodei==3 ? lin[c1+d1, c2+d2] :
+                               lin[c1, c2+d2]
+        elseif cdims==3
+            return  nodei==1 ? lin[c1, c2, c3] :
+                    nodei==2 ? lin[c1+d1, c2, c3] :
+                    nodei==3 ? lin[c1+d1, c2+d2, c3] :
+                               lin[c1, c2+d2, c3]
+        else
+            error("Logic error: cdims=$cdims")
+        end
+
+      elseif dims==3
+        # return [lin[(coor+vcat([0,0,0], aux1))...],
+        #         lin[(coor+vcat([d1,0,0], aux1))...],
+        #         lin[(coor+vcat([d1,d2,0], aux1))...],
+        #         lin[(coor+vcat([0,d2,0], aux1))...],
+        #         lin[(coor+vcat([0,0,d3], aux1))...],
+        #         lin[(coor+vcat([d1,0,d3], aux1))...],
+        #         lin[(coor+vcat([d1,d2,d3], aux1))...],
+        #         lin[(coor+vcat([0,d2,d3], aux1))...]]
+        return  nodei==1 ? lin[c1, c2, c3] :
+                nodei==2 ? lin[c1+d1, c2, c3] :
+                nodei==3 ? lin[c1+d1, c2+d2, c3] :
+                nodei==4 ? lin[c1, c2+d2, c3] :
+                nodei==5 ? lin[c1, c2, c3+d3] :
+                nodei==6 ? lin[c1+d1, c2, c3+d3] :
+                nodei==7 ? lin[c1+d1, c2+d2, c3+d3] :
+                           lin[c1, c2+d2, c3+d3]
+      else
+        error("Definition of $(self.ndims)-dimensional cells not implemented yet!")
+      end
+
+  # end
+end
+
 
 "Plots the grid on PyPlot"
 function plot(grid::Grid; fig_name="gridplot", fontsize=15,
