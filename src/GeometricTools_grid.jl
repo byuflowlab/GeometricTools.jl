@@ -533,16 +533,16 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
 
   end
 
-  # Legend
-  handles = []
-  for (flag, clr, lbl) in [(labelnodes, "k", "Node"),
-                            (labelcells, "g", "Cell"),
-                            (labelndivs, "r", "Coordinate")]
-    if flag; push!(handles, patch.Patch(color=clr, label=lbl)); end;
-  end
-  if size(handles,1)>0; PyPlot.legend(handles=handles); end;
+  # # Legend
+  # handles = []
+  # for (flag, clr, lbl) in [(labelnodes, "k", "Node"),
+  #                           (labelcells, "g", "Cell"),
+  #                           (labelndivs, "r", "Coordinate")]
+  #   if flag; push!(handles, patch.Patch(color=clr, label=lbl)); end;
+  # end
+  # if size(handles,1)>0; ax.legend(handles=handles); end;
 
-  if title_str!=nothing; PyPlot.title(title_str); end;
+  if title_str!=nothing; ax.set_title(title_str); end;
 
 end
 

@@ -19,7 +19,10 @@ import Roots
 import QuadGK
 import HDF5
 
-import PyPlot as plt
+import PyPlot
+const plt = PyPlot
+# import PyCall
+# @PyCall.pyimport matplotlib.patches as patch
 
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
                                                 # Type of multidiscretize input

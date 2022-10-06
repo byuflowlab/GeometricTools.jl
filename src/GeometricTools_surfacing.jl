@@ -15,7 +15,7 @@
   `generate_loft(crosssections, bscale, b_pos, chords, twists, LE_x, LE_z)`
 
   Generates a lofted surface geometry. The name of the arguments are taken from
-  its initial application to the lofting of an aircraft wing, so bear with it.
+  its initial application to the lofting of an aircraft wing.
 
   **Arguments**
   * `bscale::Float64`         : Semi-span scale. It will scale the entire
@@ -178,7 +178,7 @@ end
 LE_x, LE_z; optargs...)`
 
   Generates a lofted surface geometry. The name of the arguments are taken from
-  its initial application to the lofting of an aircraft wing, so bear with it.
+  its initial application to the lofting of an aircraft wing.
 
   **Arguments**
   * `bscale::Float64`         : Semi-span scale. It will scale the entire
