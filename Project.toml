@@ -17,3 +17,11 @@ PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
 
 [compat]
 julia = "1"
+Dierckx = "0.5"
+PyCall = "1.94"
+QuadGK = "2"
+Requires = "1"
+Roots = "2"
+Statistics = "1"
+HDF5 = "0.16"
+PyPlot = "2"
