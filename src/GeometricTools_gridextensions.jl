@@ -100,6 +100,17 @@ function add_field(grid::GridExtentions, field_name::String,
 end
 
 """
+    remove_field(grid::Grid, field_name::String)
+
+Remove data field from grid.
+"""
+function remove_field(grid::GridExtentions, field_name::String)
+    if field_name in keys(grid.field)
+        pop!(grid.field, field_name)
+    end
+end
+
+"""
   `calculate_field(grid::Grid, f, field_name::String, field_type::String)`
 
 Evaluates the function `f` at each nodes and stores the values as a new field.
