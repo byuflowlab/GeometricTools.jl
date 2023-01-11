@@ -347,6 +347,136 @@ function get_unitvectors(self::GridTriangleSurface, coor::Array{Int64,1})
   return get_unitvectors(self, sub2ind(self._ndivsnodes, coor...))
 end
 
+
+
+
+
+"""
+    neighbor!(ncoor::Vector, ni::Int, ci::Int, cin, ndivscells, dimsplit::Int)
+
+Returns the Cartesian coordinates of the `ni`-th neighboor of the `ci`-th cell,
+storing the coordinates under `ncoor`. `cin` are the CartesianIndices of a
+triangular grid of dimensions `ndivscells` split along dimension `dimsplit`.
+
+```@example
+
+# Pre-calculations
+ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
+cin = CartesianIndices(ndivscells)
+dimsplit = grid.dimsplit
+
+# Identify neighbor
+ncoor = ones(Int, 3)               # Store neighboor coordinates here
+ni = 3                              # Request the third neighbor
+ci = 10                             #   of cell number 10
+ccoor = cin[ci]                     # Cartesian indexing of this cell
+neighbor!(ncoor, ni, ci, ccoor, ndivscells, dimsplit)
+
+# Fetch normal of such neighbor
+normal = get_normal(grid, ncoor)
+
+# Convert Cartesian coordinates to linear indexing
+lin = LinearIndices(ndivscells)
+ni = lin[ncoor...]
+```
+"""
+function neighbor!(ncoor::AbstractVector{<:Int}, ni::Int, ci::Int,
+                    ccoor, ndivscells, dimsplit::Int)
+
+    @assert 1 <= ni <= 3 "Invalid neighbor $(ni); cell has only 3 neighbors."
+
+    if dimsplit==1
+
+        if ci%2==1          # Case: odd cell
+
+            # Neighbor between node 1 and 2
+            if ni==1
+                ncoor[1] = ccoor[1]+1
+                ncoor[2] = ccoor[2] != 1 ? ccoor[2]-1 : ndivscells[2][end]
+
+            # Neighbor between node 2 and 3
+            elseif ni==2
+                ncoor[1] = ccoor[1]+1 != ndivscells[1][end] ? ccoor[1]+3 : 2
+                ncoor[2] = ccoor[2]
+
+            # Neighbor between node 3 and 1
+            else
+                ncoor[1] = ccoor[1]+1
+                ncoor[2] = ccoor[2]
+            end
+
+        else                # Case: even cell
+
+            # Neighbor between node 1 and 2
+            if ni==1
+                ncoor[1] = ccoor[1]-1
+                ncoor[2] = ccoor[2] != ndivscells[2][end] ? ccoor[2]+1 : 1
+
+            # Neighbor between node 2 and 3
+            elseif ni==2
+                ncoor[1] = ccoor[1]-1 != 1 ? ccoor[1]-3 : ndivscells[1][end]-1
+                ncoor[2] = ccoor[2]
+
+            # Neighbor between node 3 and 1
+            else
+                ncoor[1] = ccoor[1]-1
+                ncoor[2] = ccoor[2]
+            end
+
+        end
+
+    # TODO: Implement dimsplit==2
+    # elseif dimsplit==2
+
+    else
+        error("Neighborhood with splitting dimension $(dimsplit)"*
+                " not implemented yet")
+    end
+
+    return ncoor
+end
+
+function neighbor(ni::Int, ci::Int, ccoor, ndivscells, dimsplit::Int)
+    return neighbor!(ones(Int, 3), ni, ci, ccoor, ndivscells, dimsplit)
+end
+
+function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int)
+
+    # Pre-calculations
+    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
+    cin = CartesianIndices(ndivscells)
+    ccoor = cin[ci]
+
+    # Calculate neighbor
+    return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+end
+
+function neighbor(grid::GridTriangleSurface, ni::Int,
+                    ccoor::Union{<:AbstractVector, <:Tuple})
+
+    # Pre-calculations
+    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
+    lin = LinearIndices(ndivscells)
+    ci = lin[ccoor...]
+
+    # Calculate neighbor
+    return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+end
+
+function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex)
+
+    # Pre-calculations
+    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
+    lin = LinearIndices(ndivscells)
+    ci = lin[ccoor]
+
+    # Calculate neighbor
+    return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+end
+
+
+
+
 function lintransform!(self::GridTriangleSurface, args...; optargs...)
   lintransform!(self.orggrid, args...; optargs...)
 end
@@ -360,7 +490,6 @@ end
 function transform3!(self::GridTriangleSurface, args...; optargs...)
   transform!(self.orggrid, args...; optargs...)
 end
-
 
 ##### INTERNAL FUNCTIONS  ######################################################
 function _checkGridTriangleSurface(orggrid::Grid, dimsplit::Int64)
