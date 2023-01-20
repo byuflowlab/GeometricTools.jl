@@ -352,11 +352,15 @@ end
 
 
 """
-    neighbor!(ncoor::Vector, ni::Int, ci::Int, cin, ndivscells, dimsplit::Int)
+    neighbor!(ncoor::Vector, ni::Int, ci::Int, cin, ccoor,
+                                    ndivscells, dimsplit::Int)
 
 Returns the Cartesian coordinates of the `ni`-th neighboor of the `ci`-th cell,
 storing the coordinates under `ncoor`. `cin` are the CartesianIndices of a
 triangular grid of dimensions `ndivscells` split along dimension `dimsplit`.
+
+> **NOTE:** This assumes that the grid is periodic and closed, meaning that the
+neighbors of the starting cells include the end cells and vice versa.
 
 ```@example
 
@@ -472,6 +476,21 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex)
 
     # Calculate neighbor
     return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+end
+
+function isedge(grid::GridTriangleSurface, coor)
+    isnot = true
+
+    for i in 1:length(coor)
+        isnot *= i==grid.orggrid.loop_dim || !((coor[i]==1 && grid._ndivscells[i]>1) || coor[i]==grid._ndivscells[i])
+        # if !(i==grid.orggrid.loop_dim || !(coor[i]==1 || coor[i]==grid._ndivscells[i]))
+        #     println(i==grid.orggrid.loop_dim)
+        #     println(coor[i]==1)
+        #     println(coor[i]==grid._ndivscells[i])
+        # end
+    end
+
+    return !isnot
 end
 
 
