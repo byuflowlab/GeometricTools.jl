@@ -482,12 +482,15 @@ function isedge(grid::GridTriangleSurface, coor)
     isnot = true
 
     for i in 1:length(coor)
-        isnot *= i==grid.orggrid.loop_dim || !((coor[i]==1 && grid._ndivscells[i]>1) || coor[i]==grid._ndivscells[i])
-        # if !(i==grid.orggrid.loop_dim || !(coor[i]==1 || coor[i]==grid._ndivscells[i]))
-        #     println(i==grid.orggrid.loop_dim)
-        #     println(coor[i]==1)
-        #     println(coor[i]==grid._ndivscells[i])
-        # end
+        isnot *= i==grid.orggrid.loop_dim ||
+                !(
+                    (coor[i]==(grid.dimsplit==i ? 2 : 1) && grid._ndivscells[i]>1) ||
+                    coor[i]==(grid._ndivscells[i] - (grid.dimsplit==i ? 1 : 0))
+                )
+    end
+
+    if grid.dimsplit!=1
+        @warn("Case dimsplit=$(grid.dimsplit) has not been verified yet. Expect it to be wrong.")
     end
 
     return !isnot
