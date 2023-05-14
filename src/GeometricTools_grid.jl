@@ -444,7 +444,13 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
   end
 
   fig = PyPlot.figure(fig_name)
-  ax = fig.gca(projection="3d")
+  ax = nothing  # To extend scope of ax outside try-catch block
+  try
+      ax = fig.gca(projection="3d")
+  catch err
+      # In case of error for newer Matplotlib versions
+      ax = fig.add_subplot(projection="3d")
+  end
   vectors_to_plot = []
 
   nc = grid.ncells
