@@ -480,7 +480,7 @@ end
 
 function isedge(grid::GridTriangleSurface, coor)
 
-    if loop_dim == 0
+    if grid.orggrid.loop_dim == 0
         ret = false
         # Find original grid index
         ciMod2 = ci%2
