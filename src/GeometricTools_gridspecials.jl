@@ -484,7 +484,35 @@ function isedge(grid::GridTriangleSurface, ci)
     nx = grid.orggrid.NDIVS[1]
     ny = grid.orggrid.NDIVS[2]
 
-    if grid.orggrid.loop_dim == 0
+    if grid.orggrid.loop_dim == 2
+
+        # This was the previous logic for loop_dim = 2
+        # isnot = true
+        # for i in 1:length(ci)
+        #     isnot *= i==grid.orggrid.loop_dim ||
+        #             !(
+        #                 (ci[i]==(grid.dimsplit==i ? 2 : 1) && grid._ndivscells[i]>1) ||
+        #                 ci[i]==(grid._ndivscells[i] - (grid.dimsplit==i ? 1 : 0))
+        #             )
+        # end
+        # ret = !isnot
+
+        if (ci-2)%(2*nx) == 0
+            ret = true
+        elseif (ci-(2*nx-1))%(2*nx) == 0
+            ret = true
+        end
+
+    elseif grid.orggrid.loop_dim == 1
+
+        if (ci%2 == 1) && (ci < 2*nx)
+            ret = true
+        elseif ((2*nx*ny-ci)%2 == 0) && (ci > 2*nx*(ny-1)+1)
+            ret = true
+        end
+
+    else  # For loop_dim = 0 and loop_dim > 2
+
         # Find original grid index
         ciMod2 = ci%2
         if ciMod2 == 0
@@ -519,28 +547,9 @@ function isedge(grid::GridTriangleSurface, ci)
         if ci == nx*2 || ci == 2*(nx*(ny-1))+1
             ret = false
         end
-
-    else
-        # This was the previous logic for loop_dim = 2
-        # isnot = true
-        # for i in 1:length(ci)
-        #     isnot *= i==grid.orggrid.loop_dim ||
-        #             !(
-        #                 (ci[i]==(grid.dimsplit==i ? 2 : 1) && grid._ndivscells[i]>1) ||
-        #                 ci[i]==(grid._ndivscells[i] - (grid.dimsplit==i ? 1 : 0))
-        #             )
-        # end
-        # ret = !isnot
-
-        if (ci-2)%(2*nx) == 0
-            ret = true
-        elseif (ci-(2*nx-1))%(2*nx) == 0
-            ret = true
-        end
-
     end
 
-    if grid.dimsplit != 1 || grid.orggrid.loop_dim ==1
+    if grid.dimsplit != 1
         @warn("Case dimsplit=$(grid.dimsplit) has not been verified yet. Expect it to be wrong.")
     end
 
