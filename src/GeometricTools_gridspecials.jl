@@ -484,73 +484,29 @@ function isedge(grid::GridTriangleSurface, ci)
     nx = grid.orggrid.NDIVS[1]
     ny = grid.orggrid.NDIVS[2]
 
-    if grid.orggrid.loop_dim == 2
-
-        # This was the previous logic for loop_dim = 2
-        # isnot = true
-        # for i in 1:length(ci)
-        #     isnot *= i==grid.orggrid.loop_dim ||
-        #             !(
-        #                 (ci[i]==(grid.dimsplit==i ? 2 : 1) && grid._ndivscells[i]>1) ||
-        #                 ci[i]==(grid._ndivscells[i] - (grid.dimsplit==i ? 1 : 0))
-        #             )
-        # end
-        # ret = !isnot
-
-        if (ci-2)%(2*nx) == 0
-            ret = true
-        elseif (ci-(2*nx-1))%(2*nx) == 0
-            ret = true
-        end
-
-    elseif grid.orggrid.loop_dim == 1
-
-        if (ci%2 == 1) && (ci < 2*nx)
-            ret = true
-        elseif ((2*nx*ny-ci)%2 == 0) && (ci > 2*nx*(ny-1)+1)
-            ret = true
-        end
-
-    else  # For loop_dim = 0 and loop_dim > 2
-
-        # Find original grid index
-        ciMod2 = ci%2
-        if ciMod2 == 0
-            origx = div(ci, 2)
-        else
-            origx = div(ci+1, 2)
-        end
-
-        # Convert to matrix row, column notation
-        # to box the inner cells
-        rx = origx%nx
-        if rx == 0
-            rx = nx
-        end
-        ry = div((origx-rx), nx) + 1
-
-        # Identify cells at boundary
-        if rx == 1
-            ret = (ry == 1 || ry == ny)
-            ret = (ciMod2 == 0)
-        elseif rx == nx
-            ret = (ry == 1 || ry == ny)
-            ret = (ciMod2 == 1)
-        end
-
-        # Catch false positive cells at boundary
-        if ry == 1 && ciMod2 == 1
-            ret = true
-        elseif ry == ny && ciMod2 == 0
-            ret = true
-        end
-        if ci == nx*2 || ci == 2*(nx*(ny-1))+1
-            ret = false
-        end
+    # Determine if the cell is part of any boundary
+    # Xmin, Xmax, Ymin, Ymax are the cell boundaries of the grid
+    if grid.dimsplit == 2
+        inXmin = ci <= nx
+        inXmax = ci > 2*nx*ny - nx
+        inYmin = (ci-nx-1)%(2*nx) == 0
+        inYmax = (ci-nx)%(2*nx) == 0
+    else
+        inXmin = ((ci+1)%2 == 0) && (ci < 2*nx)
+        inXmax = ((2*nx*ny-ci)%2 == 0) && (ci > 2*nx*(ny-1)+1)
+        inYmin = (ci-2)%(2*nx) == 0
+        inYmax = (ci-(2*nx-1))%(2*nx) == 0
     end
 
-    if grid.dimsplit != 1
-        @warn("Case dimsplit=$(grid.dimsplit) has not been verified yet. Expect it to be wrong.")
+    if grid.orggrid.loop_dim == 2
+        ret = inYmin || inYmax
+
+    elseif loop_dim == 1
+        ret = inXmin || inXmax
+
+    else  # For loop_dim = 0 and loop_dim > 2
+        ret = inXmin || inXmax || inYmin || inYmax
+
     end
 
     return ret
