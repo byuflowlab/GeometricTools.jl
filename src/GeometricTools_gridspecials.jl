@@ -479,21 +479,61 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex)
 end
 
 function isedge(grid::GridTriangleSurface, coor)
-    isnot = true
 
-    for i in 1:length(coor)
-        isnot *= i==grid.orggrid.loop_dim ||
-                !(
-                    (coor[i]==(grid.dimsplit==i ? 2 : 1) && grid._ndivscells[i]>1) ||
-                    coor[i]==(grid._ndivscells[i] - (grid.dimsplit==i ? 1 : 0))
-                )
+    if loop_dim == 0
+        ret = false
+        # Find original grid index
+        ciMod2 = ci%2
+        if ciMod2 == 0
+            origx = div(ci, 2)
+        else
+            origx = div(ci+1, 2)
+        end
+
+        # Convert to matrix row, column notation
+        # to box the inner cells
+        rx = origx%nx
+        if rx == 0
+            rx = nx
+        end
+        ry = div((origx-rx), nx) + 1
+
+        # Identify cells at boundary
+        if rx == 1
+            ret = (ry == 1 || ry == ny)
+            ret = (ciMod2 == 0)
+        elseif rx == nx
+            ret = (ry == 1 || ry == ny)
+            ret = (ciMod2 == 1)
+        end
+
+        # Catch false positive cells at boundary
+        if ry == 1 && ciMod2 == 1
+            ret = true
+        elseif ry == ny && ciMod2 == 0
+            ret = true
+        end
+        if ci == nx*2 || ci == 2*(nx*(ny-1))+1
+            ret = false
+        end
+
+    else  # This only works for loop_dim = 2
+        isnot = true
+        for i in 1:length(coor)
+            isnot *= i==grid.orggrid.loop_dim ||
+                    !(
+                        (coor[i]==(grid.dimsplit==i ? 2 : 1) && grid._ndivscells[i]>1) ||
+                        coor[i]==(grid._ndivscells[i] - (grid.dimsplit==i ? 1 : 0))
+                    )
+        end
+        ret = !isnot
     end
 
     if grid.dimsplit!=1
         @warn("Case dimsplit=$(grid.dimsplit) has not been verified yet. Expect it to be wrong.")
     end
 
-    return !isnot
+    return ret
 end
 
 
