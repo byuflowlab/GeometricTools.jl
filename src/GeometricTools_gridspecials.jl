@@ -501,7 +501,7 @@ function isedge(grid::GridTriangleSurface, ci)
     if grid.orggrid.loop_dim == 2
         ret = inYmin || inYmax
 
-    elseif loop_dim == 1
+    elseif grid.orggrid.loop_dim == 1
         ret = inXmin || inXmax
 
     else  # For loop_dim = 0 and loop_dim > 2
