@@ -478,7 +478,11 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex)
     return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
 end
 
-function isedge(grid::GridTriangleSurface, ci::Int)
+function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
+    # whichedge takes values 1,2,3,4 or 0 (default)
+    # [1, 2, 3, 4] = [Xmin, Xmax, Ymin, Ymax]
+    # If whichedge is used, it checks only that specific boundary
+
 
     ret = false
     nx = grid.orggrid.NDIVS[1]
@@ -498,15 +502,21 @@ function isedge(grid::GridTriangleSurface, ci::Int)
         inYmax = (ci-(2*nx-1))%(2*nx) == 0
     end
 
-    if grid.orggrid.loop_dim == 2
-        ret = inYmin || inYmax
+    if whichedge == 1; ret = inXmin
+    elseif whichedge == 2; ret = inXmax
+    elseif whichedge == 3; ret = inYmin
+    elseif whichedge == 4; ret = inYmax
+    else
+        if grid.orggrid.loop_dim == 2
+            ret = inYmin || inYmax
 
-    elseif grid.orggrid.loop_dim == 1
-        ret = inXmin || inXmax
+        elseif grid.orggrid.loop_dim == 1
+            ret = inXmin || inXmax
 
-    else  # For loop_dim = 0 and loop_dim > 2
-        ret = inXmin || inXmax || inYmin || inYmax
+        else  # For loop_dim = 0 and loop_dim > 2
+            ret = inXmin || inXmax || inYmin || inYmax
 
+        end
     end
 
     return ret
