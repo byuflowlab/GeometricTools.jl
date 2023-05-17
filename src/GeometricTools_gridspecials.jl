@@ -478,7 +478,7 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex)
     return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
 end
 
-function isedge(grid::GridTriangleSurface, ci)
+function isedge(grid::GridTriangleSurface, ci::Int)
 
     ret = false
     nx = grid.orggrid.NDIVS[1]
