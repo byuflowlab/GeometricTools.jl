@@ -445,7 +445,7 @@ function neighbor(ni::Int, ci::Int, ccoor, ndivscells, dimsplit::Int)
 end
 
 function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int;
-    preserveEdge::Bool=false)
+                    preserveEdge::Bool=false)
     # Preserve edge will output [0,0,0] for a non-existent neighbor cell
     # This happens for cells at the edges of the grid
 
@@ -479,7 +479,8 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int;
 end
 
 function neighbor(grid::GridTriangleSurface, ni::Int,
-                    ccoor::Union{<:AbstractVector, <:Tuple})
+                    ccoor::Union{<:AbstractVector, <:Tuple};
+                    preserveEdge::Bool=false)
 
     # Pre-calculations
     ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
@@ -487,10 +488,11 @@ function neighbor(grid::GridTriangleSurface, ni::Int,
     ci = lin[ccoor...]
 
     # Calculate neighbor
-    return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+    return neighbor(grid, ni, ci; preserveEdge=preserveEdge)
 end
 
-function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex)
+function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex;
+                    preserveEdge::Bool=false)
 
     # Pre-calculations
     ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
@@ -498,7 +500,7 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex)
     ci = lin[ccoor]
 
     # Calculate neighbor
-    return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+    return neighbor(grid, ni, ci; preserveEdge=preserveEdge)
 end
 
 function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
