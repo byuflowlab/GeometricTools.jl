@@ -444,7 +444,10 @@ function neighbor(ni::Int, ci::Int, ccoor, ndivscells, dimsplit::Int)
     return neighbor!(ones(Int, 3), ni, ci, ccoor, ndivscells, dimsplit)
 end
 
-function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int)
+function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int;
+    preserveEdge::Bool=false)
+    # Preserve edge will output [0,0,0] for a non-existent neighbor cell
+    # This happens for cells at the edges of the grid
 
     # Pre-calculations
     ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
@@ -452,7 +455,27 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int)
     ccoor = cin[ci]
 
     # Calculate neighbor
-    return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+    neigh = neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+
+    if preserveEdge
+        isFakeNeighbor = false
+        inXmin = (isedge(grid, ci; whichedge=1) && ni==1)
+        inXmax = (isedge(grid, ci; whichedge=2) && ni==1)
+        inYmin = (isedge(grid, ci; whichedge=3) && ni==2)
+        inYmax = (isedge(grid, ci; whichedge=4) && ni==2)
+
+        # This has only been tested for dim_split = 1
+        if grid.orggrid.loop_dim == 2
+            isFakeNeighbor = inXmin || inXmax
+        elseif grid.orggrid.loop_dim == 1
+            isFakeNeighbor = inYmin || inYmax
+        else
+            isFakeNeighbor = inXmin || inXmax || inYmin || inYmax
+        end
+        if isFakeNeighbor; neigh = [0,0,0]; end
+    end
+
+    return neigh
 end
 
 function neighbor(grid::GridTriangleSurface, ni::Int,
