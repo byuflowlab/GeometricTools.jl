@@ -459,16 +459,16 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int;
 
     if preserveEdge
         isFakeNeighbor = false
-        inXmin = (isedge(grid, ci; whichedge=1) && ni==1)
-        inXmax = (isedge(grid, ci; whichedge=2) && ni==1)
-        inYmin = (isedge(grid, ci; whichedge=3) && ni==2)
-        inYmax = (isedge(grid, ci; whichedge=4) && ni==2)
+        inXmin = (isedge(grid, ci; whichedge=1) && ni==2)
+        inXmax = (isedge(grid, ci; whichedge=2) && ni==2)
+        inYmin = (isedge(grid, ci; whichedge=3) && ni==1)
+        inYmax = (isedge(grid, ci; whichedge=4) && ni==1)
 
         # This has only been tested for dim_split = 1
         if grid.orggrid.loop_dim == 2
-            isFakeNeighbor = inXmin || inXmax
-        elseif grid.orggrid.loop_dim == 1
             isFakeNeighbor = inYmin || inYmax
+        elseif grid.orggrid.loop_dim == 1
+            isFakeNeighbor = inXmin || inXmax
         else
             isFakeNeighbor = inXmin || inXmax || inYmin || inYmax
         end
@@ -514,15 +514,15 @@ function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
     # Determine if the cell is part of any boundary
     # Xmin, Xmax, Ymin, Ymax are the cell boundaries of the grid
     if grid.dimsplit == 2
-        inXmin = ci <= nx
-        inXmax = ci > 2*nx*ny - nx
-        inYmin = (ci-nx-1)%(2*nx) == 0
-        inYmax = (ci-nx)%(2*nx) == 0
+        inXmin = (ci-nx-1)%(2*nx) == 0
+        inXmax = (ci-nx)%(2*nx) == 0
+        inYmin = ci <= nx
+        inYmax = ci > 2*nx*ny - nx
     else
-        inXmin = ((ci+1)%2 == 0) && (ci < 2*nx)
-        inXmax = ((2*nx*ny-ci)%2 == 0) && (ci > 2*nx*(ny-1)+1)
-        inYmin = (ci-2)%(2*nx) == 0
-        inYmax = (ci-(2*nx-1))%(2*nx) == 0
+        inXmin = (ci-2)%(2*nx) == 0
+        inXmax = (ci-(2*nx-1))%(2*nx) == 0
+        inYmin = ((ci+1)%2 == 0) && (ci < 2*nx)
+        inYmax = ((2*nx*ny-ci)%2 == 0) && (ci > 2*nx*(ny-1)+1)
     end
 
     if whichedge == 1; ret = inXmin
@@ -531,10 +531,10 @@ function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
     elseif whichedge == 4; ret = inYmax
     else
         if grid.orggrid.loop_dim == 2
-            ret = inYmin || inYmax
+            ret = inXmin || inXmax
 
         elseif grid.orggrid.loop_dim == 1
-            ret = inXmin || inXmax
+            ret = inYmin || inYmax
 
         else  # For loop_dim = 0 and loop_dim > 2
             ret = inXmin || inXmax || inYmin || inYmax
