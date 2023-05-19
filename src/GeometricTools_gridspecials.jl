@@ -466,9 +466,9 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int;
 
         # This has only been tested for dim_split = 1
         if grid.orggrid.loop_dim == 2
-            isFakeNeighbor = inYmin || inYmax
-        elseif grid.orggrid.loop_dim == 1
             isFakeNeighbor = inXmin || inXmax
+        elseif grid.orggrid.loop_dim == 1
+            isFakeNeighbor = inYmin || inYmax
         else
             isFakeNeighbor = inXmin || inXmax || inYmin || inYmax
         end
