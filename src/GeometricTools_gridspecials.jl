@@ -444,7 +444,10 @@ function neighbor(ni::Int, ci::Int, ccoor, ndivscells, dimsplit::Int)
     return neighbor!(ones(Int, 3), ni, ci, ccoor, ndivscells, dimsplit)
 end
 
-function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int)
+function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int;
+                    preserveEdge::Bool=false)
+    # Preserve edge will output [0,0,0] for a non-existent neighbor cell
+    # This happens for cells at the edges of the grid
 
     # Pre-calculations
     ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
@@ -452,11 +455,32 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int)
     ccoor = cin[ci]
 
     # Calculate neighbor
-    return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+    neigh = neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+
+    if preserveEdge
+        isFakeNeighbor = false
+        inXmin = (isedge(grid, ci; whichedge=1) && ni==2)
+        inXmax = (isedge(grid, ci; whichedge=2) && ni==2)
+        inYmin = (isedge(grid, ci; whichedge=3) && ni==1)
+        inYmax = (isedge(grid, ci; whichedge=4) && ni==1)
+
+        # This has only been tested for dim_split = 1
+        if grid.orggrid.loop_dim == 2
+            isFakeNeighbor = inXmin || inXmax
+        elseif grid.orggrid.loop_dim == 1
+            isFakeNeighbor = inYmin || inYmax
+        else
+            isFakeNeighbor = inXmin || inXmax || inYmin || inYmax
+        end
+        if isFakeNeighbor; neigh = [0,0,0]; end
+    end
+
+    return neigh
 end
 
 function neighbor(grid::GridTriangleSurface, ni::Int,
-                    ccoor::Union{<:AbstractVector, <:Tuple})
+                    ccoor::Union{<:AbstractVector, <:Tuple};
+                    preserveEdge::Bool=false)
 
     # Pre-calculations
     ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
@@ -464,10 +488,11 @@ function neighbor(grid::GridTriangleSurface, ni::Int,
     ci = lin[ccoor...]
 
     # Calculate neighbor
-    return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+    return neighbor(grid, ni, ci; preserveEdge=preserveEdge)
 end
 
-function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex)
+function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex;
+                    preserveEdge::Bool=false)
 
     # Pre-calculations
     ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
@@ -475,25 +500,51 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex)
     ci = lin[ccoor]
 
     # Calculate neighbor
-    return neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+    return neighbor(grid, ni, ci; preserveEdge=preserveEdge)
 end
 
-function isedge(grid::GridTriangleSurface, coor)
-    isnot = true
+function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
+    # whichedge takes values 1,2,3,4 or 0 (default)
+    # [1, 2, 3, 4] = [Xmin, Xmax, Ymin, Ymax]
+    # If whichedge is used, it checks only that specific boundary
 
-    for i in 1:length(coor)
-        isnot *= i==grid.orggrid.loop_dim ||
-                !(
-                    (coor[i]==(grid.dimsplit==i ? 2 : 1) && grid._ndivscells[i]>1) ||
-                    coor[i]==(grid._ndivscells[i] - (grid.dimsplit==i ? 1 : 0))
-                )
+
+    ret = false
+    nx = grid.orggrid.NDIVS[1]
+    ny = grid.orggrid.NDIVS[2]
+
+    # Determine if the cell is part of any boundary
+    # Xmin, Xmax, Ymin, Ymax are the cell boundaries of the grid
+    if grid.dimsplit == 2
+        inXmin = (ci-nx-1)%(2*nx) == 0
+        inXmax = (ci-nx)%(2*nx) == 0
+        inYmin = ci <= nx
+        inYmax = ci > 2*nx*ny - nx
+    else
+        inXmin = (ci-2)%(2*nx) == 0
+        inXmax = (ci-(2*nx-1))%(2*nx) == 0
+        inYmin = ((ci+1)%2 == 0) && (ci < 2*nx)
+        inYmax = ((2*nx*ny-ci)%2 == 0) && (ci > 2*nx*(ny-1)+1)
     end
 
-    if grid.dimsplit!=1
-        @warn("Case dimsplit=$(grid.dimsplit) has not been verified yet. Expect it to be wrong.")
+    if whichedge == 1; ret = inXmin
+    elseif whichedge == 2; ret = inXmax
+    elseif whichedge == 3; ret = inYmin
+    elseif whichedge == 4; ret = inYmax
+    else
+        if grid.orggrid.loop_dim == 2
+            ret = inXmin || inXmax
+
+        elseif grid.orggrid.loop_dim == 1
+            ret = inYmin || inYmax
+
+        else  # For loop_dim = 0 and loop_dim > 2
+            ret = inXmin || inXmax || inYmin || inYmax
+
+        end
     end
 
-    return !isnot
+    return ret
 end
 
 
