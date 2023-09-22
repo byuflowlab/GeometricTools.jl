@@ -283,7 +283,7 @@ end
     # --- get_num_cells_around_node() ---
     if verbose
         println("Testing gt.get_num_cells_around_node()...")
-        println("Generating 4 x 3 unit grid...")
+        println("Generating 2 x 3 grid...")
     end
 
     P_min = [0, 0, 0]
@@ -356,7 +356,7 @@ end
         @test gt.get_num_cells_around_node(tri_grid, cart[9]) == 3
 
         # Interior
-        @test gt.get_num_cells_around_node(tri_grid, cart[1]) == 6
-        @test gt.get_num_cells_around_node(tri_grid, cart[7]) == 6
+        @test gt.get_num_cells_around_node(tri_grid, cart[2]) == 6
+        @test gt.get_num_cells_around_node(tri_grid, cart[8]) == 6
     end
 end

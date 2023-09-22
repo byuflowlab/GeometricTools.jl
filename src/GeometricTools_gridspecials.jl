@@ -548,8 +548,11 @@ function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
 end
 
 """
-Returns number of cells that share a specific node for GridTriangleSurface.
-This function is useful for converting cell-based valus to node-based.
+    get_num_cells_around_node(grid::GridTriangleSurface, ci::CartesianIndex;
+        dim_split=1)
+
+Returns number of cells that share a specific node in GridTriangleSurface. The node is input using its CartesianIndex.
+This function is useful in the averagine process required for converting a grid with cell-center based values to node-based.
 """
 function get_num_cells_around_node(grid::GridTriangleSurface, ci::CartesianIndex;
         dim_split=1)
