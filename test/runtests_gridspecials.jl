@@ -359,4 +359,45 @@ end
         @test gt.get_num_cells_around_node(tri_grid, cart[2]) == 6
         @test gt.get_num_cells_around_node(tri_grid, cart[8]) == 6
     end
+
+    # --- get_nodal_data() ---
+    if verbose
+        println("Testing gt.get_nodal_data()...")
+        println("Generating 2 x 3 grid...")
+    end
+
+    # True values
+    # 3 loop_dim, 2 dim_split
+    nd_true = Array{Vector{Float64}}(undef, 3, 2)
+
+    # loop_dim = 0
+    nd_true[1, 1] = [1.5, 16.0/6, 3.0, 13.0/3, 4.5, 28.0/6, 25.0/3, 8.5, 52.0/6, 10.0, 31.0/3, 11.5]
+    nd_true[1, 2] = [2.0, 7.0/3, 2.0, 5.0, 4.5, 4.0, 9.0, 8.5, 8.0, 11.0, 64.0/6, 11.0]
+
+    # loop_dim = 1
+    nd_true[2, 1] = [2.0, 16.0/6, 4.5, 4.5, 8.5, 8.5, 11.0, 31.0/3]
+    nd_true[2, 2] = [2.0, 7.0/3, 4.5, 4.5, 8.5, 8.5, 11.0, 64.0/6]
+
+    # loop_dim = 2
+    nd_true[3, 1] = [13.0/3, 6.5, 52.0/6, 13.0/3, 4.5, 28.0/6, 25.0/3, 8.5, 52.0/6]
+    nd_true[3, 2] = [5.0, 6.5, 8.0, 5.0, 4.5, 4.0, 9.0, 8.5, 8.0]
+
+    for loop_dim in [0, 1, 2]
+        rect_grid = gt.Grid(P_min, P_max, n, loop_dim)
+
+        for dim_split in [1, 2]
+            if verbose; println("Testing loop_dim=$loop_dim dim_split = $dim_split"); end
+            tri_grid = gt.GridTriangleSurface(rect_grid, dim_split)
+
+            cart = CartesianIndices((1:n[1]+1, 1:n[2]+1))
+
+            dummy_data = collect(1.0:2*n[1]*n[2])
+            gt.add_field(tri_grid, "dummy", "scalar", dummy_data, "cell")
+
+            nd = gt.get_nodal_data(tri_grid, "dummy")
+
+            @test nd ≈ nd_true[loop_dim+1, dim_split]
+        end
+    end
+
 end
