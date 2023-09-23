@@ -640,6 +640,30 @@ function get_nodal_data(grid::GridTriangleSurface, field_name::String)
     return nodal_data
 end
 
+"""
+    project_3d_2d(p1, p2, p3)
+
+Project 3D vertices of triangle element on to a 2D coordinate system.
+Returns coordinates and basis vectors. First coordinate is always origin [0, 0] and hence not returned.
+"""
+function project_3d_2d(p1, p2, p3)
+    # Compute basis vectors of coordinate system
+    # using Gram-Schmidt orthogonalization
+    a = p2 .- p1
+    e1 = a ./ norm(a)
+
+    b = p3 .- p1
+    b_dot_e1 = dot(b, e1)
+    e2 = b .- b_dot_e1 .* e1
+    e2 = e2 ./ norm(e2)
+
+    # Project vertices onto basis vectors to find 2D coordinates
+    # t1 = [0.0, 0.0]
+    t2 = [dot(a, e1), 0.0]
+    t3 = [b_dot_e1, dot(b, e2)]
+
+    return t2, t3, e1, e2
+end
 
 
 function lintransform!(self::GridTriangleSurface, args...; optargs...)

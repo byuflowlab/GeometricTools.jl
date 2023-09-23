@@ -400,4 +400,19 @@ end
         end
     end
 
+    # --- project_3d_2d() ---
+    if verbose
+        println("Testing gt.get_nodal_data()...")
+    end
+
+    p1 = [0.0, 0.0, 4.0]
+    p2 = [1.5*sind(30), 1.5*cosd(30), 4.0]
+    p3 = [2*sind(80), 2*cosd(80), 4.0]
+
+    t2, t3, e1, e2 = gt.project_3d_2d(p1, p2, p3)
+
+    @test t2 ≈ [1.5, 0.0]
+    @test t3 ≈ [1.2855752193730787, 1.5320888862379558]
+    @test e1 ≈ [sind(30), cosd(30), 0.0]
+    @test e2 ≈ [sind(30+90), cosd(30+90), 0.0]
 end
