@@ -548,14 +548,14 @@ function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
 end
 
 """
-    get_num_cells_around_node(grid::GridTriangleSurface, ci::CartesianIndex;
-        dim_split=1)
+    get_num_cells_around_node(grid::GridTriangleSurface, ci::CartesianIndex)
 
 Returns number of cells that share a specific node in GridTriangleSurface. The node is input using its CartesianIndex.
 This function is useful in the averagine process required for converting a grid with cell-center based values to node-based.
 """
-function get_num_cells_around_node(grid::GridTriangleSurface, ci::CartesianIndex;
-        dim_split=1)
+function get_num_cells_around_node(grid::GridTriangleSurface, ci::CartesianIndex)
+
+    # Works for all dim_split values
 
     nx, ny, nz = get_ndivsnodes(grid)
     loop_dim = grid.orggrid.loop_dim
@@ -583,16 +583,12 @@ function get_num_cells_around_node(grid::GridTriangleSurface, ci::CartesianIndex
     isEdge = false
 
     # Check if node is a part of any boundary
-    if (dim_split == 1) || (dim_split == 2)
-        if (isXmin && isYmin) || (isXmax && isYmax)
-            isCorner2 = true
-        elseif (isXmin && isYmax) || (isXmax && isYmin)
-            isCorner1 = true
-        elseif (isXmin || isXmax || isYmin || isYmax)
-            isEdge = true
-        end
-    else
-        error("Invalid dim_split value: $dim_split")
+    if (isXmin && isYmin) || (isXmax && isYmax)
+        isCorner2 = true
+    elseif (isXmin && isYmax) || (isXmax && isYmin)
+        isCorner1 = true
+    elseif (isXmin || isXmax || isYmin || isYmax)
+        isEdge = true
     end
 
     # Assume the node is an interior node unless otherwise
