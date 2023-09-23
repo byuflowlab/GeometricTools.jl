@@ -7,7 +7,7 @@ catch
     global verbose = true
 end
 
-@testset verbose=verbose "Gridspecials Tests" begin
+@testset verbose=verbose "isedge" begin
 
     # --- isedge() ---
     if verbose
@@ -61,8 +61,10 @@ end
 
         if verbose; println(""); end
     end
+end
 
-    # --- isedge() ---
+@testset verbose=verbose "neighbor" begin
+
     if verbose
         println("Testing neighbor()...")
         println("Generating 4 x 3 unit grid...")
@@ -279,8 +281,10 @@ end
 
         if verbose; println(""); end
     end
+end
 
-    # --- get_num_cells_around_node() ---
+@testset verbose=verbose "get_num_cells_around_node" begin
+
     if verbose
         println("Testing gt.get_num_cells_around_node()...")
         println("Generating 2 x 3 grid...")
@@ -359,12 +363,17 @@ end
         @test gt.get_num_cells_around_node(tri_grid, cart[2]) == 6
         @test gt.get_num_cells_around_node(tri_grid, cart[8]) == 6
     end
+end
+@testset verbose=verbose "get_nodal_data" begin
 
-    # --- get_nodal_data() ---
     if verbose
         println("Testing gt.get_nodal_data()...")
         println("Generating 2 x 3 grid...")
     end
+
+    P_min = [0, 0, 0]
+    P_max = [2, 1, 0]
+    n = [2, 3, 0]
 
     # True values
     # 3 loop_dim, 2 dim_split
@@ -399,10 +408,12 @@ end
             @test nd ≈ nd_true[loop_dim+1, dim_split]
         end
     end
+end
 
-    # --- project_3d_2d() ---
+@testset verbose=verbose "project_3d_2d" begin
+
     if verbose
-        println("Testing gt.get_nodal_data()...")
+        println("Testing gt.project_3d_2d()...")
     end
 
     p1 = [0.0, 0.0, 4.0]
