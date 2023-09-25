@@ -606,7 +606,7 @@ function get_num_cells_around_node(grid::GridTriangleSurface, ci::CartesianIndex
 end
 
 """
-    get_nodal_data(grid::GridTriangleSurface, field_name::String)
+    get_nodal_data(grid::GridTriangleSurface; field_name::String)
 
 Converts specified cell-centered field data to node-based data
 by averaging field values of cells surrounding the node.
@@ -622,10 +622,49 @@ function get_nodal_data(grid::GridTriangleSurface, field_name::String)
     # dividing each element of the nodal array using
     # the number of cells around each node
     vtxs = ones(Int, 3)
-    field_val = 0.0
     for i = 1:grid.ncells
         vtxs .= get_cell(grid, i)
         scalar_val = grid.field[field_name]["field_data"][i]
+        nodal_data[vtxs[1]] += scalar_val
+        nodal_data[vtxs[2]] += scalar_val
+        nodal_data[vtxs[3]] += scalar_val
+    end
+
+    # Divide each element by number of cells to obtain average
+    cart = CartesianIndices((1:nx, 1:ny))
+    for i = 1:grid.nnodes
+        nodal_data[i] /= get_num_cells_around_node(grid, cart[i])
+    end
+
+    return nodal_data
+end
+
+"""
+    get_nodal_data(grid::GridTriangleSurface; field_vals)
+
+Converts specified cell-centered field data to node-based data
+by averaging field values of cells surrounding the node. 
+`field_vals` could be an array or vector containing the scalar data values.
+"""
+function get_nodal_data(grid::GridTriangleSurface, field_vals)
+
+    if length(field_vals) != grid.ncells
+        error("No. of field_vals do not match no. of cells")
+    end
+
+    nx, ny, nz = get_ndivsnodes(grid)
+
+    # Create an array where each index represents a node
+    nodal_data = zeros(grid.nnodes)
+
+    # Parse through each cell and add its field value to that nodal array
+    # whose index is the node index. At the end, obtain the average by
+    # dividing each element of the nodal array using
+    # the number of cells around each node
+    vtxs = ones(Int, 3)
+    for i = 1:grid.ncells
+        vtxs .= get_cell(grid, i)
+        scalar_val = field_vals[i]
         nodal_data[vtxs[1]] += scalar_val
         nodal_data[vtxs[2]] += scalar_val
         nodal_data[vtxs[3]] += scalar_val
