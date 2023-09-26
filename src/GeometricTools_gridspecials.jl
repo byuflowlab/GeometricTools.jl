@@ -549,7 +549,7 @@ end
 
 """
     get_nodal_data(grid::GridTriangleSurface; field_name::String;
-                    algorithm=2, areas=Nothing)
+                    algorithm=2, areas=nothing)
 
 Converts specified cell-centered field data to node-based data
 by averaging field values of cells surrounding the node.
@@ -586,7 +586,7 @@ function get_nodal_data(grid::GridTriangleSurface, field_name::String;
 end
 
 """
-    get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, areas=Nothing)
+    get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, areas=nothing)
 
 Converts specified cell-centered field data to node-based data
 by averaging field values of cells surrounding the node. 
