@@ -548,64 +548,6 @@ function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
 end
 
 """
-    get_num_cells_around_node(grid::GridTriangleSurface, ci::CartesianIndex)
-
-Returns number of cells that share a specific node in GridTriangleSurface. The node is input using its CartesianIndex.
-This function is useful in the averagine process required for converting a grid with cell-center based values to node-based.
-"""
-function get_num_cells_around_node(grid::GridTriangleSurface, ci::CartesianIndex)
-
-    # Works for all dim_split values
-
-    nx, ny, nz = get_ndivsnodes(grid)
-    loop_dim = grid.orggrid.loop_dim
-
-    # Identify whether the given node lies on any of the boundaries
-    isXmin = ci[1] == 1
-    isXmax = ci[1] == nx
-    isYmin = ci[2] == 1
-    isYmax = ci[2] == ny
-
-    # If the grid is looped, some boundaries are not present
-    if loop_dim == 1
-        isXmin = false
-        isXmax = false
-    end
-    if loop_dim == 2
-        isYmin = false
-        isYmax = false
-    end
-
-    # There are four posibilities for number of cells around a node
-    # Corner-1 or 2, Edge-3, Interior-6
-    isCorner1 = false
-    isCorner2 = false
-    isEdge = false
-
-    # Check if node is a part of any boundary
-    if (isXmin && isYmin) || (isXmax && isYmax)
-        isCorner2 = true
-    elseif (isXmin && isYmax) || (isXmax && isYmin)
-        isCorner1 = true
-    elseif (isXmin || isXmax || isYmin || isYmax)
-        isEdge = true
-    end
-
-    # Assume the node is an interior node unless otherwise
-    num_cells = 6
-
-    if isEdge
-        num_cells = 3
-    elseif isCorner1
-        num_cells = 1
-    elseif isCorner2
-        num_cells = 2
-    end
-
-    return num_cells
-end
-
-"""
     get_nodal_data(grid::GridTriangleSurface; field_name::String;
                     algorithm=2, areas=Nothing)
 
