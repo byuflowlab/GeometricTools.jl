@@ -606,77 +606,81 @@ function get_num_cells_around_node(grid::GridTriangleSurface, ci::CartesianIndex
 end
 
 """
-    get_nodal_data(grid::GridTriangleSurface; field_name::String)
+    get_nodal_data(grid::GridTriangleSurface; field_name::String;
+                    algorithm=2, areas=Nothing)
 
 Converts specified cell-centered field data to node-based data
 by averaging field values of cells surrounding the node.
+Algorithms: 1.Averaging 2.Area-weighted
 """
-function get_nodal_data(grid::GridTriangleSurface, field_name::String)
-    nx, ny, nz = get_ndivsnodes(grid)
+function get_nodal_data(grid::GridTriangleSurface, field_name::String;
+                            algorithm=2, areas=nothing)
 
-    # Create an array where each index represents a node
+    # Create a vector where each index represents a node
     nodal_data = zeros(grid.nnodes)
+    net_weight = zeros(grid.nnodes)
+
+    # Weight can be 1 or area. 1 implies simple averaging.
+    if algorithm == 2
+        if isnothing(areas)
+            weight = [get_area(grid, i) for i in 1:grid.ncells]
+        end
+    else
+        weight = ones(grid.ncells)
+    end
 
     # Parse through each cell and add its field value to that nodal array
-    # whose index is the node index. At the end, obtain the average by
-    # dividing each element of the nodal array using
-    # the number of cells around each node
+    # whose index is the node index. At the end, obtain the weighted average by
+    # dividing each element of the nodal array using the net weight
     vtxs = ones(Int, 3)
     for i = 1:grid.ncells
         vtxs .= get_cell(grid, i)
-        scalar_val = grid.field[field_name]["field_data"][i]
-        nodal_data[vtxs[1]] += scalar_val
-        nodal_data[vtxs[2]] += scalar_val
-        nodal_data[vtxs[3]] += scalar_val
+        nodal_data[vtxs] .+= weight[i] * grid.field[field_name]["field_data"][i]
+        net_weight[vtxs] .+= weight[i]
     end
 
-    # Divide each element by number of cells to obtain average
-    cart = CartesianIndices((1:nx, 1:ny))
-    for i = 1:grid.nnodes
-        nodal_data[i] /= get_num_cells_around_node(grid, cart[i])
-    end
-
-    return nodal_data
+    # Divide each element by number of cells or net area to obtain average
+    return nodal_data ./ net_weight
 end
 
 """
-    get_nodal_data(grid::GridTriangleSurface; field_vals)
+    get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, areas=Nothing)
 
 Converts specified cell-centered field data to node-based data
 by averaging field values of cells surrounding the node. 
 `field_vals` could be an array or vector containing the scalar data values.
+Algorithms: 1.Averaging 2.Area-weighted
 """
-function get_nodal_data(grid::GridTriangleSurface, field_vals)
+function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, areas=nothing)
 
     if length(field_vals) != grid.ncells
         error("No. of field_vals do not match no. of cells")
     end
 
-    nx, ny, nz = get_ndivsnodes(grid)
-
     # Create an array where each index represents a node
     nodal_data = zeros(grid.nnodes)
+    net_weight = zeros(grid.nnodes)
+
+    # Weight can be 1 or area. 1 implies simple averaging.
+    weight = ones(grid.ncells)
+    if algorithm == 2
+        if isnothing(areas)
+            weight = [get_area(grid, i) for i in 1:grid.ncells]
+        end
+    end
 
     # Parse through each cell and add its field value to that nodal array
-    # whose index is the node index. At the end, obtain the average by
-    # dividing each element of the nodal array using
-    # the number of cells around each node
+    # whose index is the node index. At the end, obtain the weighted average by
+    # dividing each element of the nodal array using the net weight
     vtxs = ones(Int, 3)
     for i = 1:grid.ncells
         vtxs .= get_cell(grid, i)
-        scalar_val = field_vals[i]
-        nodal_data[vtxs[1]] += scalar_val
-        nodal_data[vtxs[2]] += scalar_val
-        nodal_data[vtxs[3]] += scalar_val
+        nodal_data[vtxs] .+= weight[i] * field_vals[i]
+        net_weight[vtxs] .+= weight[i]
     end
 
     # Divide each element by number of cells to obtain average
-    cart = CartesianIndices((1:nx, 1:ny))
-    for i = 1:grid.nnodes
-        nodal_data[i] /= get_num_cells_around_node(grid, cart[i])
-    end
-
-    return nodal_data
+    return nodal_data ./ net_weight
 end
 
 """
