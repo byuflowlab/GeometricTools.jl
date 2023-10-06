@@ -548,46 +548,6 @@ function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
 end
 
 """
-    get_nodal_data(grid::GridTriangleSurface; field_name::String;
-                    algorithm=2, areas=nothing)
-
-Converts specified cell-centered field data to node-based data
-by averaging field values of cells surrounding the node.
-Algorithms: 1.Averaging 2.Area-weighted
-"""
-function get_nodal_data(grid::GridTriangleSurface, field_name::String;
-                            algorithm=2, areas=nothing)
-
-    # Create a vector where each index represents a node
-    nodal_data = zeros(grid.nnodes)
-    net_weight = zeros(grid.nnodes)
-
-    # Weight can be 1 or area. 1 implies simple averaging.
-    if algorithm == 2
-        if isnothing(areas)
-            weight = [get_area(grid, i) for i in 1:grid.ncells]
-        else
-            weight = areas
-        end
-    else
-        weight = ones(grid.ncells)
-    end
-
-    # Parse through each cell and add its field value to that nodal array
-    # whose index is the node index. At the end, obtain the weighted average by
-    # dividing each element of the nodal array using the net weight
-    vtxs = ones(Int, 3)
-    for i = 1:grid.ncells
-        vtxs .= get_cell(grid, i)
-        nodal_data[vtxs] .+= weight[i] * grid.field[field_name]["field_data"][i]
-        net_weight[vtxs] .+= weight[i]
-    end
-
-    # Divide each element by number of cells or net area to obtain average
-    return nodal_data ./ net_weight
-end
-
-"""
     get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, areas=nothing)
 
 Converts specified cell-centered field data to node-based data
@@ -627,6 +587,18 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, area
 
     # Divide each element by number of cells to obtain average
     return nodal_data ./ net_weight
+end
+
+"""
+    get_nodal_data(grid::GridTriangleSurface; field_name::String;
+                    algorithm=2, areas=nothing)
+
+Converts specified cell-centered field data to node-based data
+by averaging field values of cells surrounding the node.
+Algorithms: 1.Averaging 2.Area-weighted
+"""
+function get_nodal_data(grid::GridTriangleSurface, field_name::String, args...; optargs...)
+    return get_nodal_data(grid, grid.field[field_name]["field_data"], args...; optargs...)
 end
 
 """
