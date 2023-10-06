@@ -2,18 +2,19 @@
 Methods for the manipulation of geometric data, grid generation, and visualization
 formatting.
 
-<img src="docs/img/helicoid01.png" alt="Pic here" style="width: 200px;"/>
-<img src="docs/img/blade00.png" alt="Pic here" style="width: 200px;"/>
-<img src="docs/img/vahana_fuselage02.png" alt="Pic here" style="width: 200px;"/>
+<img src="docs/img/helicoid01.png" alt="Pic here" style="width:50%;"/>
+<img src="docs/img/blade00.png" alt="Pic here" style="width:50%;"/>
+<img src="docs/img/vahana_fuselage02.png" alt="Pic here" style="width:50%;"/>
 
 See `docs` for code documentation and `examples` for usage examples.
 
 # Installation
 
-Run the following line in a Julia terminal
+GeometricTools is in the official Julia registry, so it can be installed
+directly from the package manager:
 
 ```
-Pkg.clone("git@github.com:byuflowlab/GeometricTools.jl.git")
+] add GeometricTools
 ```
 
 # Dependencies
