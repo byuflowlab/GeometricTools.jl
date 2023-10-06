@@ -547,7 +547,110 @@ function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
     return ret
 end
 
+"""
+    get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, areas=nothing)
 
+Converts specified cell-centered field data to node-based data
+by averaging field values of cells surrounding the node. 
+`field_vals` could be an array or vector containing the scalar data values.
+Algorithms: 1.Averaging 2.Area-weighted
+"""
+function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, areas=nothing)
+
+    if length(field_vals) != grid.ncells
+        error("No. of field_vals do not match no. of cells")
+    end
+
+    # Create an array where each index represents a node
+    nodal_data = zeros(grid.nnodes)
+    net_weight = zeros(grid.nnodes)
+
+    # Weight can be 1 or area. 1 implies simple averaging.
+    weight = ones(grid.ncells)
+    if algorithm == 2
+        if isnothing(areas)
+            weight = [get_area(grid, i) for i in 1:grid.ncells]
+        else
+            weight = areas
+        end
+    end
+
+    # Parse through each cell and add its field value to that nodal array
+    # whose index is the node index. At the end, obtain the weighted average by
+    # dividing each element of the nodal array using the net weight
+    vtxs = ones(Int, 3)
+    for i = 1:grid.ncells
+        vtxs .= get_cell(grid, i)
+        nodal_data[vtxs] .+= weight[i] * field_vals[i]
+        net_weight[vtxs] .+= weight[i]
+    end
+
+    # Divide each element by number of cells to obtain average
+    return nodal_data ./ net_weight
+end
+
+"""
+    get_nodal_data(grid::GridTriangleSurface; field_name::String;
+                    algorithm=2, areas=nothing)
+
+Converts specified cell-centered field data to node-based data
+by averaging field values of cells surrounding the node.
+Algorithms: 1.Averaging 2.Area-weighted
+"""
+function get_nodal_data(grid::GridTriangleSurface, field_name::String, args...; optargs...)
+    return get_nodal_data(grid, grid.field[field_name]["field_data"], args...; optargs...)
+end
+
+"""
+    project_3d_2d!(t2, t3, ex, ey, p1, p2, p3)
+
+Project 3D vertices p1, p2, p3 of a triangle element on to a 2D coordinate system.
+Returns coordinates and basis vectors.
+First coordinate t1 is always origin [0, 0] and hence not returned. t2 and t3 should be 2-element arrays. Basis vectors ex and ey should be 3-element arrays.
+"""
+function project_3d_2d!(t2, t3, ex, ey, p1, p2, p3)
+    # Compute basis vectors of coordinate system
+    # using Gram-Schmidt orthogonalization
+    a1 = p2[1] - p1[1]
+    a2 = p2[2] - p1[2]
+    a3 = p2[3] - p1[3]
+    a_mag = sqrt(a1^2 + a2^2 + a3^2)
+
+    ex[1] = a1 / a_mag
+    ex[2] = a2 / a_mag
+    ex[3] = a3 / a_mag
+
+    a_dot_ex = a1*ex[1] + a2*ex[2] + a3*ex[3]
+
+    b1 = p3[1] - p1[1]
+    b2 = p3[2] - p1[2]
+    b3 = p3[3] - p1[3]
+
+    b_dot_ex = b1*ex[1] + b2*ex[2] + b3*ex[3]
+    ey[1] = b1 - b_dot_ex * ex[1]
+    ey[2] = b2 - b_dot_ex * ex[2]
+    ey[3] = b3 - b_dot_ex * ex[3]
+    ey_mag = sqrt(ey[1]^2 + ey[2]^2 + ey[3]^2)
+
+    ey[1] = ey[1] / ey_mag
+    ey[2] = ey[2] / ey_mag
+    ey[3] = ey[3] / ey_mag
+
+    b_dot_ey = b1*ey[1] + b2*ey[2] + b3*ey[3]
+
+    # Project vertices onto basis vectors to find 2D coordinates
+    # t1 = [0.0, 0.0]
+    # t2 = [a_dot_ex, 0.0]
+    # t3 = [b_dot_ex, b_dot_ey]
+
+    t2[1] = a_dot_ex
+    t2[2] = 0.0
+
+    t3[1] = b_dot_ex
+    t3[2] = b_dot_ey
+
+    return
+end
 
 
 function lintransform!(self::GridTriangleSurface, args...; optargs...)
