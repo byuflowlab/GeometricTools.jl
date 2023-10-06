@@ -566,6 +566,8 @@ function get_nodal_data(grid::GridTriangleSurface, field_name::String;
     if algorithm == 2
         if isnothing(areas)
             weight = [get_area(grid, i) for i in 1:grid.ncells]
+        else
+            weight = areas
         end
     else
         weight = ones(grid.ncells)
@@ -608,6 +610,8 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, area
     if algorithm == 2
         if isnothing(areas)
             weight = [get_area(grid, i) for i in 1:grid.ncells]
+        else
+            weight = areas
         end
     end
 
