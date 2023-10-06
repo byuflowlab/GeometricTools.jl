@@ -1,7 +1,7 @@
 name = "GeometricTools"
 uuid = "83792f5e-c6a1-11e8-2e0a-93511f02ae5f"
 authors = ["Eduardo J. Alvarez <Edo.AlvarezR@gmail.com>"]
-version = "2.1.6"
+version = "2.1.7"
 
 [deps]
 Dierckx = "39dd38d3-220a-591b-8e3c-4c3a8c710a94"
