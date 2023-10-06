@@ -283,7 +283,7 @@ end
     end
 end
 
-@testset verbose=verbose "project_3d_2d" begin
+@testset verbose=verbose "project_3d_2d!" begin
 
     if verbose
         println("Testing gt.project_3d_2d()...")
@@ -293,10 +293,15 @@ end
     p2 = [1.5*sind(30), 1.5*cosd(30), 4.0]
     p3 = [2*sind(80), 2*cosd(80), 4.0]
 
-    t2, t3, e1, e2 = gt.project_3d_2d(p1, p2, p3)
+    t2 = zeros(2)
+    t3 = zeros(2)
+    ex = zeros(3)
+    ey = zeros(3)
+
+    gt.project_3d_2d!(t2, t3, ex, ey, p1, p2, p3)
 
     @test t2 ≈ [1.5, 0.0]
     @test t3 ≈ [1.2855752193730787, 1.5320888862379558]
-    @test e1 ≈ [sind(30), cosd(30), 0.0]
-    @test e2 ≈ [sind(30+90), cosd(30+90), 0.0]
+    @test ex ≈ [sind(30), cosd(30), 0.0]
+    @test ey ≈ [sind(30+90), cosd(30+90), 0.0]
 end
