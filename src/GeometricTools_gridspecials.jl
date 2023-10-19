@@ -568,11 +568,8 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, area
     # Weight can be 1 or area. 1 implies simple averaging.
     weight = ones(grid.ncells)
     if algorithm == 2
-        if isnothing(areas)
-            weight = [get_area(grid, i) for i in 1:grid.ncells]
-        else
-            weight = areas
-        end
+        # Compute areas if they are not provided
+        weight = isnothing(areas) ? [get_area(grid, i) for i in 1:grid.ncells] : areas
     end
 
     # Parse through each cell and add its field value to that nodal array
@@ -587,6 +584,56 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, area
 
     # Divide each element by number of cells to obtain average
     return nodal_data ./ net_weight
+end
+
+function get_nodal_data_TEcells(grid::GridTriangleSurface, field_vals, TE_idx, cells_U, cells_L; algorithm=2, areas=nothing)
+
+    if length(field_vals) != grid.ncells
+        error("No. of field_vals do not match no. of cells")
+    end
+
+    # Create an array where each index represents a TE node
+    nodal_data_U = zeros(length(TE_idx))
+    nodal_data_L = zeros(length(TE_idx))
+    net_weight_U = zeros(length(TE_idx))
+    net_weight_L = zeros(length(TE_idx))
+
+    # Weight can be 1 or area. 1 implies simple averaging.
+    weight = ones(grid.ncells)
+    if algorithm == 2
+        # Compute areas if they are not provided
+        weight = isnothing(areas) ? [get_area(grid, i) for i in 1:grid.ncells] : areas
+    end
+
+    vtxs = ones(Int, 3)
+
+    # Parse through cells and extract field data for TE nodes
+    # Cells on upper side wing/body
+    for icell in cells_U
+        # If vertex is a TE, add the nodal data to that index
+        for vtx in get_cell(grid, icell)
+            idx = findfirst(isequal(vtx), TE_idx)
+            if idx != nothing
+                nodal_data_U[idx] += weight[icell] * field_vals[icell]
+                net_weight_U[idx] += weight[icell]
+            end
+        end
+    end
+
+    # Cells on lower side of wing/body
+    for icell in cells_L
+        # If vertex is a TE, add the nodal data to that index
+        for vtx in get_cell(grid, icell)
+            idx = findfirst(isequal(vtx), TE_idx)
+            if idx != nothing
+                nodal_data_L[idx] += weight[icell] * field_vals[icell]
+                net_weight_L[idx] += weight[icell]
+            end
+        end
+    end
+
+    # Divide each element by number of cells to obtain average
+    return nodal_data_U ./ net_weight_U, nodal_data_L ./ net_weight_L
 end
 
 """
