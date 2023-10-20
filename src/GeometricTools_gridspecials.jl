@@ -548,6 +548,33 @@ function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
 end
 
 """
+    get_tri_gradient!(out, t1, t2, t3, t0, e1, e2, A, b, res)
+
+Returns gradient of a scalar field with values b, provided at the three vertices.
+t1, t2 and t3 are x,y coordinates of the triangle in the local 2D coordinate frame.
+t0 is centroid (t1 + t2 + t3)/3
+e1 and e2 are basis vectors for transforming from 3D to 2D and vice versa.
+A is a 3x3 working matrix and b is 3x1 vector of scalar values
+"""
+function get_tri_gradient!(grad, t1, t2, t3, t0, e1, e2, A, b)
+        A[1, 1] = 1.0
+        A[1, 2] = t1[1]-t0[1]
+        A[1, 3] = t1[2]-t0[2]
+
+        A[2, 1] = 1.0
+        A[2, 2] = t2[1]-t0[1]
+        A[2, 3] = t2[2]-t0[2]
+
+        A[3, 1] = 1.0
+        A[3, 2] = t3[1]-t0[1]
+        A[3, 3] = t3[2]-t0[2]
+
+        grad .= A\b
+        # dx = grad[2]
+        # dy = grad[3]
+end
+
+"""
     get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, areas=nothing)
 
 Converts specified cell-centered field data to node-based data
