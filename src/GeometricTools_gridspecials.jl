@@ -548,6 +548,33 @@ function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
 end
 
 """
+    get_tri_gradient!(out, t1, t2, t3, t0, e1, e2, A, b, res)
+
+Returns gradient of a scalar field with values b, provided at the three vertices.
+t1, t2 and t3 are x,y coordinates of the triangle in the local 2D coordinate frame.
+t0 is centroid (t1 + t2 + t3)/3
+e1 and e2 are basis vectors for transforming from 3D to 2D and vice versa.
+A is a 3x3 working matrix and b is 3x1 vector of scalar values
+"""
+function get_tri_gradient!(grad, t1, t2, t3, t0, e1, e2, A, b)
+        A[1, 1] = 1.0
+        A[1, 2] = t1[1]-t0[1]
+        A[1, 3] = t1[2]-t0[2]
+
+        A[2, 1] = 1.0
+        A[2, 2] = t2[1]-t0[1]
+        A[2, 3] = t2[2]-t0[2]
+
+        A[3, 1] = 1.0
+        A[3, 2] = t3[1]-t0[1]
+        A[3, 3] = t3[2]-t0[2]
+
+        grad .= A\b
+        # dx = grad[2]
+        # dy = grad[3]
+end
+
+"""
     get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, areas=nothing)
 
 Converts specified cell-centered field data to node-based data
@@ -568,11 +595,8 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, area
     # Weight can be 1 or area. 1 implies simple averaging.
     weight = ones(grid.ncells)
     if algorithm == 2
-        if isnothing(areas)
-            weight = [get_area(grid, i) for i in 1:grid.ncells]
-        else
-            weight = areas
-        end
+        # Compute areas if they are not provided
+        weight = isnothing(areas) ? [get_area(grid, i) for i in 1:grid.ncells] : areas
     end
 
     # Parse through each cell and add its field value to that nodal array
@@ -587,6 +611,56 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, area
 
     # Divide each element by number of cells to obtain average
     return nodal_data ./ net_weight
+end
+
+function get_nodal_data_TEcells(grid::GridTriangleSurface, field_vals, TE_idx, cells_U, cells_L; algorithm=2, areas=nothing)
+
+    if length(field_vals) != grid.ncells
+        error("No. of field_vals do not match no. of cells")
+    end
+
+    # Create an array where each index represents a TE node
+    nodal_data_U = zeros(length(TE_idx))
+    nodal_data_L = zeros(length(TE_idx))
+    net_weight_U = zeros(length(TE_idx))
+    net_weight_L = zeros(length(TE_idx))
+
+    # Weight can be 1 or area. 1 implies simple averaging.
+    weight = ones(grid.ncells)
+    if algorithm == 2
+        # Compute areas if they are not provided
+        weight = isnothing(areas) ? [get_area(grid, i) for i in 1:grid.ncells] : areas
+    end
+
+    vtxs = ones(Int, 3)
+
+    # Parse through cells and extract field data for TE nodes
+    # Cells on upper side wing/body
+    for icell in cells_U
+        # If vertex is a TE, add the nodal data to that index
+        for vtx in get_cell(grid, icell)
+            idx = findfirst(isequal(vtx), TE_idx)
+            if idx != nothing
+                nodal_data_U[idx] += weight[icell] * field_vals[icell]
+                net_weight_U[idx] += weight[icell]
+            end
+        end
+    end
+
+    # Cells on lower side of wing/body
+    for icell in cells_L
+        # If vertex is a TE, add the nodal data to that index
+        for vtx in get_cell(grid, icell)
+            idx = findfirst(isequal(vtx), TE_idx)
+            if idx != nothing
+                nodal_data_L[idx] += weight[icell] * field_vals[icell]
+                net_weight_L[idx] += weight[icell]
+            end
+        end
+    end
+
+    # Divide each element by number of cells to obtain average
+    return nodal_data_U ./ net_weight_U, nodal_data_L ./ net_weight_L
 end
 
 """
