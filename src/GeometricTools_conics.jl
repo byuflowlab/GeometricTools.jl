@@ -34,8 +34,8 @@ end
 """
     `generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real, Cx::Real, Cy::Real, Sx::Real, Sy::Real)`
 
-     Returns a conic curve function with control point A, B, and C, and shoulder point S. 
-        See Raymer's Aircraft Design, lofting chapter (p. 128).
+     Returns a conic curve function with control point A, B, and C, and shoulder point S.
+        See Raymer's Aircraft Design, lofting chapter (p. 128, 2nd ed.; p. 178, 5th ed.).
 """
 function generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real,
                             Cx::Real, Cy::Real, Sx::Real, Sy::Real)
@@ -73,8 +73,8 @@ end
 """
     `generate_conic_fun(Ax::Real, Ay::Real, Bx::Real, By::Real, Cx::Real, Cy::Real, rho::Real)`
 
-    Returns a conic curve function with control point A, B, and C, and shape parameter rho. 
-        See Raymer's Aircraft Design, lofting chapter (p. 132).
+    Returns a conic curve function with control point A, B, and C, and shape parameter rho.
+        See Raymer's Aircraft Design, lofting chapter (p. 132, 2nd ed.;P. 182, 5th ed.).
 
     Hyperbola: rho > 0.5
     Parabola:  rho = 0.5

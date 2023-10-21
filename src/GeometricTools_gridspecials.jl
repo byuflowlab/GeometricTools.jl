@@ -578,11 +578,11 @@ end
     get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, areas=nothing)
 
 Converts specified cell-centered field data to node-based data
-by averaging field values of cells surrounding the node. 
+by averaging field values of cells surrounding the node.
 `field_vals` could be an array or vector containing the scalar data values.
 Algorithms: 1.Averaging 2.Area-weighted
 """
-function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, areas=nothing)
+function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=3, areas=nothing, centroids=nothing)
 
     if length(field_vals) != grid.ncells
         error("No. of field_vals do not match no. of cells")
@@ -592,21 +592,75 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=2, area
     nodal_data = zeros(grid.nnodes)
     net_weight = zeros(grid.nnodes)
 
-    # Weight can be 1 or area. 1 implies simple averaging.
-    weight = ones(grid.ncells)
-    if algorithm == 2
-        # Compute areas if they are not provided
-        weight = isnothing(areas) ? [get_area(grid, i) for i in 1:grid.ncells] : areas
-    end
+    # Preallocate memory for centroid (if needed)
+    C = zeros(grid.orggrid.dims)
 
     # Parse through each cell and add its field value to that nodal array
     # whose index is the node index. At the end, obtain the weighted average by
     # dividing each element of the nodal array using the net weight
     vtxs = ones(Int, 3)
     for i = 1:grid.ncells
+
+        # Fetch indices of this cell's vertices
         vtxs .= get_cell(grid, i)
-        nodal_data[vtxs] .+= weight[i] * field_vals[i]
-        net_weight[vtxs] .+= weight[i]
+
+        # Case 1: Simple average
+        if algorithm == 1
+            weight = 1.0
+
+            nodal_data[vtxs] .+= weight * field_vals[i]
+            net_weight[vtxs] .+= weight
+
+        # Case 2: Area-weighted average
+        elseif algorithm == 2
+            weight = isnothing(areas) ? get_area(grid, i) : areas[i]
+
+            nodal_data[vtxs] .+= weight * field_vals[i]
+            net_weight[vtxs] .+= weight
+
+        # Case 3: Area/distance^2 weighted average
+        elseif algorithm == 3
+
+            # This panel's area
+            area = isnothing(areas) ? get_area(grid, i) : areas[i]
+
+            # This panel's centroid
+            if isnothing(centroids)
+
+                C .= 0
+                for vtx in vtxs
+                    for j in 1:grid.orggrid.dims
+                        C[j] += grid.orggrid.nodes[j, vtx]
+                    end
+                end
+                C ./= length(vtxs)
+
+            else
+
+                C .= view(centroids, :, i)
+
+            end
+
+            # Iterate over vertices
+            for vtx in vtxs
+
+                d2 = 0
+                for j in 1:grid.orggrid.dims
+                    d2 += (C[j] - grid.orggrid.nodes[j, vtx])^2
+                end
+
+                weight = area / d2
+
+                nodal_data[vtx] += weight * field_vals[i]
+                net_weight[vtx] += weight
+            end
+
+        else
+
+            error("Invalid algorithm $(algorithm); valid values are 1, 2, or 3")
+
+        end
+
     end
 
     # Divide each element by number of cells to obtain average
