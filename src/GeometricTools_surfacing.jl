@@ -402,13 +402,13 @@ Receives a contour to revolve around an axis generating a surface of revolution.
   * `low_a::Float64=0`            : Lower bound of angle (deg) of revolution.
   * `up_a::Float64=0`             : Upper bound of angle (deg) of revolution.
 """
-function surface_revolution(profile::AbstractMatrix{T}, thetaNDIVS::Integer;
+function surface_revolution(profile::AbstractMatrix{T}, thetaNDIVS::TN;
                               loop_dim::Integer=0, axis_angle::Number=0,
                               low_a::Number=0, up_a::Number=360,
                               # OUTPUT OPTIONS
                               save_path=nothing, paraview::Bool=true,
                               file_name::AbstractString="myrev"
-                              ) where{T<:Real}
+                              ) where{T<:Real, TN}
   #ERROR CASES
   if size(profile,2)!=2
     error("Invalid point dimensions in `profile`."*
@@ -422,7 +422,12 @@ function surface_revolution(profile::AbstractMatrix{T}, thetaNDIVS::Integer;
   # First coordinate is a map to the points in the countor of revolution
   # Seciond coordinate is the angle of revolution
   # Third is a dummy
-  NDIVS = [size(profile,1)-1, thetaNDIVS, 0]# Divisions in every coordinate
+  if TN <: Number
+      NDIVS = [size(profile,1)-1, thetaNDIVS, 0] # Divisions in every coordinate
+  else
+      NDIVS = [[(1.0, size(profile,1)-1, 1.0, false)], thetaNDIVS, [(1.0, 0, 1.0, false)]]
+  end
+
   P_min = [0, low_a, 0]                     # Lower boundaries
   P_max = [1, up_a, 0 ]                     # Upper boundaries
   # loop_dim = 1                            # Loops the countour of revolution
