@@ -510,8 +510,10 @@ function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
 
 
     ret = false
-    nx = grid.orggrid.NDIVS[1]
-    ny = grid.orggrid.NDIVS[2]
+    # nx = grid.orggrid.NDIVS[1]
+    # ny = grid.orggrid.NDIVS[2]
+    nx = grid.orggrid._ndivscells[1]
+    ny = grid.orggrid._ndivscells[2]
 
     # Determine if the cell is part of any boundary
     # Xmin, Xmax, Ymin, Ymax are the cell boundaries of the grid
