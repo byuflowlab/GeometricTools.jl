@@ -15,7 +15,7 @@ closed_contour=false, nperiodic=1, verify_spline=true)`
 
 Receives a concave contour (collection of points) and rediscretizes it based on
 arc length, where `discretization` can be a "multidiscretize" parameter set or
-and integer with the number of evenly-spaced point to discretize the contour
+an integer with the number of evenly-spaced point to discretize the contour
 into (use "multidiscretize" parameters for a more general discretization).
 
 Use `closed_contour=true` if the contour is closed or to close the contour.
@@ -26,14 +26,21 @@ function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
                                         discretization::multidisctype;
                                         closed_contour::Bool=false,
                                         nperiodic::Int=1,
+                                        s_lo=0.0, s_up=1.0,
+                                        out=nothing,
                                         verify_spline::Bool=true,
-                                        plot_title=nothing)
+                                        plot_title=nothing
+                                        # REMEMBER TO ADD OPT ARGS TO THE CATCH CASE
+                                        )
 
     # Catch case that it is a closed contour but not declared so
     if !closed_contour && ys[1]==ys[end] && zs[1]==zs[end]
         return rediscretize_concavecontour(ys, zs, discretization;
                                             closed_contour=true,
                                             nperiodic=nperiodic,
+                                            s_lo=s_lo, s_up=s_up,
+                                            out=out,
+                                            verify_spline=verify_spline,
                                             plot_title=plot_title)
     end
 
@@ -112,11 +119,17 @@ function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
     arclengths ./= arclengths[index2]
 
     # Generate arc length positions to redescritize the section into
-    new_arclengths = multidiscretize(identity, 0, 1, discretization)
+    new_arclengths = multidiscretize(identity, s_lo, s_up, discretization)
 
     # Rediscretize section based on arc length positions
     new_rhos = FLOWMath.akima(arclengths, rhos, new_arclengths)
     new_thetas = FLOWMath.akima(arclengths, thetas, new_arclengths)
+
+    # Output intermediate calculations
+    if !isnothing(out)
+        push!(out, (; arclengths, rhos, thetas,
+                        new_arclengths, new_rhos, new_thetas))
+    end
 
     # Error case: Akima spline returned a NaN point
     if !prod(isnan.(new_rhos) .== false) || !prod(isnan.(new_thetas) .== false)
@@ -166,8 +179,13 @@ end
 function rediscretize_concavecontour(points::AbstractMatrix, args...;
                                                                     optargs...)
 
-    ys = view(points, :, 1)
-    zs = view(points, :, 2)
+    if size(points, 1)==2
+        ys = view(points, 1, :)
+        zs = view(points, 2, :)
+    else
+        ys = view(points, :, 1)
+        zs = view(points, :, 2)
+    end
 
     new_ys, new_zs = rediscretize_concavecontour(ys, zs, args...; optargs...)
 
@@ -178,9 +196,18 @@ end
 
 
 """
+`rediscretize_line(points::Union{Matrix, Vector{Vector}}, discretization;
+parameterization = X->X[1])`
+
+
+Receives an n-dimensional line (collection of points) and rediscretizes it based
+on arc length, where `discretization` can be a "multidiscretize" parameter set or
+an integer with the number of evenly-spaced point to discretize the contour
+into (use "multidiscretize" parameters for a more general discretization), or
+a vector of arc lengths to discretize the path into.
 
 `points` is an nxm matrix, where n is the dimensionality and m is the number of
-points.
+points, or a vector of vectors.
 
 `parameterization` is a differentiable function `X -> s` for parameterizing the
 line with a single parameter `s`. This function must be injective
@@ -190,8 +217,18 @@ line with a single parameter `s`. This function must be injective
 NOTE: The current implementation only supports using one of the coordinates
 as the parameterization, otherwise don't expect to obtain sensical results.
 """
-function rediscretize_line(points::AbstractMatrix, discretization::multidisctype;
-                                parameterization::Function = X->X[1])
+function rediscretize_line(points::AbstractMatrix, discretization::Vector;
+                                parameterization::Function = X->X[1],
+                                out=nothing)
+
+    if minimum(discretization) < 0
+        @warn "Requested arc length lower than 0 ($(minimum(discretization)));"*
+                " spline will proceed to extrapolate."
+    end
+    if maximum(discretization) > 1
+        @warn "Requested arc length greater than 1 ($(maximum(discretization)));"*
+                " spline will proceed to extrapolate."
+    end
 
     # Obtain the parameter s corresponding to each point
     params = parameterization.(eachcol(points))
@@ -208,14 +245,12 @@ function rediscretize_line(points::AbstractMatrix, discretization::multidisctype
     # Spline each coordinate with respect to s
     X_spl = [FLOWMath.Akima(params, row) for row in eachrow(points)]
 
-
     # Derivate of X(s)
     dXds(s) = FLOWMath.derivative.(X_spl, s)
 
     # Arc length function
     integrand(s) = norm(dXds(s))
     arclength(si, sf) = QuadGK.quadgk(integrand, si, sf)[1]
-
 
     # Compute the arc length at each s
     arclengths = zeros(length(params))
@@ -228,9 +263,8 @@ function rediscretize_line(points::AbstractMatrix, discretization::multidisctype
     arclengths .-= arclengths[1]
     arclengths ./= arclengths[end]
 
-
-    # Generate arc length positions to redescritize the section into
-    new_arclengths = multidiscretize(identity, 0, 1, discretization)
+    # Fetch arc length positions to redescritize the line into
+    new_arclengths = discretization
 
     # Rediscretize line based on arc length positions
     new_points = [FLOWMath.akima(arclengths, row, new_arclengths) for row in eachrow(points)]
@@ -238,7 +272,26 @@ function rediscretize_line(points::AbstractMatrix, discretization::multidisctype
     # Convert coordinates of new points back to a matrix
     new_points = permutedims(hcat(new_points...))
 
+    # Output intermediate results
+    if !isnothing(out)
+        push!(out, (; org_arclengths=arclengths))
+    end
+
     return new_points
+
+end
+
+function rediscretize_line(points::AbstractMatrix,
+                            discretization::multidisctype, args...; optargs...)
+
+    # Generate arc length positions to redescritize the line into
+    new_arclengths = multidiscretize(identity, 0, 1, discretization)
+
+    # Make sure than bounds are preserved
+    new_arclengths[1] = 0
+    new_arclengths[end] = 1
+
+    return rediscretize_line(points, new_arclengths, args...; optargs...)
 
 end
 
