@@ -10,11 +10,14 @@
 =###############################################################################
 
 """
-`rediscretize_concavecontour(ys::Vector, zs::Vector; closed_contour=false,
-nperiodic=1, verify_spline=true)`
+`rediscretize_concavecontour(ys::Vector, zs::Vector, discretization;
+closed_contour=false, nperiodic=1, verify_spline=true)`
 
 Receives a concave contour (collection of points) and rediscretizes it based on
-arc length.
+arc length, where `discretization` can be a "multidiscretize" parameter set or
+and integer with the number of evenly-spaced point to discretize the contour
+into (use "multidiscretize" parameters for a more general discretization).
+
 Use `closed_contour=true` if the contour is closed or to close the contour.
 `nperiodic` is the number of periods used to resemble periodic boundary
 conditions in the internal splining process.
@@ -140,7 +143,8 @@ function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
         ax.spines["top"].set_visible(false)
 
         ax.plot(ys, zs, "o-k", label="Raw", alpha=0.8, markersize=8)
-        ax.plot(new_ys, new_zs, "s-r", label="Spline", alpha=1.0, markersize=4, linewidth=1)
+        ax.plot(new_ys, new_zs, "s-r", label="Spline",
+                                alpha=1.0, markersize=4, linewidth=1)
 
         ax.legend(loc="best", frameon=true, fontsize=8)
     end
@@ -150,15 +154,17 @@ function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
 end
 
 function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
-                                        discretization::Int; optargs...)
+                                     discretization::Int, args...; optargs...)
 
     multidiscretization = [(1.0, discretization, 1.0, true)]
 
-    return rediscretize_concavecontour(ys, zs, multidiscretization; optargs...)
+    return rediscretize_concavecontour(ys, zs, multidiscretization, args...;
+                                                                    optargs...)
 
 end
 
-function rediscretize_concavecontour(points::AbstractMatrix, args...; optargs...)
+function rediscretize_concavecontour(points::AbstractMatrix, args...;
+                                                                    optargs...)
 
     ys = view(points, :, 1)
     zs = view(points, :, 2)
@@ -166,5 +172,91 @@ function rediscretize_concavecontour(points::AbstractMatrix, args...; optargs...
     new_ys, new_zs = rediscretize_concavecontour(ys, zs, args...; optargs...)
 
     return hcat(new_ys, new_zs)
+
+end
+
+
+
+"""
+
+`points` is an nxm matrix, where n is the dimensionality and m is the number of
+points.
+
+`parameterization` is a differentiable function `X -> s` for parameterizing the
+line with a single parameter `s`. This function must be injective
+(meaning that for each `X` there is a unique value of `s` and for each value of
+`s` there is a unique `X`) and monotonically increasing along the line.
+
+NOTE: The current implementation only supports using one of the coordinates
+as the parameterization, otherwise don't expect to obtain sensical results.
+"""
+function rediscretize_line(points::AbstractMatrix, discretization::multidisctype;
+                                parameterization::Function = X->X[1])
+
+    # Obtain the parameter s corresponding to each point
+    params = parameterization.(eachcol(points))
+
+    # Check that the parameterization is strictly monotonic
+    for i in 2:length(params)
+
+        s2 = params[i]
+        s1 = params[i-1]
+
+        @assert s2 > s1 "Parameterization is not monotically increasing; s = $(params)"
+    end
+
+    # Spline each coordinate with respect to s
+    X_spl = [FLOWMath.Akima(params, row) for row in eachrow(points)]
+
+
+    # Derivate of X(s)
+    dXds(s) = FLOWMath.derivative.(X_spl, s)
+
+    # Arc length function
+    integrand(s) = norm(dXds(s))
+    arclength(si, sf) = QuadGK.quadgk(integrand, si, sf)[1]
+
+
+    # Compute the arc length at each s
+    arclengths = zeros(length(params))
+
+    for si in 2:length(arclengths)
+        arclengths[si] = arclength(params[si-1], params[si]) + arclengths[si-1]
+    end
+
+    # Normalize arc lengths to go from 0 to 1
+    arclengths .-= arclengths[1]
+    arclengths ./= arclengths[end]
+
+
+    # Generate arc length positions to redescritize the section into
+    new_arclengths = multidiscretize(identity, 0, 1, discretization)
+
+    # Rediscretize line based on arc length positions
+    new_points = [FLOWMath.akima(arclengths, row, new_arclengths) for row in eachrow(points)]
+
+    # Convert coordinates of new points back to a matrix
+    new_points = permutedims(hcat(new_points...))
+
+    return new_points
+
+end
+
+function rediscretize_line(points::AbstractMatrix, discretization::Int, args...;
+                                                                     optargs...)
+
+    multidiscretization = [(1.0, discretization, 1.0, true)]
+
+    return rediscretize_line(points, multidiscretization, args...; optargs...)
+
+end
+
+function rediscretize_line(points::AbstractVector{<:AbstractVector{<:Real}}, args...; optargs...)
+
+    points_matrix = hcat(points...)
+
+    points_matrix = rediscretize_line(points_matrix, args...; optargs...)
+
+    return collect.(eachcol(points_matrix))
 
 end

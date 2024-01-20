@@ -30,6 +30,7 @@ const module_path = splitdir(@__FILE__)[1]      # Path to this module
 const multidisctype = Vector{Tuple{Float64,Int64,Float64,Bool}}
 
 for header_name in ["vtk", "geometry", "misc", "gridabstract", "airfoil",
+                    "discretization",
                     "surfacing", "plot3d", "vtk_shapes", "conics",
                     "statistics", "linearalgebra", "xdmf",
                     "DEPRECATED", "plotting"]
