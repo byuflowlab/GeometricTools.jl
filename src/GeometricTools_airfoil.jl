@@ -81,7 +81,7 @@ end
 
 """
 `rediscretize_concavecontour(ys::Vector, zs::Vector; closed_contour=false,
-nperiodic=1)`
+nperiodic=1, verify_spline=true)`
 
 Receives a concave contour (collection of points) and rediscretizes it based on
 arc length.
@@ -93,13 +93,15 @@ function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
                                         discretization::multidisctype;
                                         closed_contour::Bool=false,
                                         nperiodic::Int=1,
-                                        verify_spline::Bool=true)
+                                        verify_spline::Bool=true,
+                                        plot_title=nothing)
 
     # Catch case that it is a closed contour but not declared so
     if !closed_contour && ys[1]==ys[end] && zs[1]==zs[end]
         return rediscretize_concavecontour(ys, zs, discretization;
                                             closed_contour=true,
-                                            nperiodic=nperiodic)
+                                            nperiodic=nperiodic,
+                                            plot_title=plot_title)
     end
 
     # Error cases
@@ -198,8 +200,10 @@ function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
 
     # Verification plots
     if verify_spline
-        fig = plt.figure(figsize=[7, 5]*1/2)
+        fig = isnothing(plot_title) ?   plt.figure(figsize=[7, 5]*1/2) :
+                                        plt.figure(plot_title, figsize=[7, 5]*1/2)
         ax = fig.gca()
+        if !isnothing(plot_title); ax.set_title(plot_title); end;
         ax.set_aspect("equal")
 
         ax.spines["right"].set_visible(false)
