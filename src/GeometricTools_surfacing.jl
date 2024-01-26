@@ -385,98 +385,34 @@ end
 
 
 # PATH LOFTING #################################################################
-
 """
-"""
-function surface_pathloft(sections::AbstractVector{Tuple{<:Real, <:AbstractMatrix}},
-                            )
+`surface_pathloft(sections, section_NDIVS, path_NDIVS, path; injective_coordinate=1,
+loop_dim=0, nperiodic=2, redisc_optargs=[], verify_spline=true,
+save_path=nothing, paraview=true, file_pref="pathloft")`
 
+Generation of a surface grid by lofting a set of sections along a path.
 
+`sections` is an array where `sections[i] = (spos, points)` is the i-th
+contour made out of the 2xn matrix `points` that goes along the path in the
+nondimensional arc-length position `spos` (a number between 0 and 1, where 0
+is the start of the path and 1 is the end of the path). `path` is an array where
+`path[i] = (X, n, twist)` is the i-th point along the
+path placed at `X` in the global coordinate system and the cross section passing
+through this point will be oriented according to the normal vector `n` and
+twisted by `twist` (in degrees). The number of points in `path` does not need to
+match the number of sections in `sections`
 
-
-
-          # ----------------- SURFACE GRID ---------------------------------------------
-          # Auxiliary function for weighting values across span
-          function calc_vals(span, array)
-
-            # Finds bounding airfoil position
-            val_in, val_out = nothing, array[1]
-            for val in array[2:end]
-                val_in = val_out
-                val_out = val
-                if val[1]>=span; break; end
-            end
-            pos_in = val_in[1]
-            val_in = val_in[2]
-            pos_out = val_out[1]
-            val_out = val_out[2]
-
-            weight = (span-pos_in)/(pos_out-pos_in)
-
-            return weight, val_in, val_out
-          end
-
-          # Space transformation function
-          function my_space_transform(inds)
-            span = b_pos[inds[2]]           # y/bscale span position
-            chord = chords[inds[2]]         # c/bscale chord length
-            twist = twists[inds[2]]         # deg twist
-            le_x = LE_x[inds[2]]            # x/bscale LE position
-            le_z = LE_z[inds[2]]            # z/bscale LE position
-
-            inds1 = (sec_NDIVS+1) - (inds[1]-1) # Here it flips the airfoil contour
-
-            # Merges airfoil contours at this span position
-            weight, sec_in, sec_out = calc_vals(span*sign(span)^symmetric, crosssections)
-
-            # Point over airfoil contour
-            point = weight*sec_out[inds1, :]+(1-weight)*sec_in[inds1, :]
-            point = vcat(point, 0)
-
-            # Scales the airfoil contour by the normalized chord length
-            point = chord*point
-
-            # Applies twist to the airfoil point
-            tlt_z = tilt_z!=nothing ?  tilt_z[inds[2]] : 0.0
-            tlt_y = tilt_y!=nothing ?  tilt_y[inds[2]] : 0.0
-            point = rotation_matrix(-twist, -tlt_z, -tlt_y)*point
-
-            # Places the point relative to LE and scales by span scale
-            point = [point[1]+le_x, span+point[3], point[2]+le_z]*bscale
-
-            return point
-          end
-
-          # Transforms the quasi-two dimensional parametric grid into the wing surface
-          transform2!(grid, my_space_transform)
-
-          if save_path!=nothing
-            # Outputs a vtk file
-            save(grid, file_name; path=save_path)
-
-            if paraview
-              # Calls paraview
-              run(`paraview --data=$(joinpath(save_path,file_name)).vtk`)
-            end
-          end
-
-          return grid::Grid
-end
-
-"""
-`surface_pathloft(sections, sec_NDIVS, xpos_NDIVS, args...; optargs...)`
-
-This function rediscretizes the sections as given by `sec_NDIVS`,
-which it could be an array of multidiscretization parameters to apply to each
-section, a single multidiscretization parameter set, or an integer with the
-number of points used to discretize all sections. Similarly, `xpos_NDIVS`
-indicates the desired discretization of the x-position along the path.
+This function rediscretizes the sections as indicated by `section_NDIVS`,
+which could be an array of multidiscretization parameters to apply to each
+section, a single multidiscretization parameter set for all the sections, or an
+integer with the number of points used to discretize all sections. Similarly,
+`path_NDIVS` indicates the desired discretization of the x-position along the path.
 
 Contours can either be closed or open, and the discretization will automatically
 recognize and preserve that. Contours must be concave.
 
-`sections` has the format `sections[i] = (xpos, points)` where `points`
-is the nx2 matrix of n contours points (y, z) of each section, and `xpos`
+`sections` has the format `sections[i] = (spos, points)` where `points`
+is the nx2 matrix of n contours points (y, z) of each section, and `spos`
 is the nondimensional position along the path of each section.
 
 `path` has the format `path[i] = (X, normal, twist)`, where `X` is the position
@@ -486,10 +422,9 @@ the cross section at that position (in degrees). `injective_coordinate` is the
 coordinate that makes the path injective.
 """
 function surface_pathloft(sections::AbstractVector,
+                            path::AbstractVector{T},
                             sec_discretizations::AbstractVector{multidisctype},
-                            xpositions::AbstractVector,
-                            # path::AbstractVector{Tuple{<:AbstractVector, <:AbstractVector, <:Real}};
-                            path;
+                            xpositions::AbstractVector{<:Number};
                             # PATH PARAMETERS
                             injective_coordinate=1,
                             loop_dim=0,
@@ -497,16 +432,12 @@ function surface_pathloft(sections::AbstractVector,
                             nperiodic=2,
                             redisc_optargs=[],
                             # OUTPUT PARAMETERS
+                            verify_spline=true,
                             save_path=nothing, paraview=true,
                             file_pref="pathloft"
-                            )
+                            ) where {T<:Tuple{<:AbstractVector, <:AbstractVector, <:Number}}
 
-    #=
-        TODO
-        * [ ] Calculate normals from the path itself?
-    =#
-
-    str = save_path
+    str = ""
     nsecs = length(sections)
     npoints = sum(disc[2] for disc in sec_discretizations[1])
 
@@ -549,8 +480,7 @@ function surface_pathloft(sections::AbstractVector,
         new_points = rediscretize_concavecontour(points, discretization;
                                                     s_lo=s_lo, s_up=s_up,
                                                     nperiodic=nperiodic,
-                                                    # verify_spline=false,
-                                                    verify_spline=true,
+                                                    verify_spline=verify_spline,
                                                     plot_title=plt.L"$x=$"*"$(xpos)",
                                                     out=outs,
                                                     redisc_optargs...)
@@ -613,6 +543,8 @@ function surface_pathloft(sections::AbstractVector,
     # Fetch the arc lengths corresponding the each of the original points from
     # the intermediate calculations
     path_arclengths = rediscretize_out[1].org_arclengths
+    new_path_arclengths = rediscretize_out[1].new_arclengths
+    total_arclength = rediscretize_out[1].total_arclength
 
     # Spline normal and twist and probe it at the new x-positions
     path_n1 = [n[1] for (X, n, twist) in path]
@@ -623,11 +555,77 @@ function surface_pathloft(sections::AbstractVector,
     new_path_n1 = FLOWMath.akima(path_arclengths, path_n1, xpositions)
     new_path_n2 = FLOWMath.akima(path_arclengths, path_n2, xpositions)
     new_path_n3 = FLOWMath.akima(path_arclengths, path_n3, xpositions)
+    new_path_nnorm = sqrt.(new_path_n1.^2 + new_path_n2.^2 + new_path_n3.^2)
     new_path_twist = FLOWMath.akima(path_arclengths, path_twist, xpositions)
 
     # Re-pack the new path
-    new_path = [(X, [n1, n2, n3], twist) for (X, n1, n2, n3, twist) in
-                  zip(new_path_Xs, new_path_n1, new_path_n2, new_path_n3, new_path_twist)]
+    new_path = [(X, [n1/nnorm, n2/nnorm, n3/nnorm], twist)
+                    for (X, n1, n2, n3, nnorm, twist) in
+                    zip(new_path_Xs, new_path_n1, new_path_n2, new_path_n3, new_path_nnorm, new_path_twist)]
+
+    # Verification plots
+    if verify_spline
+        fig = plt.figure("Path discretization", figsize=[7*2, 5]*7/9)
+        axs = fig.subplots(1, 2)
+
+        fig2 = plt.figure("Path discretization - scalar", figsize=[7, 5]*1/2)
+        ax2 = fig2.gca()
+
+        for (ax, dimi) in zip(axs, 2:3)
+
+            # Define scaling for normal vector
+            scale = 0.1*total_arclength
+
+            # Plot raw path
+            ax.plot([X[1] for X in path_Xs], [X[dimi] for X in path_Xs],
+                                    ".k", label="Raw", alpha=0.8, markersize=8,
+                                    clip_on=false)
+
+            for (X, n, twist) in path
+                ax.plot([X[1], X[1]+scale*n[1]],
+                        [X[dimi], X[dimi]+scale*n[dimi]],
+                        "-k", alpha=0.5, linewidth=1, clip_on=false)
+            end
+
+            # Plot splined path
+            ax.plot([X[1] for (X, n, twist) in new_path],
+                    [X[dimi] for (X, n, twist) in new_path],
+                                    "-r", label="Spline",
+                                    alpha=1.0, markersize=4, linewidth=1,
+                                    clip_on=false)
+            for (X, n, twist) in new_path
+                ax.plot([X[1], X[1]+scale*n[1]],
+                        [X[dimi], X[dimi]+scale*n[dimi]],
+                        "-g", alpha=0.25, linewidth=1, clip_on=false)
+            end
+
+            ax.set_xlabel(L"x")
+            ax.set_ylabel([L"x", L"y", L"z"][dimi])
+
+        end
+
+        # Plot twist
+        ax2.plot(path_arclengths*total_arclength,
+                [twist for (X, n, twist) in path],
+                                ".k", label="Raw", alpha=0.8, markersize=8,
+                                clip_on=false)
+
+        ax2.plot(new_path_arclengths*total_arclength,
+                [twist for (X, n, twist) in new_path],
+                                        "-r", label="Spline",
+                                        alpha=1.0, markersize=4, linewidth=1,
+                                        clip_on=false)
+
+        ax2.set_xlabel(L"Arc length $s$")
+        ax2.set_ylabel(L"Twist ($^\circ$)")
+
+        for (axi, ax) in enumerate(vcat(axs, ax2))
+            if axi != 3; ax.set_aspect("equal"); end
+            ax.spines["right"].set_visible(false)
+            ax.spines["top"].set_visible(false)
+            ax.legend(loc="best", frameon=true, fontsize=8)
+        end
+    end
 
     # Output VTK of path
     if !isnothing(save_path)
@@ -680,10 +678,37 @@ function surface_pathloft(sections::AbstractVector,
 
     nodes = grid.nodes
 
+    # Rotation matrix of each normal
+    angles = [ ( 0, 180/pi*acos(n[3]) - 90, 180/pi*sign(n[2])*acos( n[1]/sqrt(n[1]^2+n[2]^2) ) ) for (X, n, twist) in new_path]
+    rotationmatrix = [rotation_matrix2( angle... ) for angle in angles]
+
+    # println([round.(n; digits=2) for (X, n, twist) in new_path])
+    # println([round.(angle; digits=2) for angle in angles])
+
     # Convert nodes into pre-calculated grid
     function my_space_transform(inds)
 
-        point = [xpositions[inds[1]], grid_ys[inds[2], inds[1]], grid_zs[inds[2], inds[1]]]
+        i = inds[1]                             # Index along path coordinate
+        j = inds[2]                             # Index along contour coordinate
+
+        spos = xpositions[i]                    # Position along arc length
+        y = grid_ys[j, i]                       # y-coordinate of contour point
+        z = grid_zs[j, i]                       # z-coordinate of contour point
+
+        O = new_path[i][1]                      # Contour center in global coordinates
+        n = new_path[i][2]                      # Normal of the control in global coordinates
+        twist = new_path[i][3]                  # (deg) twist of the contour
+
+        M = rotationmatrix[i]                   # Rotation matrix according to normal vector
+
+        # Twist contour
+        y, z = y*cosd(twist) + z*sind(twist), -y*sind(twist) + z*cosd(twist)
+
+        # Rotate contour according to normal
+        X = M*[0, y, z]
+
+        # Translate contour to the position along the path
+        point = O + X
 
         return point
     end
@@ -697,7 +722,7 @@ function surface_pathloft(sections::AbstractVector,
         str *= save(grid, file_pref*"_loft"; path=save_path, format="vtk")
 
         if paraview
-            run(`paraview --data=$(str)`)
+            run(`paraview --data=$(joinpath(save_path, str))`)
         end
     end
 
@@ -706,52 +731,52 @@ function surface_pathloft(sections::AbstractVector,
 end
 
 
-function surface_pathloft(sections::AbstractVector,
+function surface_pathloft(sections::AbstractVector, path,
                             sec_discretizations::AbstractVector{multidisctype},
-                            xpos_NDIVS::multidisctype,
+                            spos_NDIVS::multidisctype,
                             args...;
-                            xpos_lo=0.0, xpos_up=1.0,
+                            spos_lo=0.0, spos_up=1.0,
                             optargs...
                             )
 
-    xpositions = Float64.(multidiscretize(identity, xpos_lo, xpos_up, xpos_NDIVS))
+    xpositions = Float64.(multidiscretize(identity, spos_lo, spos_up, spos_NDIVS))
 
-    return surface_pathloft(sections, sec_discretizations, xpositions,
+    return surface_pathloft(sections, path, sec_discretizations, xpositions,
                                                             args...; optargs...)
 
 end
-function surface_pathloft(sections::AbstractVector,
+function surface_pathloft(sections::AbstractVector, path,
                             sec_discretizations::AbstractVector{multidisctype},
-                            xpos_NDIVS::Int,
+                            spos_NDIVS::Int,
                             args...; optargs...
                             )
 
-    _xpos_NDIVS = [(1.0, xpos_NDIVS, 1.0, true)]
+    _spos_NDIVS = [(1.0, spos_NDIVS, 1.0, true)]
 
-    return surface_pathloft(sections, sec_discretizations, _xpos_NDIVS,
+    return surface_pathloft(sections, path, sec_discretizations, _spos_NDIVS,
                                                             args...; optargs...)
 
 end
-function surface_pathloft(sections::AbstractVector,
+function surface_pathloft(sections::AbstractVector, path,
                             sec_discretization::multidisctype,
-                            xpos_NDIVS::Union{Int, multidisctype},
+                            spos_NDIVS::Union{Int, multidisctype},
                             args...; optargs...
                             )
 
-    sec_discretizations = [sec_ndivs for i in 1:length(sections)]
+    sec_discretizations = [sec_discretization for i in 1:length(sections)]
 
-    return surface_pathloft(secs, sec_discretizations, xpos_NDIVS,
+    return surface_pathloft(sections, path, sec_discretizations, spos_NDIVS,
                                                             args...; optargs...)
 end
-function surface_pathloft(sections::AbstractVector,
+function surface_pathloft(sections::AbstractVector, path,
                             sec_NDIVS::Int,
-                            xpos_NDIVS::Union{Int, multidisctype},
+                            spos_NDIVS::Union{Int, multidisctype},
                             args...; optargs...
                             )
 
     _sec_NDIVS = [(1.0, sec_NDIVS, 1.0, true)]
 
-    return surface_pathloft(sections, _sec_NDIVS, xpos_NDIVS,
+    return surface_pathloft(sections, path, _sec_NDIVS, spos_NDIVS,
                                                             args...; optargs...)
 end
 
@@ -766,7 +791,7 @@ Loft a geometry where the sections are read from the files indicated by
 is the CSV file containing the (y, z) contours of each section, and `xpos`
 is the nondimensional position along the path of each section.
 """
-function surface_pathloft(sections::AbstractVector{Tuple{<:Real, String}},
+function surface_pathloft(sections::AbstractVector{Tuple{<:Number, String}},
                             data_path::String, args...; header_len::Int64=1,
                             delim::String=",", optargs...)
 

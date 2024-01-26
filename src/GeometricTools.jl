@@ -21,6 +21,7 @@ import QuadGK
 import HDF5
 
 import PyPlot
+import PyPlot: @L_str
 const plt = PyPlot
 # import PyCall
 # @PyCall.pyimport matplotlib.patches as patch

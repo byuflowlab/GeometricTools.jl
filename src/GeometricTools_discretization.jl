@@ -155,8 +155,8 @@ function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
         ax.spines["right"].set_visible(false)
         ax.spines["top"].set_visible(false)
 
-        ax.plot(ys, zs, "o-k", label="Raw", alpha=0.8, markersize=8)
-        ax.plot(new_ys, new_zs, "s-r", label="Spline",
+        ax.plot(ys, zs, ".-k", label="Raw", alpha=0.8, markersize=8)
+        ax.plot(new_ys, new_zs, "-r", label="Spline",
                                 alpha=1.0, markersize=4, linewidth=1)
 
         ax.legend(loc="best", frameon=true, fontsize=8)
@@ -221,11 +221,11 @@ function rediscretize_line(points::AbstractMatrix, discretization::Vector;
                                 parameterization::Function = X->X[1],
                                 out=nothing)
 
-    if minimum(discretization) < 0
+    if minimum(discretization) < (0 - 10*eps())
         @warn "Requested arc length lower than 0 ($(minimum(discretization)));"*
                 " spline will proceed to extrapolate."
     end
-    if maximum(discretization) > 1
+    if maximum(discretization) > (1 + 10*eps())
         @warn "Requested arc length greater than 1 ($(maximum(discretization)));"*
                 " spline will proceed to extrapolate."
     end
@@ -259,6 +259,9 @@ function rediscretize_line(points::AbstractMatrix, discretization::Vector;
         arclengths[si] = arclength(params[si-1], params[si]) + arclengths[si-1]
     end
 
+    # Total arc length
+    total_arclength = arclengths[end] - arclengths[1]
+
     # Normalize arc lengths to go from 0 to 1
     arclengths .-= arclengths[1]
     arclengths ./= arclengths[end]
@@ -274,7 +277,7 @@ function rediscretize_line(points::AbstractMatrix, discretization::Vector;
 
     # Output intermediate results
     if !isnothing(out)
-        push!(out, (; org_arclengths=arclengths))
+        push!(out, (; org_arclengths=arclengths, total_arclength, new_arclengths))
     end
 
     return new_points
