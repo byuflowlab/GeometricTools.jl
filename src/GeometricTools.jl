@@ -20,6 +20,8 @@ import Roots
 import QuadGK
 import HDF5
 
+import Meshes
+
 import PyPlot
 import PyPlot: @L_str
 const plt = PyPlot
@@ -34,7 +36,8 @@ for header_name in ["vtk", "geometry", "misc", "gridabstract", "airfoil",
                     "discretization",
                     "surfacing", "plot3d", "vtk_shapes", "conics",
                     "statistics", "linearalgebra", "xdmf",
-                    "DEPRECATED", "plotting"]
+                    "DEPRECATED", "plotting",
+                    "meshesjl"]
     include("GeometricTools_"*header_name*".jl")
 end
 
