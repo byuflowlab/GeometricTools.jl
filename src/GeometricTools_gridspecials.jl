@@ -115,8 +115,30 @@ mutable struct GridTriangleSurface{GType} <: AbstractGrid
     end
 end
 
-get_node(self::GridTriangleSurface, i::Int64) = get_node(self.orggrid, i)
-get_node(self::GridTriangleSurface, coor::Array{Int64,1}) = get_node(self.orggrid, coor)
+function get_node(self::GridTriangleSurface{G}, i::Int) where {G <: Grid}
+    return get_node(self.orggrid, i)
+end
+function get_node(self::GridTriangleSurface{G}, coor::Vector{Int}) where {G <: Grid}
+    return get_node(self.orggrid, coor)
+end
+
+function get_node(self::GridTriangleSurface{G}, i::Int) where {G <: Meshes.SimpleMesh}
+
+    if i>self.nnodes
+        error("Requested invalid node index $i; max is $(self.nnodes).")
+    elseif i<1
+        error("Invalid index $i (it must be greater than 0).")
+    end
+
+    return self._nodes[:, i]
+
+end
+function get_node(self::GridTriangleSurface{G}, coor::Vector{Int}) where {G <: Meshes.SimpleMesh}
+
+    _check_simplemesh_coor(coor)
+    return get_node(self, coor[1])
+
+end
 
 function get_cell(self::GridTriangleSurface{G}, args...) where {G <: Meshes.SimpleMesh}
     return get_cell(self.orggrid, args...)
@@ -910,10 +932,10 @@ _calc_t1(nodes::AbstractMatrix, panel) = (nodes[1, panel[2]] - nodes[1, panel[1]
 _calc_t2(nodes::AbstractMatrix, panel) = (nodes[2, panel[2]] - nodes[2, panel[1]]) / _calc_tnorm(nodes, panel)
 _calc_t3(nodes::AbstractMatrix, panel) = (nodes[3, panel[2]] - nodes[3, panel[1]]) / _calc_tnorm(nodes, panel)
 
-_calc_tnorm(nodes::AbstractVector, panel) = sqrt((nodes[panel[2]][1] - nodes[panel[1]][1])^2 + (nodes[panel[2]][2] - nodes[panel[1]][2])^2 + (nodes[panel[2]][3] - nodes[panel[1]][3])^2)
-_calc_t1(nodes::AbstractVector, panel) = (nodes[panel[2]][1] - nodes[panel[1]][1]) / _calc_tnorm(nodes, panel)
-_calc_t2(nodes::AbstractVector, panel) = (nodes[panel[2]][2] - nodes[panel[1]][2]) / _calc_tnorm(nodes, panel)
-_calc_t3(nodes::AbstractVector, panel) = (nodes[panel[2]][3] - nodes[panel[1]][3]) / _calc_tnorm(nodes, panel)
+# _calc_tnorm(nodes::AbstractVector, panel) = sqrt((nodes[panel[2]][1] - nodes[panel[1]][1])^2 + (nodes[panel[2]][2] - nodes[panel[1]][2])^2 + (nodes[panel[2]][3] - nodes[panel[1]][3])^2)
+# _calc_t1(nodes::AbstractVector, panel) = (nodes[panel[2]][1] - nodes[panel[1]][1]) / _calc_tnorm(nodes, panel)
+# _calc_t2(nodes::AbstractVector, panel) = (nodes[panel[2]][2] - nodes[panel[1]][2]) / _calc_tnorm(nodes, panel)
+# _calc_t3(nodes::AbstractVector, panel) = (nodes[panel[2]][3] - nodes[panel[1]][3]) / _calc_tnorm(nodes, panel)
 
 _calc_tnorm(nodes) = sqrt((nodes[2][1] - nodes[1][1])^2 + (nodes[2][2] - nodes[1][2])^2 + (nodes[2][3] - nodes[1][3])^2)
 _calc_t1(nodes) = (nodes[2][1] - nodes[1][1]) / _calc_tnorm(nodes)
@@ -929,9 +951,9 @@ _calc_n1aux(nodes::AbstractMatrix, panel) = (nodes[2, panel[2]]-nodes[2, panel[1
 _calc_n2aux(nodes::AbstractMatrix, panel) = (nodes[3, panel[2]]-nodes[3, panel[1]])*(nodes[1, panel[3]]-nodes[1, panel[1]]) - (nodes[1, panel[2]]-nodes[1, panel[1]])*(nodes[3, panel[3]]-nodes[3, panel[1]])
 _calc_n3aux(nodes::AbstractMatrix, panel) = (nodes[1, panel[2]]-nodes[1, panel[1]])*(nodes[2, panel[3]]-nodes[2, panel[1]]) - (nodes[2, panel[2]]-nodes[2, panel[1]])*(nodes[1, panel[3]]-nodes[1, panel[1]])
 
-_calc_n1aux(nodes::AbstractVector, panel) = (nodes[panel[2]][2]-nodes[panel[1]][2])*(nodes[panel[3]][3]-nodes[panel[1]][3]) - (nodes[panel[2]][3]-nodes[panel[1]][3])*(nodes[panel[3]][2]-nodes[panel[1]][2])
-_calc_n2aux(nodes::AbstractVector, panel) = (nodes[panel[2]][3]-nodes[panel[1]][3])*(nodes[panel[3]][1]-nodes[panel[1]][1]) - (nodes[panel[2]][1]-nodes[panel[1]][1])*(nodes[panel[3]][3]-nodes[panel[1]][3])
-_calc_n3aux(nodes::AbstractVector, panel) = (nodes[panel[2]][1]-nodes[panel[1]][1])*(nodes[panel[3]][2]-nodes[panel[1]][2]) - (nodes[panel[2]][2]-nodes[panel[1]][2])*(nodes[panel[3]][1]-nodes[panel[1]][1])
+# _calc_n1aux(nodes::AbstractVector, panel) = (nodes[panel[2]][2]-nodes[panel[1]][2])*(nodes[panel[3]][3]-nodes[panel[1]][3]) - (nodes[panel[2]][3]-nodes[panel[1]][3])*(nodes[panel[3]][2]-nodes[panel[1]][2])
+# _calc_n2aux(nodes::AbstractVector, panel) = (nodes[panel[2]][3]-nodes[panel[1]][3])*(nodes[panel[3]][1]-nodes[panel[1]][1]) - (nodes[panel[2]][1]-nodes[panel[1]][1])*(nodes[panel[3]][3]-nodes[panel[1]][3])
+# _calc_n3aux(nodes::AbstractVector, panel) = (nodes[panel[2]][1]-nodes[panel[1]][1])*(nodes[panel[3]][2]-nodes[panel[1]][2]) - (nodes[panel[2]][2]-nodes[panel[1]][2])*(nodes[panel[3]][1]-nodes[panel[1]][1])
 
 _calc_nnorm(nodes, panel) = sqrt(_calc_n1aux(nodes, panel)^2 + _calc_n2aux(nodes, panel)^2 + _calc_n3aux(nodes, panel)^2)
 _calc_n1(nodes, panel) = _calc_n1aux(nodes, panel) / _calc_nnorm(nodes, panel)

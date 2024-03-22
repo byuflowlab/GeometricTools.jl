@@ -10,23 +10,23 @@
 =###############################################################################
 
 
-function get_node(mesh::Meshes.SimpleMesh, coor::Vector{Int})
-
-    _check_simplemesh_coor(coor)
-
-    return get_node(mesh, coor[1])
-end
-
-function get_node(mesh::Meshes.SimpleMesh, i::Int)
-
-    if i>length(mesh.vertices)
-        error("Requested invalid node index $i; max is $(length(mesh.vertices)).")
-    elseif i<1
-        error("Invalid index $i (it must be greater than 0).")
-    end
-
-    return mesh.vertices[i].coords
-end
+# function get_node(mesh::Meshes.SimpleMesh, coor::Vector{Int})
+#
+#     _check_simplemesh_coor(coor)
+#
+#     return get_node(mesh, coor[1])
+# end
+#
+# function get_node(mesh::Meshes.SimpleMesh, i::Int)
+#
+#     if i>length(mesh.vertices)
+#         error("Requested invalid node index $i; max is $(length(mesh.vertices)).")
+#     elseif i<1
+#         error("Invalid index $i (it must be greater than 0).")
+#     end
+#
+#     return mesh.vertices[i].coords
+# end
 
 
 
