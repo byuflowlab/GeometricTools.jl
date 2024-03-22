@@ -400,7 +400,7 @@ function get_tangent(self::GridTriangleSurface, i::Int64)
   return _calc_tangent(get_cellnodes(self, i))
 end
 function get_tangent(self::GridTriangleSurface, coor::Array{Int64,1})
-  return get_tangent(self, sub2ind(self._ndivsnodes, coor...))
+  return get_tangent(self, Base._sub2ind(self._ndivsnodes, coor...))
 end
 
 """
@@ -414,7 +414,7 @@ function get_unitvectors(self::GridTriangleSurface, i::Int64)
   return _calc_unitvectors(get_cellnodes(self, i))
 end
 function get_unitvectors(self::GridTriangleSurface, coor::Array{Int64,1})
-  return get_unitvectors(self, sub2ind(self._ndivsnodes, coor...))
+  return get_unitvectors(self, Base._sub2ind(self._ndivsnodes, coor...))
 end
 
 
