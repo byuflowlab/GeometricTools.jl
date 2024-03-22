@@ -111,8 +111,28 @@ end
 get_node(self::GridTriangleSurface, i::Int64) = get_node(self.orggrid, i)
 get_node(self::GridTriangleSurface, coor::Array{Int64,1}) = get_node(self.orggrid, coor)
 
-get_cell(self::GridTriangleSurface{G}, args...) where {G <: Meshes.SimpleMesh}  = get_cell(self.orggrid, args...)
-# get_cell_t!(args1..., self::GridTriangleSurface{G}, args...) where {G <: Meshes.SimpleMesh}  = get_cell(self.orggrid, args...)
+function get_cell(self::GridTriangleSurface{G}, args...) where {G <: Meshes.SimpleMesh}
+    return get_cell(self.orggrid, args...)
+end
+
+function get_cell_t!(out, ::Any, ::Any, self::GridTriangleSurface{G}, args...;
+                                    optargs...) where {G <: Meshes.SimpleMesh}
+    return get_cell_t!(out, self.orggrid, args...; optargs...)
+end
+function get_cell_t!(out, ::Any, ::Any, ::Any, self::GridTriangleSurface{G}, args...;
+                                    optargs...) where {G <: Meshes.SimpleMesh}
+    return get_cell_t!(out, self.orggrid, args...; optargs...)
+end
+
+function get_cell_t(::Any, self::GridTriangleSurface{G}, args...;
+                                    optargs...) where {G <: Meshes.SimpleMesh}
+    return get_cell_t(self.orggrid, args...; optargs...)
+end
+function get_cell_t(::Any, ::Any, self::GridTriangleSurface{G}, args...;
+                                    optargs...) where {G <: Meshes.SimpleMesh}
+    return get_cell_t(self.orggrid, args...; optargs...)
+end
+
 
 function get_cell(self::GridTriangleSurface{G}, i::Int64) where {G <: Grid}
   if i>self.ncells
