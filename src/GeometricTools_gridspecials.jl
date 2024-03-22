@@ -37,6 +37,7 @@ mutable struct GridTriangleSurface{GType} <: AbstractGrid
     field::Dict{String, Dict{String, Any}}  # Calculated fields
 
     # Internal data
+    _nodes::Matrix{<:Real}              # Position of each node
     _ndivsnodes::Tuple                  # Number of nodes in each coordinate
     _ndivscells::Tuple                  # Number of cells in each coordinate
     _override_vtkcelltype::Int64        # Option for overriding vtk outputs
@@ -45,6 +46,7 @@ mutable struct GridTriangleSurface{GType} <: AbstractGrid
     # Base constructor
     function GridTriangleSurface{GType}(orggrid, dimsplit,
                                         dims, nnodes, ncells,
+                                        _nodes,
                                         _ndivsnodes, _ndivscells;
                                         field=Dict{String, Dict{String, Any}}(),
                                         _override_vtkcelltype=5,
@@ -52,7 +54,7 @@ mutable struct GridTriangleSurface{GType} <: AbstractGrid
                                         ) where {GType}
         return new(orggrid, dimsplit,
                     dims, nnodes, ncells, field,
-                    _ndivsnodes, _ndivscells,
+                    _nodes, _ndivsnodes, _ndivscells,
                     _override_vtkcelltype, _halfedgetopology
                     )
     end
@@ -62,6 +64,7 @@ mutable struct GridTriangleSurface{GType} <: AbstractGrid
                                     dims=orggrid.dims,
                                     nnodes=orggrid.nnodes,
                                     ncells=2*orggrid.ncells,
+                                    _nodes=orggrid.nodes,
                                     _ndivsnodes=orggrid._ndivsnodes,
                                     _ndivscells=_ndivscells(orggrid, dimsplit),
                                     optargs...
@@ -72,6 +75,7 @@ mutable struct GridTriangleSurface{GType} <: AbstractGrid
 
         return GridTriangleSurface{GType}(orggrid, dimsplit,
                                             dims, nnodes, ncells,
+                                            _nodes,
                                             _ndivsnodes, _ndivscells;
                                             optargs...)
 
@@ -99,8 +103,11 @@ mutable struct GridTriangleSurface{GType} <: AbstractGrid
         # Precompute half-edge topology
         _halfedgetopology = Meshes.HalfEdgeTopology(topology.connec)
 
+        _nodes = vertices2nodes(orggrid.vertices)
+
         return GridTriangleSurface{GType}(orggrid, dimsplit,
                                             dims, nnodes, ncells,
+                                            _nodes,
                                             _ndivsnodes, _ndivscells;
                                             _halfedgetopology=_halfedgetopology,
                                             optargs...)

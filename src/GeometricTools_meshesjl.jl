@@ -116,3 +116,21 @@ end
 function Base.getindex(point::Meshes.Primitive, i::Int)
     return point.coords[i]
 end
+
+"""
+Converts the vertices of a Meshes.jl object (an array of m n-th dimensional
+Points) to a collection of nodes (an nxm Matrix).
+"""
+function vertices2nodes(vertices::AbstractVector{P}) where {N, R, P<:Meshes.Primitive{N, R}}
+
+    nodes = zeros(R, N, length(vertices))
+    vertices2nodes!(vertices, nodes)
+
+    return nodes
+end
+
+function vertices2nodes!(vertices, nodes)
+    for (point, node) in zip(vertices, eachcol(nodes))
+        node .= point.coords
+    end
+end
