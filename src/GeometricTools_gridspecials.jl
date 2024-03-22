@@ -115,13 +115,7 @@ mutable struct GridTriangleSurface{GType} <: AbstractGrid
     end
 end
 
-function get_node(self::GridTriangleSurface{G}, i::Int) where {G <: Grid}
-    return get_node(self.orggrid, i)
-end
-function get_node(self::GridTriangleSurface{G}, coor::Vector{Int}) where {G <: Grid}
-    return get_node(self.orggrid, coor)
-end
-
+# ---------- Functions specialized for Meshes.SimpleMesh -----------------------
 function get_node(self::GridTriangleSurface{G}, i::Int) where {G <: Meshes.SimpleMesh}
 
     if i>self.nnodes
@@ -162,6 +156,22 @@ function get_cell_t(::Any, ::Any, self::GridTriangleSurface{G}, args...;
     return get_cell_t(self.orggrid, args...; optargs...)
 end
 
+function generate_getcellt_args!(grid::GridTriangleSurface{G}) where {G <: Meshes.SimpleMesh}
+    return zeros(Int, 3), nothing, nothing, nothing, nothing, nothing, nothing
+end
+function generate_getcellt_args(grid::GridTriangleSurface{G}) where {G <: Meshes.SimpleMesh}
+    return nothing, nothing, nothing, nothing, nothing
+end
+
+
+# ---------- Functions specialized for Grid ------------------------------------
+function get_node(self::GridTriangleSurface{G}, i::Int) where {G <: Grid}
+    return get_node(self.orggrid, i)
+end
+
+function get_node(self::GridTriangleSurface{G}, coor::Vector{Int}) where {G <: Grid}
+    return get_node(self.orggrid, coor)
+end
 
 function get_cell(self::GridTriangleSurface{G}, i::Int64) where {G <: Grid}
   if i>self.ncells
@@ -203,8 +213,9 @@ function get_cell(self::GridTriangleSurface{G}, coor::Array{Int64,1}) where {G <
 end
 
 
-function get_cell_t!(tri_out, tricoor, quadcoor, quad_out, self::GridTriangleSurface,
-                                                i::Int64, lin, ndivscells, cin)
+function get_cell_t!(tri_out, tricoor, quadcoor, quad_out,
+                        self::GridTriangleSurface{G},
+                        i::Int64, lin, ndivscells, cin) where {G <: Grid}
   if i>self.ncells
     error("Requested invalid cell index $i; max is $(self.ncells).")
   end
@@ -213,8 +224,8 @@ function get_cell_t!(tri_out, tricoor, quadcoor, quad_out, self::GridTriangleSur
   return get_cell_t!(tri_out, quadcoor, quad_out, self, tricoor, lin, ndivscells)
 end
 
-function get_cell_t!(tri_out, quadcoor, quad_out, self::GridTriangleSurface, coor,
-                                                                lin, ndivscells)
+function get_cell_t!(tri_out, quadcoor, quad_out, self::GridTriangleSurface{G},
+                                        coor, lin, ndivscells) where {G <: Grid}
   # ERROR CASES
   if length(coor)!=self.dims
     error("$(self.dims)-dimensional grid requires $(self.dims) coordinates,"*
@@ -261,8 +272,8 @@ function get_cell_t!(tri_out, quadcoor, quad_out, self::GridTriangleSurface, coo
 end
 
 
-function get_cell_t(tricoor, quadcoor, self::GridTriangleSurface,
-                                                i::Int, nodei::Int, lin, ndivscells, cin)
+function get_cell_t(tricoor, quadcoor, self::GridTriangleSurface{G},
+                    i::Int, nodei::Int, lin, ndivscells, cin) where {G <: Grid}
   if i>self.ncells
     error("Requested invalid cell index $i; max is $(self.ncells).")
   end
@@ -271,8 +282,8 @@ function get_cell_t(tricoor, quadcoor, self::GridTriangleSurface,
   return get_cell_t(quadcoor, self, tricoor, nodei, lin, ndivscells)
 end
 
-function get_cell_t(quadcoor, self::GridTriangleSurface, coor, nodei::Int,
-                                                                lin, ndivscells)
+function get_cell_t(quadcoor, self::GridTriangleSurface{G}, coor, nodei::Int,
+                                            lin, ndivscells) where {G <: Grid}
   # ERROR CASES
   if length(coor)!=self.dims
     error("$(self.dims)-dimensional grid requires $(self.dims) coordinates,"*
@@ -316,7 +327,7 @@ function get_cell_t(quadcoor, self::GridTriangleSurface, coor, nodei::Int,
   return out
 end
 
-function generate_getcellt_args!(grid)
+function generate_getcellt_args!(grid::GridTriangleSurface{G}) where {G <: Grid}
     # Pre-allocate memory for panel calculation
     lin = LinearIndices(grid._ndivsnodes)
     ndivscells = vcat(grid._ndivscells...)
@@ -329,7 +340,7 @@ function generate_getcellt_args!(grid)
     return tri_out, tricoor, quadcoor, quad_out, lin, ndivscells, cin
 end
 
-function generate_getcellt_args(grid)
+function generate_getcellt_args(grid::GridTriangleSurface{G}) where {G <: Grid}
     # Pre-allocate memory for panel calculation
     lin = LinearIndices(grid._ndivsnodes)
     ndivscells = vcat(grid._ndivscells...)
@@ -340,6 +351,7 @@ function generate_getcellt_args(grid)
     return tricoor, quadcoor, lin, ndivscells, cin
 end
 
+# ---------- Common functions --------------------------------------------------
 """
     `get_area(self::GridTriangleSurface, i_or_coor::Union{Int, Array{Int,1}})`
 Returns the area of the i-th cell.

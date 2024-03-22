@@ -70,11 +70,11 @@ end
 get_cell_t!(out, mesh, i::Int) = get_cell_t!(out, get_cell(mesh, i))
 
 # Base case
-function get_cell_t!(out, cell::Meshes.Connectivity{PL, N}) where {PL, N}
+function get_cell_t!(out, cell::NTuple{N, T}) where {N, T}
     @assert length(out) == N
         "Received storage array of length $(length(out)); expected length $N"
 
-    out .= cell.indices
+    out .= cell
 
     return out
 end
