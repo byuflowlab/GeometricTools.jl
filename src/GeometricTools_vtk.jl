@@ -288,7 +288,7 @@ function multilines2vtkmulticells(lines,
       nothing
     else
 
-      cur_npoints = size(points)[1]   # Current number of points
+      cur_npoints = size(points, 1)   # Current number of points
 
       # Meshes this section
       out = lines2vtkmulticells(lines[i-1], line,
@@ -548,14 +548,16 @@ Generates a vtk file with the given data.
 See `examples.jl` for an example on how to use this function.
 """
 function generateVTK(filename::String, points;
-                    lines::Array{Array{Int64,1},1}=Array{Int64,1}[],
-                    cells::Array{Array{Int64,1},1}=Array{Int64,1}[],
+                    lines::AbstractVector{Arr1}=Vector{Int}[],
+                    cells::AbstractVector{Arr2}=Vector{Int}[],
                     point_data=nothing, cell_data=nothing,
                     num=nothing, time=nothing,
                     path="", comments="", _griddims::Int64=-1,
                     keep_points::Bool=false,
                     override_cell_type::Int64=-1,
-                    rnd_d=32)
+                    rnd_d=32) where {N1, N2,
+                                     Arr1 <: Union{Vector{Int}, NTuple{N1, Int}},
+                                     Arr2 <: Union{Vector{Int}, NTuple{N2, Int}}}
 
   aux = num!=nothing ? ".$num" : ""
   ext = aux*".vtk"
@@ -581,9 +583,9 @@ function generateVTK(filename::String, points;
     print(f, line0, line1, line2)
   end
 
-  np = size(points)[1]
-  nl = size(lines)[1]
-  nc = size(cells)[1]
+  np = size(points, 1)
+  nl = length(lines)
+  nc = length(cells)
 
   _keep_points = keep_points || (nl==0 && nc==0)
 
@@ -602,13 +604,13 @@ function generateVTK(filename::String, points;
   end
 
   # CELLS
-  auxl = size(lines)[1]
+  auxl = length(lines)
   for line in lines
-    auxl += size(line)[1]
+    auxl += length(line)
   end
-  auxc = size(cells)[1]
+  auxc = length(cells)
   for cell in cells
-    auxc += size(cell)[1]
+    auxc += length(cell)
   end
   print(f, "\n\nCELLS $(np+nl+nc) $(2*np+auxl+auxc)")
 
@@ -620,7 +622,7 @@ function generateVTK(filename::String, points;
     else
       pts = cells[i-(nl+np)]
     end
-    print(f, "\n", size(pts,1))
+    print(f, "\n", length(pts))
     for pt in pts
       print(f, " ", pt)
     end
