@@ -111,3 +111,8 @@ function _check_simplemesh_coor(coor)
 
     return nothing
 end
+
+# function Base.getindex(point::Meshes.Point3, i::Int)
+function Base.getindex(point::Meshes.Primitive, i::Int)
+    return point.coords[i]
+end
