@@ -101,7 +101,7 @@ mutable struct GridTriangleSurface{GType} <: AbstractGrid
             Only SimpleTopology is allowed"
 
         # Precompute half-edge topology
-        _halfedgetopology = Meshes.HalfEdgeTopology(topology.connec)
+        _halfedgetopology = Meshes.HalfEdgeTopology(topology.connec; sort=true)
 
         _nodes = vertices2nodes(orggrid.vertices)
 

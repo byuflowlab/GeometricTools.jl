@@ -121,7 +121,8 @@ end
 Converts the vertices of a Meshes.jl object (an array of m n-th dimensional
 Points) to a collection of nodes (an nxm Matrix).
 """
-function vertices2nodes(vertices::AbstractVector{P}) where {N, R, P<:Meshes.Primitive{N, R}}
+function vertices2nodes(vertices::AbstractVector{P}
+                                    ) where {N, R, P<:Meshes.Primitive{N, R}}
 
     nodes = zeros(R, N, length(vertices))
     vertices2nodes!(vertices, nodes)
@@ -129,8 +130,61 @@ function vertices2nodes(vertices::AbstractVector{P}) where {N, R, P<:Meshes.Prim
     return nodes
 end
 
-function vertices2nodes!(vertices, nodes)
+function vertices2nodes!(vertices::AbstractVector{P}, nodes::AbstractMatrix
+                                                ) where {P<:Meshes.Primitive}
     for (point, node) in zip(vertices, eachcol(nodes))
         node .= point.coords
     end
+end
+
+function vertices2nodes(vertices::AbstractVector{P},
+                        topology::Meshes.SimpleTopology{Meshes.Connectivity{PL, 2}}
+                        ) where {N, R, P<:Meshes.Primitive{N, R}, PL}
+
+    nodes = zeros(R, N, length(vertices))
+
+    ni = 1
+    previndices = (-1, -1)
+    for (si, elem) in enumerate(topology.elems)
+
+        segment = topology.connec[si]
+        # segment = topology.connec[elem]
+        indices = segment.indices
+
+        # NOTE: Here we will assume that each node is only used for at most two
+        #       segments
+        # NOTE: We also assume that the mesh is continuous, meaning that cells
+        #       are already contiguous
+
+        if !(indices[2] in previndices) && !(indices[1] in previndices)
+            println("$(si)\t$(ni)\tprevindices: $(previndices)\tindices: $(indices)\tnextindices: $(topology.connec[si+1].indices)")
+        end
+
+        # Add the first point if it wasn't shared by the previous segment
+        if !(indices[1] in previndices)
+
+            nodes[:, ni] .= vertices[indices[1]].coords
+            ni += 1
+        end
+
+        # Add the second point if it wasn't shared by the previous segment
+        if !(indices[2] in previndices)
+            nodes[:, ni] .= vertices[indices[2]].coords
+            ni += 1
+        end
+
+        previndices = indices
+
+    end
+
+    # Remove any extra memory that was not used
+    if ni != size(nodes, 2)
+        nodes = nodes[:, 1:ni]
+    end
+
+    return nodes
+end
+
+function vertices2nodes(mesh::Meshes.SimpleMesh)
+    return vertices2nodes(mesh.vertices, mesh.topology)
 end
