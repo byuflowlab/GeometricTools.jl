@@ -163,6 +163,105 @@ function generate_getcellt_args(grid::GridTriangleSurface{G}) where {G <: Meshes
     return nothing, nothing, nothing, nothing, nothing
 end
 
+function neighbor!(ncoor::AbstractVector{<:Int}, ni::Int, ci::Int,
+                    mesh::Meshes.SimpleMesh,
+                    hetopology::Meshes.HalfEdgeTopology;
+                    preserveEdge::Bool=false, debug::Bool=true)
+
+    @assert ni >= 1 "Requested invalid neighbor $(ni)"
+
+    # ------------- Fetch the first edge of this cell --------------------------
+
+    # NOTE: half4elem seems to return an edge that is not consistent with the
+    #       order of vertices from get_cell, so it should be avoided
+    # halfedge = Meshes.half4elem(hetopology, ci)
+
+
+    # Fetch the first three vertices of this cell
+    v1 = get_cell_t(mesh, ci, 1)
+    v2 = get_cell_t(mesh, ci, 2)
+    v3 = get_cell_t(mesh, ci, 3)
+
+    # Fetch a half-edge that is between the two vertices
+    halfedge = Meshes.half4pair(hetopology, (v1, v2))
+
+    # Make sure that we have the correct half-edge corresponding to this cell
+    # and not its neighbor
+    if halfedge.elem != ci
+        halfedge = halfedge.half
+    end
+
+    # Determine the direction that we should traverse the edges and whether
+    # we need to shift the edge
+    direction = halfedge.next.head==v1 || halfedge.next.head==v2 ? :next : :prev
+
+    if debug
+        @assert halfedge.elem == ci ""*
+            "LOGIC ERROR! Could not find first edge for cell $(ci)"
+
+        # @assert  (direction == :next ?
+        #             halfedge.prev.head==v1 && halfedge.head==v2 :
+        #             halfedge.head==v1 && halfedge.prev.head==v2
+        #             ) ""*
+        #     "LOGIC ERROR! Edges $(halfedge), $(halfedge.prev), $(halfedge.next)"*
+        #     " are inconsistent with cell vertices $(get_cell(mesh, ci))"
+
+        @assert Meshes.half4pair(hetopology, (v2, v3)).elem == getproperty(halfedge, direction).elem || Meshes.half4pair(hetopology, (v2, v3)).half.elem == getproperty(halfedge, direction).elem 
+    end
+
+
+    # --------------------------------------------------------------------------
+
+    # Iterate over subsequent edges (ni-1) times
+    for dummy in 1:ni-1
+        halfedge = getproperty(halfedge, direction)
+    end
+
+    if debug
+        # Check that Meshes.jl keeps the edge associated to the same cell
+        @assert halfedge.elem==ci ""*
+            "LOGIC ERROR! Cell associated with edge was not preserved!"
+    end
+
+    # Fetch the global index of the ni-th neighbor (cell on the other side of
+    # the ni-th edge)
+    neighborglobalindex = halfedge.half.elem
+
+    # Case that this is an open edge (meaning, there is no neighbor)
+    if isnothing(neighborglobalindex)
+
+        if preserveEdge
+            ncoor .= 0
+        else
+
+            error("Requested $(ni)th neighbor of cell $(ci), but that is an "*
+                    "open edge; use `preserveEdge=true` to get [0, 0, 0] "*
+                    "instead")
+        end
+
+    # Save index of neighbor
+    else
+        ncoor[1] = neighborglobalindex
+    end
+
+    return ncoor
+
+end
+
+function neighbor(grid::GridTriangleSurface{G}, ni, ci::Int, args...; optargs...) where {G <: Meshes.SimpleMesh}
+
+    @assert 1 <= ci <= grid.ncells ""*
+        "Invalid cell $(ci); minimum is 1, maximum is $(grid.ncells)"
+
+    hetopology = grid._halfedgetopology
+
+    ncoor = ones(Int, 3)
+    neighbor!(ncoor, ni, ci, grid.orggrid, hetopology, args...; optargs...)
+
+    return ncoor
+
+end
+
 
 # ---------- Functions specialized for Grid ------------------------------------
 function get_node(self::GridTriangleSurface{G}, i::Int) where {G <: Grid}
@@ -351,7 +450,208 @@ function generate_getcellt_args(grid::GridTriangleSurface{G}) where {G <: Grid}
     return tricoor, quadcoor, lin, ndivscells, cin
 end
 
+"""
+    neighbor!(ncoor::Vector, ni::Int, ci::Int, cin, ccoor,
+                                    ndivscells, dimsplit::Int)
+
+Returns the Cartesian coordinates of the `ni`-th neighboor of the `ci`-th cell,
+storing the coordinates under `ncoor`. `cin` are the CartesianIndices of a
+triangular grid of dimensions `ndivscells` split along dimension `dimsplit`.
+
+> **NOTE:** This assumes that the grid is periodic and closed, meaning that the
+neighbors of the starting cells include the end cells and vice versa.
+
+```@example
+
+# Pre-calculations
+ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
+cin = CartesianIndices(ndivscells)
+dimsplit = grid.dimsplit
+
+# Identify neighbor
+ncoor = ones(Int, 3)               # Store neighboor coordinates here
+ni = 3                              # Request the third neighbor
+ci = 10                             #   of cell number 10
+ccoor = cin[ci]                     # Cartesian indexing of this cell
+neighbor!(ncoor, ni, ci, ccoor, ndivscells, dimsplit)
+
+# Fetch normal of such neighbor
+normal = get_normal(grid, ncoor)
+
+# Convert Cartesian coordinates to linear indexing
+lin = LinearIndices(ndivscells)
+ni = lin[ncoor...]
+```
+"""
+function neighbor!(ncoor::AbstractVector{<:Int}, ni::Int, ci::Int,
+                    ccoor, ndivscells, dimsplit::Int)
+
+    @assert 1 <= ni <= 3 "Invalid neighbor $(ni); cell has only 3 neighbors."
+
+    if dimsplit==1
+
+        if ci%2==1          # Case: odd cell
+
+            # Neighbor between node 1 and 2
+            if ni==1
+                ncoor[1] = ccoor[1]+1
+                ncoor[2] = ccoor[2] != 1 ? ccoor[2]-1 : ndivscells[2][end]
+
+            # Neighbor between node 2 and 3
+            elseif ni==2
+                ncoor[1] = ccoor[1]+1 != ndivscells[1][end] ? ccoor[1]+3 : 2
+                ncoor[2] = ccoor[2]
+
+            # Neighbor between node 3 and 1
+            else
+                ncoor[1] = ccoor[1]+1
+                ncoor[2] = ccoor[2]
+            end
+
+        else                # Case: even cell
+
+            # Neighbor between node 1 and 2
+            if ni==1
+                ncoor[1] = ccoor[1]-1
+                ncoor[2] = ccoor[2] != ndivscells[2][end] ? ccoor[2]+1 : 1
+
+            # Neighbor between node 2 and 3
+            elseif ni==2
+                ncoor[1] = ccoor[1]-1 != 1 ? ccoor[1]-3 : ndivscells[1][end]-1
+                ncoor[2] = ccoor[2]
+
+            # Neighbor between node 3 and 1
+            else
+                ncoor[1] = ccoor[1]-1
+                ncoor[2] = ccoor[2]
+            end
+
+        end
+
+    # TODO: Implement dimsplit==2
+    # elseif dimsplit==2
+
+    else
+        error("Neighborhood with splitting dimension $(dimsplit)"*
+                " not implemented yet")
+    end
+
+    return ncoor
+end
+
+function neighbor(ni::Int, ci::Int, ccoor, ndivscells, dimsplit::Int)
+    return neighbor!(ones(Int, 3), ni, ci, ccoor, ndivscells, dimsplit)
+end
+
+function neighbor(grid::GridTriangleSurface{G}, ni::Int, ci::Int;
+                        preserveEdge::Bool=false) where {G <: Grid}
+
+    # Preserve edge will output [0,0,0] for a non-existent neighbor cell
+    # This happens for cells at the edges of the grid
+
+    # Pre-calculations
+    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
+    cin = CartesianIndices(ndivscells)
+    ccoor = cin[ci]
+
+    # Calculate neighbor
+    neigh = neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
+
+    if preserveEdge
+        isFakeNeighbor = false
+        inXmin = (isedge(grid, ci; whichedge=1) && ni==2)
+        inXmax = (isedge(grid, ci; whichedge=2) && ni==2)
+        inYmin = (isedge(grid, ci; whichedge=3) && ni==1)
+        inYmax = (isedge(grid, ci; whichedge=4) && ni==1)
+
+        # This has only been tested for dim_split = 1
+        if grid.orggrid.loop_dim == 2
+            isFakeNeighbor = inXmin || inXmax
+        elseif grid.orggrid.loop_dim == 1
+            isFakeNeighbor = inYmin || inYmax
+        else
+            isFakeNeighbor = inXmin || inXmax || inYmin || inYmax
+        end
+        if isFakeNeighbor; neigh = [0,0,0]; end
+    end
+
+    return neigh
+end
+
+function isedge(grid::GridTriangleSurface{G}, ci::Int;
+                                            whichedge::Int=0) where {G <: Grid}
+    # whichedge takes values 1,2,3,4 or 0 (default)
+    # [1, 2, 3, 4] = [Xmin, Xmax, Ymin, Ymax]
+    # If whichedge is used, it checks only that specific boundary
+
+
+    ret = false
+    # nx = grid.orggrid.NDIVS[1]
+    # ny = grid.orggrid.NDIVS[2]
+    nx = grid.orggrid._ndivscells[1]
+    ny = grid.orggrid._ndivscells[2]
+
+    # Determine if the cell is part of any boundary
+    # Xmin, Xmax, Ymin, Ymax are the cell boundaries of the grid
+    if grid.dimsplit == 2
+        inXmin = (ci-nx-1)%(2*nx) == 0
+        inXmax = (ci-nx)%(2*nx) == 0
+        inYmin = ci <= nx
+        inYmax = ci > 2*nx*ny - nx
+    else
+        inXmin = (ci-2)%(2*nx) == 0
+        inXmax = (ci-(2*nx-1))%(2*nx) == 0
+        inYmin = ((ci+1)%2 == 0) && (ci < 2*nx)
+        inYmax = ((2*nx*ny-ci)%2 == 0) && (ci > 2*nx*(ny-1)+1)
+    end
+
+    if whichedge == 1; ret = inXmin
+    elseif whichedge == 2; ret = inXmax
+    elseif whichedge == 3; ret = inYmin
+    elseif whichedge == 4; ret = inYmax
+    else
+        if grid.orggrid.loop_dim == 2
+            ret = inXmin || inXmax
+
+        elseif grid.orggrid.loop_dim == 1
+            ret = inYmin || inYmax
+
+        else  # For loop_dim = 0 and loop_dim > 2
+            ret = inXmin || inXmax || inYmin || inYmax
+
+        end
+    end
+
+    return ret
+end
+
 # ---------- Common functions --------------------------------------------------
+
+function neighbor(grid::GridTriangleSurface, ni::Int,
+                    ccoor::Union{<:AbstractVector, <:Tuple}, args...;
+                    optargs...)
+
+    # Pre-calculations
+    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
+    lin = LinearIndices(ndivscells)
+    ci = lin[ccoor...]
+
+    # Calculate neighbor
+    return neighbor(grid, ni, ci, args...; optargs...)
+end
+
+function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex,
+                    args...; optargs...)
+
+    # Pre-calculations
+    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
+    lin = LinearIndices(ndivscells)
+    ci = lin[ccoor]
+
+    # Calculate neighbor
+    return neighbor(grid, ni, ci, args...; optargs...)
+end
+
 """
     `get_area(self::GridTriangleSurface, i_or_coor::Union{Int, Array{Int,1}})`
 Returns the area of the i-th cell.
@@ -461,204 +761,6 @@ end
 
 
 
-
-"""
-    neighbor!(ncoor::Vector, ni::Int, ci::Int, cin, ccoor,
-                                    ndivscells, dimsplit::Int)
-
-Returns the Cartesian coordinates of the `ni`-th neighboor of the `ci`-th cell,
-storing the coordinates under `ncoor`. `cin` are the CartesianIndices of a
-triangular grid of dimensions `ndivscells` split along dimension `dimsplit`.
-
-> **NOTE:** This assumes that the grid is periodic and closed, meaning that the
-neighbors of the starting cells include the end cells and vice versa.
-
-```@example
-
-# Pre-calculations
-ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
-cin = CartesianIndices(ndivscells)
-dimsplit = grid.dimsplit
-
-# Identify neighbor
-ncoor = ones(Int, 3)               # Store neighboor coordinates here
-ni = 3                              # Request the third neighbor
-ci = 10                             #   of cell number 10
-ccoor = cin[ci]                     # Cartesian indexing of this cell
-neighbor!(ncoor, ni, ci, ccoor, ndivscells, dimsplit)
-
-# Fetch normal of such neighbor
-normal = get_normal(grid, ncoor)
-
-# Convert Cartesian coordinates to linear indexing
-lin = LinearIndices(ndivscells)
-ni = lin[ncoor...]
-```
-"""
-function neighbor!(ncoor::AbstractVector{<:Int}, ni::Int, ci::Int,
-                    ccoor, ndivscells, dimsplit::Int)
-
-    @assert 1 <= ni <= 3 "Invalid neighbor $(ni); cell has only 3 neighbors."
-
-    if dimsplit==1
-
-        if ci%2==1          # Case: odd cell
-
-            # Neighbor between node 1 and 2
-            if ni==1
-                ncoor[1] = ccoor[1]+1
-                ncoor[2] = ccoor[2] != 1 ? ccoor[2]-1 : ndivscells[2][end]
-
-            # Neighbor between node 2 and 3
-            elseif ni==2
-                ncoor[1] = ccoor[1]+1 != ndivscells[1][end] ? ccoor[1]+3 : 2
-                ncoor[2] = ccoor[2]
-
-            # Neighbor between node 3 and 1
-            else
-                ncoor[1] = ccoor[1]+1
-                ncoor[2] = ccoor[2]
-            end
-
-        else                # Case: even cell
-
-            # Neighbor between node 1 and 2
-            if ni==1
-                ncoor[1] = ccoor[1]-1
-                ncoor[2] = ccoor[2] != ndivscells[2][end] ? ccoor[2]+1 : 1
-
-            # Neighbor between node 2 and 3
-            elseif ni==2
-                ncoor[1] = ccoor[1]-1 != 1 ? ccoor[1]-3 : ndivscells[1][end]-1
-                ncoor[2] = ccoor[2]
-
-            # Neighbor between node 3 and 1
-            else
-                ncoor[1] = ccoor[1]-1
-                ncoor[2] = ccoor[2]
-            end
-
-        end
-
-    # TODO: Implement dimsplit==2
-    # elseif dimsplit==2
-
-    else
-        error("Neighborhood with splitting dimension $(dimsplit)"*
-                " not implemented yet")
-    end
-
-    return ncoor
-end
-
-function neighbor(ni::Int, ci::Int, ccoor, ndivscells, dimsplit::Int)
-    return neighbor!(ones(Int, 3), ni, ci, ccoor, ndivscells, dimsplit)
-end
-
-function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int;
-                    preserveEdge::Bool=false)
-    # Preserve edge will output [0,0,0] for a non-existent neighbor cell
-    # This happens for cells at the edges of the grid
-
-    # Pre-calculations
-    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
-    cin = CartesianIndices(ndivscells)
-    ccoor = cin[ci]
-
-    # Calculate neighbor
-    neigh = neighbor(ni, ci, ccoor, ndivscells, grid.dimsplit)
-
-    if preserveEdge
-        isFakeNeighbor = false
-        inXmin = (isedge(grid, ci; whichedge=1) && ni==2)
-        inXmax = (isedge(grid, ci; whichedge=2) && ni==2)
-        inYmin = (isedge(grid, ci; whichedge=3) && ni==1)
-        inYmax = (isedge(grid, ci; whichedge=4) && ni==1)
-
-        # This has only been tested for dim_split = 1
-        if grid.orggrid.loop_dim == 2
-            isFakeNeighbor = inXmin || inXmax
-        elseif grid.orggrid.loop_dim == 1
-            isFakeNeighbor = inYmin || inYmax
-        else
-            isFakeNeighbor = inXmin || inXmax || inYmin || inYmax
-        end
-        if isFakeNeighbor; neigh = [0,0,0]; end
-    end
-
-    return neigh
-end
-
-function neighbor(grid::GridTriangleSurface, ni::Int,
-                    ccoor::Union{<:AbstractVector, <:Tuple};
-                    preserveEdge::Bool=false)
-
-    # Pre-calculations
-    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
-    lin = LinearIndices(ndivscells)
-    ci = lin[ccoor...]
-
-    # Calculate neighbor
-    return neighbor(grid, ni, ci; preserveEdge=preserveEdge)
-end
-
-function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex;
-                    preserveEdge::Bool=false)
-
-    # Pre-calculations
-    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
-    lin = LinearIndices(ndivscells)
-    ci = lin[ccoor]
-
-    # Calculate neighbor
-    return neighbor(grid, ni, ci; preserveEdge=preserveEdge)
-end
-
-function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
-    # whichedge takes values 1,2,3,4 or 0 (default)
-    # [1, 2, 3, 4] = [Xmin, Xmax, Ymin, Ymax]
-    # If whichedge is used, it checks only that specific boundary
-
-
-    ret = false
-    # nx = grid.orggrid.NDIVS[1]
-    # ny = grid.orggrid.NDIVS[2]
-    nx = grid.orggrid._ndivscells[1]
-    ny = grid.orggrid._ndivscells[2]
-
-    # Determine if the cell is part of any boundary
-    # Xmin, Xmax, Ymin, Ymax are the cell boundaries of the grid
-    if grid.dimsplit == 2
-        inXmin = (ci-nx-1)%(2*nx) == 0
-        inXmax = (ci-nx)%(2*nx) == 0
-        inYmin = ci <= nx
-        inYmax = ci > 2*nx*ny - nx
-    else
-        inXmin = (ci-2)%(2*nx) == 0
-        inXmax = (ci-(2*nx-1))%(2*nx) == 0
-        inYmin = ((ci+1)%2 == 0) && (ci < 2*nx)
-        inYmax = ((2*nx*ny-ci)%2 == 0) && (ci > 2*nx*(ny-1)+1)
-    end
-
-    if whichedge == 1; ret = inXmin
-    elseif whichedge == 2; ret = inXmax
-    elseif whichedge == 3; ret = inYmin
-    elseif whichedge == 4; ret = inYmax
-    else
-        if grid.orggrid.loop_dim == 2
-            ret = inXmin || inXmax
-
-        elseif grid.orggrid.loop_dim == 1
-            ret = inYmin || inYmax
-
-        else  # For loop_dim = 0 and loop_dim > 2
-            ret = inXmin || inXmax || inYmin || inYmax
-
-        end
-    end
-
-    return ret
-end
 
 """
     get_tri_gradient!(out, t1, t2, t3, t0, e1, e2, A, b, res)
