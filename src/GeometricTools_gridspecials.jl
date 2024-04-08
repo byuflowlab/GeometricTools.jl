@@ -206,7 +206,7 @@ function neighbor!(ncoor::AbstractVector{<:Int}, ni::Int, ci::Int,
         #     "LOGIC ERROR! Edges $(halfedge), $(halfedge.prev), $(halfedge.next)"*
         #     " are inconsistent with cell vertices $(get_cell(mesh, ci))"
 
-        @assert Meshes.half4pair(hetopology, (v2, v3)).elem == getproperty(halfedge, direction).elem || Meshes.half4pair(hetopology, (v2, v3)).half.elem == getproperty(halfedge, direction).elem 
+        @assert Meshes.half4pair(hetopology, (v2, v3)).elem == getproperty(halfedge, direction).elem || Meshes.half4pair(hetopology, (v2, v3)).half.elem == getproperty(halfedge, direction).elem
     end
 
 
@@ -796,6 +796,8 @@ Converts specified cell-centered field data to node-based data
 by averaging field values of cells surrounding the node.
 `field_vals` could be an array or vector containing the scalar data values.
 Algorithms: 1.Averaging 2.Area-weighted
+
+NOTE: The current implementation only works with scalar fields.
 """
 function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=3, areas=nothing, centroids=nothing)
 
@@ -808,16 +810,15 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=3, area
     net_weight = zeros(grid.nnodes)
 
     # Preallocate memory for centroid (if needed)
-    C = zeros(grid.orggrid.dims)
+    C = zeros(grid.dims)
 
     # Parse through each cell and add its field value to that nodal array
     # whose index is the node index. At the end, obtain the weighted average by
     # dividing each element of the nodal array using the net weight
-    vtxs = ones(Int, 3)
     for i = 1:grid.ncells
 
         # Fetch indices of this cell's vertices
-        vtxs .= get_cell(grid, i)
+        vtxs = get_cell(grid, i)
 
         # Case 1: Simple average
         if algorithm == 1
@@ -844,8 +845,8 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=3, area
 
                 C .= 0
                 for vtx in vtxs
-                    for j in 1:grid.orggrid.dims
-                        C[j] += grid.orggrid.nodes[j, vtx]
+                    for j in 1:grid.dims
+                        C[j] += grid._nodes[j, vtx]
                     end
                 end
                 C ./= length(vtxs)
@@ -860,8 +861,8 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=3, area
             for vtx in vtxs
 
                 d2 = 0
-                for j in 1:grid.orggrid.dims
-                    d2 += (C[j] - grid.orggrid.nodes[j, vtx])^2
+                for j in 1:grid.dims
+                    d2 += (C[j] - grid._nodes[j, vtx])^2
                 end
 
                 weight = area / d2
