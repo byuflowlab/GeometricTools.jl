@@ -24,47 +24,255 @@ original quadrilateral panel into triangles.
   * `orggrid`         : Original quadrilateral surface grid.
   * `dimsplit`        : Dimension along which to split the quadrilaterals.
 """
-mutable struct GridTriangleSurface <: AbstractGrid
+mutable struct GridTriangleSurface{GType} <: AbstractGrid
 
-  # User inputs
-  orggrid::Grid                       # Original quadrilateral surface grid
-  dimsplit::Int64                     # Dimension to split
+    # User inputs
+    orggrid::GType                      # Original quadrilateral surface grid
+    dimsplit::Int64                     # Dimension to split
 
-  # Properties
-  dims::Int64                         # Number of dimensions
-  nnodes::Int64                       # Number of nodes
-  ncells::Int64                       # Number of cells
-  field::Dict{String, Dict{String, Any}}  # Calculated fields
+    # Properties
+    dims::Int64                         # Number of dimensions
+    nnodes::Int64                       # Number of nodes
+    ncells::Int64                       # Number of cells
+    field::Dict{String, Dict{String, Any}}  # Calculated fields
 
-  # Internal data
-  _ndivsnodes::Tuple                  # Number of nodes in each coordinate
-  _ndivscells::Tuple                  # Number of cells in each coordinate
-  _override_vtkcelltype::Int64        # Option for overriding vtk outputs
+    # Internal data
+    _nodes::Matrix{<:Real}              # Position of each node
+    _ndivsnodes::Tuple                  # Number of nodes in each coordinate
+    _ndivscells::Tuple                  # Number of cells in each coordinate
+    _override_vtkcelltype::Int64        # Option for overriding vtk outputs
+    _halfedgetopology
 
-  GridTriangleSurface(orggrid, dimsplit,
-                      dims=orggrid.dims,
-                        nnodes=orggrid.nnodes,
-                        ncells=2*orggrid.ncells,
-                        field=Dict{String, Dict{String, Any}}(),
-                      _ndivsnodes=orggrid._ndivsnodes,
-                        _ndivscells=_ndivscells(orggrid, dimsplit),
-                        _override_vtkcelltype=5
-      ) = _checkGridTriangleSurface(orggrid, dimsplit) ? new(orggrid, dimsplit,
-                      dims,
-                        nnodes,
-                        ncells,
-                        field,
-                      _ndivsnodes,
-                        _ndivscells,
-                        _override_vtkcelltype
-      ) : error("Logic error!")
+    # Base constructor
+    function GridTriangleSurface{GType}(orggrid, dimsplit,
+                                        dims, nnodes, ncells,
+                                        _nodes,
+                                        _ndivsnodes, _ndivscells;
+                                        field=Dict{String, Dict{String, Any}}(),
+                                        _override_vtkcelltype=5,
+                                        _halfedgetopology=nothing
+                                        ) where {GType}
+        return new(orggrid, dimsplit,
+                    dims, nnodes, ncells, field,
+                    _nodes, _ndivsnodes, _ndivscells,
+                    _override_vtkcelltype, _halfedgetopology
+                    )
+    end
+
+    # Constructor for triangulating an grid of type Grid
+    function GridTriangleSurface(orggrid::GType, dimsplit;
+                                    dims=orggrid.dims,
+                                    nnodes=orggrid.nnodes,
+                                    ncells=2*orggrid.ncells,
+                                    _nodes=orggrid.nodes,
+                                    _ndivsnodes=orggrid._ndivsnodes,
+                                    _ndivscells=_ndivscells(orggrid, dimsplit),
+                                    optargs...
+                                    ) where {GType <: Grid}
+
+        @assert _checkGridTriangleSurface(orggrid, dimsplit) ""*
+            "Logic error: Original grid did not pass the triangulation test"
+
+        return GridTriangleSurface{GType}(orggrid, dimsplit,
+                                            dims, nnodes, ncells,
+                                            _nodes,
+                                            _ndivsnodes, _ndivscells;
+                                            optargs...)
+
+    end
+
+
+    # Constructor for wrapping a grid from Meshes.jl
+    function GridTriangleSurface(orggrid::GType;
+                                    dimsplit=0,
+                                    dims=3,
+                                    nnodes=length(orggrid.vertices),
+                                    ncells=length(orggrid),
+                                    _ndivscells=(ncells, 0, 0),
+                                    _ndivsnodes=(nnodes, 1, 1),
+                                    optargs...
+                                    ) where {GType <: Meshes.SimpleMesh{3}}
+
+        # Check that all elements are Triangle
+        topology = orggrid.topology
+
+        @assert _checkGridTriangleSurface(orggrid) ""*
+            "Logic error: Original grid did not pass the triangulation test.
+            Only SimpleTopology is allowed"
+
+        # Precompute half-edge topology
+        _halfedgetopology = Meshes.HalfEdgeTopology(topology.connec; sort=true)
+
+        _nodes = vertices2nodes(orggrid.vertices)
+
+        return GridTriangleSurface{GType}(orggrid, dimsplit,
+                                            dims, nnodes, ncells,
+                                            _nodes,
+                                            _ndivsnodes, _ndivscells;
+                                            _halfedgetopology=_halfedgetopology,
+                                            optargs...)
+
+    end
+end
+
+# ---------- Functions specialized for Meshes.SimpleMesh -----------------------
+function get_node(self::GridTriangleSurface{G}, i::Int) where {G <: Meshes.SimpleMesh}
+
+    if i>self.nnodes
+        error("Requested invalid node index $i; max is $(self.nnodes).")
+    elseif i<1
+        error("Invalid index $i (it must be greater than 0).")
+    end
+
+    return self._nodes[:, i]
+
+end
+function get_node(self::GridTriangleSurface{G}, coor::Vector{Int}) where {G <: Meshes.SimpleMesh}
+
+    _check_simplemesh_coor(coor)
+    return get_node(self, coor[1])
+
+end
+
+function get_cell(self::GridTriangleSurface{G}, args...) where {G <: Meshes.SimpleMesh}
+    return get_cell(self.orggrid, args...)
+end
+
+function get_cell_t!(out, ::Any, ::Any, self::GridTriangleSurface{G}, args...;
+                                    optargs...) where {G <: Meshes.SimpleMesh}
+    return get_cell_t!(out, self.orggrid, args...; optargs...)
+end
+function get_cell_t!(out, ::Any, ::Any, ::Any, self::GridTriangleSurface{G}, args...;
+                                    optargs...) where {G <: Meshes.SimpleMesh}
+    return get_cell_t!(out, self.orggrid, args...; optargs...)
+end
+
+function get_cell_t(::Any, self::GridTriangleSurface{G}, args...;
+                                    optargs...) where {G <: Meshes.SimpleMesh}
+    return get_cell_t(self.orggrid, args...; optargs...)
+end
+function get_cell_t(::Any, ::Any, self::GridTriangleSurface{G}, args...;
+                                    optargs...) where {G <: Meshes.SimpleMesh}
+    return get_cell_t(self.orggrid, args...; optargs...)
+end
+
+function generate_getcellt_args!(grid::GridTriangleSurface{G}) where {G <: Meshes.SimpleMesh}
+    return zeros(Int, 3), nothing, nothing, nothing, nothing, nothing, nothing
+end
+function generate_getcellt_args(grid::GridTriangleSurface{G}) where {G <: Meshes.SimpleMesh}
+    return nothing, nothing, nothing, nothing, nothing
+end
+
+function neighbor!(ncoor::AbstractVector{<:Int}, ni::Int, ci::Int,
+                    mesh::Meshes.SimpleMesh,
+                    hetopology::Meshes.HalfEdgeTopology;
+                    preserveEdge::Bool=false, debug::Bool=true)
+
+    @assert ni >= 1 "Requested invalid neighbor $(ni)"
+
+    # ------------- Fetch the first edge of this cell --------------------------
+
+    # NOTE: half4elem seems to return an edge that is not consistent with the
+    #       order of vertices from get_cell, so it should be avoided
+    # halfedge = Meshes.half4elem(hetopology, ci)
+
+
+    # Fetch the first three vertices of this cell
+    v1 = get_cell_t(mesh, ci, 1)
+    v2 = get_cell_t(mesh, ci, 2)
+    v3 = get_cell_t(mesh, ci, 3)
+
+    # Fetch a half-edge that is between the two vertices
+    halfedge = Meshes.half4pair(hetopology, (v1, v2))
+
+    # Make sure that we have the correct half-edge corresponding to this cell
+    # and not its neighbor
+    if halfedge.elem != ci
+        halfedge = halfedge.half
+    end
+
+    # Determine the direction that we should traverse the edges and whether
+    # we need to shift the edge
+    direction = halfedge.next.head==v1 || halfedge.next.head==v2 ? :next : :prev
+
+    if debug
+        @assert halfedge.elem == ci ""*
+            "LOGIC ERROR! Could not find first edge for cell $(ci)"
+
+        # @assert  (direction == :next ?
+        #             halfedge.prev.head==v1 && halfedge.head==v2 :
+        #             halfedge.head==v1 && halfedge.prev.head==v2
+        #             ) ""*
+        #     "LOGIC ERROR! Edges $(halfedge), $(halfedge.prev), $(halfedge.next)"*
+        #     " are inconsistent with cell vertices $(get_cell(mesh, ci))"
+
+        @assert Meshes.half4pair(hetopology, (v2, v3)).elem == getproperty(halfedge, direction).elem || Meshes.half4pair(hetopology, (v2, v3)).half.elem == getproperty(halfedge, direction).elem
+    end
+
+
+    # --------------------------------------------------------------------------
+
+    # Iterate over subsequent edges (ni-1) times
+    for dummy in 1:ni-1
+        halfedge = getproperty(halfedge, direction)
+    end
+
+    if debug
+        # Check that Meshes.jl keeps the edge associated to the same cell
+        @assert halfedge.elem==ci ""*
+            "LOGIC ERROR! Cell associated with edge was not preserved!"
+    end
+
+    # Fetch the global index of the ni-th neighbor (cell on the other side of
+    # the ni-th edge)
+    neighborglobalindex = halfedge.half.elem
+
+    # Case that this is an open edge (meaning, there is no neighbor)
+    if isnothing(neighborglobalindex)
+
+        if preserveEdge
+            ncoor .= 0
+        else
+
+            error("Requested $(ni)th neighbor of cell $(ci), but that is an "*
+                    "open edge; use `preserveEdge=true` to get [0, 0, 0] "*
+                    "instead")
+        end
+
+    # Save index of neighbor
+    else
+        ncoor[1] = neighborglobalindex
+    end
+
+    return ncoor
+
+end
+
+function neighbor(grid::GridTriangleSurface{G}, ni, ci::Int, args...; optargs...) where {G <: Meshes.SimpleMesh}
+
+    @assert 1 <= ci <= grid.ncells ""*
+        "Invalid cell $(ci); minimum is 1, maximum is $(grid.ncells)"
+
+    hetopology = grid._halfedgetopology
+
+    ncoor = ones(Int, 3)
+    neighbor!(ncoor, ni, ci, grid.orggrid, hetopology, args...; optargs...)
+
+    return ncoor
+
 end
 
 
-get_node(self::GridTriangleSurface, i::Int64) = get_node(self.orggrid, i)
-get_node(self::GridTriangleSurface, coor::Array{Int64,1}) = get_node(self.orggrid, coor)
+# ---------- Functions specialized for Grid ------------------------------------
+function get_node(self::GridTriangleSurface{G}, i::Int) where {G <: Grid}
+    return get_node(self.orggrid, i)
+end
 
-function get_cell(self::GridTriangleSurface, i::Int64)
+function get_node(self::GridTriangleSurface{G}, coor::Vector{Int}) where {G <: Grid}
+    return get_node(self.orggrid, coor)
+end
+
+function get_cell(self::GridTriangleSurface{G}, i::Int64) where {G <: Grid}
   if i>self.ncells
     error("Requested invalid cell index $i; max is $(self.ncells).")
   end
@@ -72,7 +280,7 @@ function get_cell(self::GridTriangleSurface, i::Int64)
   return get_cell(self, collect(Tuple(CartesianIndices(dims)[i])))
 end
 
-function get_cell(self::GridTriangleSurface, coor::Array{Int64,1})
+function get_cell(self::GridTriangleSurface{G}, coor::Array{Int64,1}) where {G <: Grid}
   # ERROR CASES
   if length(coor)!=self.dims
     error("$(self.dims)-dimensional grid requires $(self.dims) coordinates,"*
@@ -104,8 +312,9 @@ function get_cell(self::GridTriangleSurface, coor::Array{Int64,1})
 end
 
 
-function get_cell_t!(tri_out, tricoor, quadcoor, quad_out, self::GridTriangleSurface,
-                                                i::Int64, lin, ndivscells, cin)
+function get_cell_t!(tri_out, tricoor, quadcoor, quad_out,
+                        self::GridTriangleSurface{G},
+                        i::Int64, lin, ndivscells, cin) where {G <: Grid}
   if i>self.ncells
     error("Requested invalid cell index $i; max is $(self.ncells).")
   end
@@ -114,8 +323,8 @@ function get_cell_t!(tri_out, tricoor, quadcoor, quad_out, self::GridTriangleSur
   return get_cell_t!(tri_out, quadcoor, quad_out, self, tricoor, lin, ndivscells)
 end
 
-function get_cell_t!(tri_out, quadcoor, quad_out, self::GridTriangleSurface, coor,
-                                                                lin, ndivscells)
+function get_cell_t!(tri_out, quadcoor, quad_out, self::GridTriangleSurface{G},
+                                        coor, lin, ndivscells) where {G <: Grid}
   # ERROR CASES
   if length(coor)!=self.dims
     error("$(self.dims)-dimensional grid requires $(self.dims) coordinates,"*
@@ -162,8 +371,8 @@ function get_cell_t!(tri_out, quadcoor, quad_out, self::GridTriangleSurface, coo
 end
 
 
-function get_cell_t(tricoor, quadcoor, self::GridTriangleSurface,
-                                                i::Int, nodei::Int, lin, ndivscells, cin)
+function get_cell_t(tricoor, quadcoor, self::GridTriangleSurface{G},
+                    i::Int, nodei::Int, lin, ndivscells, cin) where {G <: Grid}
   if i>self.ncells
     error("Requested invalid cell index $i; max is $(self.ncells).")
   end
@@ -172,8 +381,8 @@ function get_cell_t(tricoor, quadcoor, self::GridTriangleSurface,
   return get_cell_t(quadcoor, self, tricoor, nodei, lin, ndivscells)
 end
 
-function get_cell_t(quadcoor, self::GridTriangleSurface, coor, nodei::Int,
-                                                                lin, ndivscells)
+function get_cell_t(quadcoor, self::GridTriangleSurface{G}, coor, nodei::Int,
+                                            lin, ndivscells) where {G <: Grid}
   # ERROR CASES
   if length(coor)!=self.dims
     error("$(self.dims)-dimensional grid requires $(self.dims) coordinates,"*
@@ -217,7 +426,7 @@ function get_cell_t(quadcoor, self::GridTriangleSurface, coor, nodei::Int,
   return out
 end
 
-function generate_getcellt_args!(grid)
+function generate_getcellt_args!(grid::GridTriangleSurface{G}) where {G <: Grid}
     # Pre-allocate memory for panel calculation
     lin = LinearIndices(grid._ndivsnodes)
     ndivscells = vcat(grid._ndivscells...)
@@ -230,7 +439,7 @@ function generate_getcellt_args!(grid)
     return tri_out, tricoor, quadcoor, quad_out, lin, ndivscells, cin
 end
 
-function generate_getcellt_args(grid)
+function generate_getcellt_args(grid::GridTriangleSurface{G}) where {G <: Grid}
     # Pre-allocate memory for panel calculation
     lin = LinearIndices(grid._ndivsnodes)
     ndivscells = vcat(grid._ndivscells...)
@@ -240,116 +449,6 @@ function generate_getcellt_args(grid)
 
     return tricoor, quadcoor, lin, ndivscells, cin
 end
-
-"""
-    `get_area(self::GridTriangleSurface, i_or_coor::Union{Int, Array{Int,1}})`
-Returns the area of the i-th cell.
-"""
-function get_area(self::GridTriangleSurface, i)
-    cell = get_cell(self, i)
-    A = get_node(self, cell[1])
-    B = get_node(self, cell[2])
-    C = get_node(self, cell[3])
-    return 0.5*norm(cross(B-A, C-A))
-end
-function _get_area(nodes, panel)
-
-    p1, p2, p3 = panel
-
-    crss1 = (nodes[2, p2]-nodes[2, p1])*(nodes[3, p3]-nodes[3, p1]) - (nodes[3, p2]-nodes[3, p1])*(nodes[2, p3]-nodes[2, p1])
-    crss2 = (nodes[3, p2]-nodes[3, p1])*(nodes[1, p3]-nodes[1, p1]) - (nodes[1, p2]-nodes[1, p1])*(nodes[3, p3]-nodes[3, p1])
-    crss3 = (nodes[1, p2]-nodes[1, p1])*(nodes[2, p3]-nodes[2, p1]) - (nodes[2, p2]-nodes[2, p1])*(nodes[1, p3]-nodes[1, p1])
-
-    return 0.5*sqrt(crss1^2 + crss2^2 + crss3^2)
-end
-
-"""
-    `get_area(self::GridTriangleSurface)`
-Returns the area of the entire grid.
-"""
-function get_area(self::GridTriangleSurface)
-    A = 0
-    for i in 1:self.ncells
-        A += get_area(self, i)
-    end
-    return A
-end
-
-"""
-    `get_volume(self::GridTriangleSurface)`
-Returns the volume encloused by the grid using Green's theorem. See
-https://en.wikipedia.org/wiki/Green%27s_theorem#Area_Calculation
-https://en.wikipedia.org/wiki/Polyhedron#Volume
-"""
-function get_volume(self::GridTriangleSurface)
-    V = 0
-    for i in 1:self.ncells
-        A = get_area(self, i)
-        n = get_normal(self, i)
-        r = get_cellcenter(self, i)
-        V += 1/3 * dot(r, A*n)
-    end
-    return V
-end
-
-"""
-    `get_centroid(self::GridTriangleSurface)`
-Returns the centroid of the volume encloused by the grid using Green's theorem.
-See https://en.wikipedia.org/wiki/Green%27s_theorem#Area_Calculation
-"""
-function get_centroid(self::GridTriangleSurface)
-    R = zeros(self.dims)
-    for i in 1:self.ncells
-        A = get_area(self, i)
-        n = get_normal(self, i)
-        r = get_cellcenter(self, i)
-        R += 3/4*r * (1/3 * dot(r, A*n))
-    end
-    return R/get_volume(self)
-end
-
-"""
-  `get_normal(self::GridTriangleSurface, i::Int64)`
-
-Returns the normal vector of the i-th panel.
-"""
-function get_normal(self::GridTriangleSurface, i::Int64)
-  return _calc_normal(get_cellnodes(self, i))
-end
-function get_normal(self::GridTriangleSurface, coor::Array{Int64,1})
-  return get_normal(self, Base._sub2ind(self._ndivsnodes, coor...))
-end
-
-
-"""
-  `get_tangent(self::GridTriangleSurface, i::Int64)`
-
-Returns the tangential vector of the i-th panel.
-"""
-function get_tangent(self::GridTriangleSurface, i::Int64)
-  return _calc_tangent(get_cellnodes(self, i))
-end
-function get_tangent(self::GridTriangleSurface, coor::Array{Int64,1})
-  return get_tangent(self, sub2ind(self._ndivsnodes, coor...))
-end
-
-"""
-  `get_unitvectors(self::GridTriangleSurface, i::Int64)`
-
-Returns the orthogonal system `(t, o, n)` of the i-th panel, with `t` the
-tangent vector, `o` the oblique vector (which is also tangent), and `n` the
-normal vector.
-"""
-function get_unitvectors(self::GridTriangleSurface, i::Int64)
-  return _calc_unitvectors(get_cellnodes(self, i))
-end
-function get_unitvectors(self::GridTriangleSurface, coor::Array{Int64,1})
-  return get_unitvectors(self, sub2ind(self._ndivsnodes, coor...))
-end
-
-
-
-
 
 """
     neighbor!(ncoor::Vector, ni::Int, ci::Int, cin, ccoor,
@@ -444,8 +543,9 @@ function neighbor(ni::Int, ci::Int, ccoor, ndivscells, dimsplit::Int)
     return neighbor!(ones(Int, 3), ni, ci, ccoor, ndivscells, dimsplit)
 end
 
-function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int;
-                    preserveEdge::Bool=false)
+function neighbor(grid::GridTriangleSurface{G}, ni::Int, ci::Int;
+                        preserveEdge::Bool=false) where {G <: Grid}
+
     # Preserve edge will output [0,0,0] for a non-existent neighbor cell
     # This happens for cells at the edges of the grid
 
@@ -478,32 +578,8 @@ function neighbor(grid::GridTriangleSurface, ni::Int, ci::Int;
     return neigh
 end
 
-function neighbor(grid::GridTriangleSurface, ni::Int,
-                    ccoor::Union{<:AbstractVector, <:Tuple};
-                    preserveEdge::Bool=false)
-
-    # Pre-calculations
-    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
-    lin = LinearIndices(ndivscells)
-    ci = lin[ccoor...]
-
-    # Calculate neighbor
-    return neighbor(grid, ni, ci; preserveEdge=preserveEdge)
-end
-
-function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex;
-                    preserveEdge::Bool=false)
-
-    # Pre-calculations
-    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
-    lin = LinearIndices(ndivscells)
-    ci = lin[ccoor]
-
-    # Calculate neighbor
-    return neighbor(grid, ni, ci; preserveEdge=preserveEdge)
-end
-
-function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
+function isedge(grid::GridTriangleSurface{G}, ci::Int;
+                                            whichedge::Int=0) where {G <: Grid}
     # whichedge takes values 1,2,3,4 or 0 (default)
     # [1, 2, 3, 4] = [Xmin, Xmax, Ymin, Ymax]
     # If whichedge is used, it checks only that specific boundary
@@ -549,6 +625,143 @@ function isedge(grid::GridTriangleSurface, ci::Int; whichedge::Int=0)
     return ret
 end
 
+# ---------- Common functions --------------------------------------------------
+
+function neighbor(grid::GridTriangleSurface, ni::Int,
+                    ccoor::Union{<:AbstractVector, <:Tuple}, args...;
+                    optargs...)
+
+    # Pre-calculations
+    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
+    lin = LinearIndices(ndivscells)
+    ci = lin[ccoor...]
+
+    # Calculate neighbor
+    return neighbor(grid, ni, ci, args...; optargs...)
+end
+
+function neighbor(grid::GridTriangleSurface, ni::Int, ccoor::CartesianIndex,
+                    args...; optargs...)
+
+    # Pre-calculations
+    ndivscells = Tuple(collect( 1:(d != 0 ? d : 1) for d in grid._ndivscells))
+    lin = LinearIndices(ndivscells)
+    ci = lin[ccoor]
+
+    # Calculate neighbor
+    return neighbor(grid, ni, ci, args...; optargs...)
+end
+
+"""
+    `get_area(self::GridTriangleSurface, i_or_coor::Union{Int, Array{Int,1}})`
+Returns the area of the i-th cell.
+"""
+function get_area(self::GridTriangleSurface, i)
+    cell = get_cell(self, i)
+    A = get_node(self, cell[1])
+    B = get_node(self, cell[2])
+    C = get_node(self, cell[3])
+    return 0.5*norm(cross(B-A, C-A))
+end
+function _get_area(nodes, panel)
+
+    p1, p2, p3 = panel
+
+    crss1 = (nodes[2, p2]-nodes[2, p1])*(nodes[3, p3]-nodes[3, p1]) - (nodes[3, p2]-nodes[3, p1])*(nodes[2, p3]-nodes[2, p1])
+    crss2 = (nodes[3, p2]-nodes[3, p1])*(nodes[1, p3]-nodes[1, p1]) - (nodes[1, p2]-nodes[1, p1])*(nodes[3, p3]-nodes[3, p1])
+    crss3 = (nodes[1, p2]-nodes[1, p1])*(nodes[2, p3]-nodes[2, p1]) - (nodes[2, p2]-nodes[2, p1])*(nodes[1, p3]-nodes[1, p1])
+
+    return 0.5*sqrt(crss1^2 + crss2^2 + crss3^2)
+end
+
+"""
+    `get_area(self::GridTriangleSurface)`
+Returns the area of the entire grid.
+"""
+function get_area(self::GridTriangleSurface)
+    A = 0
+    for i in 1:self.ncells
+        A += get_area(self, i)
+    end
+    return A
+end
+
+"""
+    `get_volume(self::GridTriangleSurface)`
+Returns the volume encloused by the grid using Green's theorem. See
+https://en.wikipedia.org/wiki/Green%27s_theorem#Area_Calculation
+https://en.wikipedia.org/wiki/Polyhedron#Volume
+"""
+function get_volume(self::GridTriangleSurface)
+    V = 0
+    for i in 1:self.ncells
+        A = get_area(self, i)
+        n = get_normal(self, i)
+        r = get_cellcenter(self, i)
+        V += 1/3 * dot(r, A*n)
+    end
+    return V
+end
+
+"""
+    `get_centroid(self::GridTriangleSurface)`
+Returns the centroid of the volume encloused by the grid using Green's theorem.
+See https://en.wikipedia.org/wiki/Green%27s_theorem#Area_Calculation
+"""
+function get_centroid(self::GridTriangleSurface)
+    R = zeros(self.dims)
+    for i in 1:self.ncells
+        A = get_area(self, i)
+        n = get_normal(self, i)
+        r = get_cellcenter(self, i)
+        R += 3/4*r * (1/3 * dot(r, A*n))
+    end
+    return R/get_volume(self)
+end
+
+"""
+  `get_normal(self::GridTriangleSurface, i::Int64)`
+
+Returns the normal vector of the i-th panel.
+"""
+function get_normal(self::GridTriangleSurface, i::Int64)
+  return _calc_normal(get_cellnodes(self, i))
+end
+function get_normal(self::GridTriangleSurface, coor::Array{Int64,1})
+  return get_normal(self, Base._sub2ind(self._ndivsnodes, coor...))
+end
+
+
+"""
+  `get_tangent(self::GridTriangleSurface, i::Int64)`
+
+Returns the tangential vector of the i-th panel.
+"""
+function get_tangent(self::GridTriangleSurface, i::Int64)
+  return _calc_tangent(get_cellnodes(self, i))
+end
+function get_tangent(self::GridTriangleSurface, coor::Array{Int64,1})
+  return get_tangent(self, Base._sub2ind(self._ndivsnodes, coor...))
+end
+
+"""
+  `get_unitvectors(self::GridTriangleSurface, i::Int64)`
+
+Returns the orthogonal system `(t, o, n)` of the i-th panel, with `t` the
+tangent vector, `o` the oblique vector (which is also tangent), and `n` the
+normal vector.
+"""
+function get_unitvectors(self::GridTriangleSurface, i::Int64)
+  return _calc_unitvectors(get_cellnodes(self, i))
+end
+function get_unitvectors(self::GridTriangleSurface, coor::Array{Int64,1})
+  return get_unitvectors(self, Base._sub2ind(self._ndivsnodes, coor...))
+end
+
+
+
+
+
 """
     get_tri_gradient!(out, t1, t2, t3, t0, e1, e2, A, b, res)
 
@@ -583,6 +796,8 @@ Converts specified cell-centered field data to node-based data
 by averaging field values of cells surrounding the node.
 `field_vals` could be an array or vector containing the scalar data values.
 Algorithms: 1.Averaging 2.Area-weighted
+
+NOTE: The current implementation only works with scalar fields.
 """
 function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=3, areas=nothing, centroids=nothing)
 
@@ -595,16 +810,15 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=3, area
     net_weight = zeros(grid.nnodes)
 
     # Preallocate memory for centroid (if needed)
-    C = zeros(grid.orggrid.dims)
+    C = zeros(grid.dims)
 
     # Parse through each cell and add its field value to that nodal array
     # whose index is the node index. At the end, obtain the weighted average by
     # dividing each element of the nodal array using the net weight
-    vtxs = ones(Int, 3)
     for i = 1:grid.ncells
 
         # Fetch indices of this cell's vertices
-        vtxs .= get_cell(grid, i)
+        vtxs = get_cell(grid, i)
 
         # Case 1: Simple average
         if algorithm == 1
@@ -631,8 +845,8 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=3, area
 
                 C .= 0
                 for vtx in vtxs
-                    for j in 1:grid.orggrid.dims
-                        C[j] += grid.orggrid.nodes[j, vtx]
+                    for j in 1:grid.dims
+                        C[j] += grid._nodes[j, vtx]
                     end
                 end
                 C ./= length(vtxs)
@@ -647,8 +861,8 @@ function get_nodal_data(grid::GridTriangleSurface, field_vals; algorithm=3, area
             for vtx in vtxs
 
                 d2 = 0
-                for j in 1:grid.orggrid.dims
-                    d2 += (C[j] - grid.orggrid.nodes[j, vtx])^2
+                for j in 1:grid.dims
+                    d2 += (C[j] - grid._nodes[j, vtx])^2
                 end
 
                 weight = area / d2
@@ -816,16 +1030,27 @@ function _checkGridTriangleSurface(orggrid::Grid, dimsplit::Int64)
   return true
 end
 
+_checkGridTriangleSurface(orggrid::Meshes.SimpleMesh) = _checkGridTriangleSurface(orggrid.topology)
+
+function _checkGridTriangleSurface(orggrid::Meshes.SimpleTopology{Meshes.Connectivity{E, N}}) where {E, N}
+    return E <: Meshes.Triangle && N==3
+end
+
 function _ndivscells(orggrid::Grid, dimsplit::Int64)
   return Tuple([
             2^(i==dimsplit)*divs for (i,divs) in enumerate(orggrid._ndivscells)
               ])
 end
 
-_calc_tnorm(nodes, panel) = sqrt((nodes[1, panel[2]] - nodes[1, panel[1]])^2 + (nodes[2, panel[2]] - nodes[2, panel[1]])^2 + (nodes[3, panel[2]] - nodes[3, panel[1]])^2)
-_calc_t1(nodes, panel) = (nodes[1, panel[2]] - nodes[1, panel[1]]) / _calc_tnorm(nodes, panel)
-_calc_t2(nodes, panel) = (nodes[2, panel[2]] - nodes[2, panel[1]]) / _calc_tnorm(nodes, panel)
-_calc_t3(nodes, panel) = (nodes[3, panel[2]] - nodes[3, panel[1]]) / _calc_tnorm(nodes, panel)
+_calc_tnorm(nodes::AbstractMatrix, panel) = sqrt((nodes[1, panel[2]] - nodes[1, panel[1]])^2 + (nodes[2, panel[2]] - nodes[2, panel[1]])^2 + (nodes[3, panel[2]] - nodes[3, panel[1]])^2)
+_calc_t1(nodes::AbstractMatrix, panel) = (nodes[1, panel[2]] - nodes[1, panel[1]]) / _calc_tnorm(nodes, panel)
+_calc_t2(nodes::AbstractMatrix, panel) = (nodes[2, panel[2]] - nodes[2, panel[1]]) / _calc_tnorm(nodes, panel)
+_calc_t3(nodes::AbstractMatrix, panel) = (nodes[3, panel[2]] - nodes[3, panel[1]]) / _calc_tnorm(nodes, panel)
+
+# _calc_tnorm(nodes::AbstractVector, panel) = sqrt((nodes[panel[2]][1] - nodes[panel[1]][1])^2 + (nodes[panel[2]][2] - nodes[panel[1]][2])^2 + (nodes[panel[2]][3] - nodes[panel[1]][3])^2)
+# _calc_t1(nodes::AbstractVector, panel) = (nodes[panel[2]][1] - nodes[panel[1]][1]) / _calc_tnorm(nodes, panel)
+# _calc_t2(nodes::AbstractVector, panel) = (nodes[panel[2]][2] - nodes[panel[1]][2]) / _calc_tnorm(nodes, panel)
+# _calc_t3(nodes::AbstractVector, panel) = (nodes[panel[2]][3] - nodes[panel[1]][3]) / _calc_tnorm(nodes, panel)
 
 _calc_tnorm(nodes) = sqrt((nodes[2][1] - nodes[1][1])^2 + (nodes[2][2] - nodes[1][2])^2 + (nodes[2][3] - nodes[1][3])^2)
 _calc_t1(nodes) = (nodes[2][1] - nodes[1][1]) / _calc_tnorm(nodes)
@@ -837,9 +1062,14 @@ function _calc_tangent(nodes::Array{Arr1,1}) where{Arr1<:AbstractArray}
     return [_calc_t1(nodes), _calc_t2(nodes), _calc_t3(nodes)]
 end
 
-_calc_n1aux(nodes, panel) = (nodes[2, panel[2]]-nodes[2, panel[1]])*(nodes[3, panel[3]]-nodes[3, panel[1]]) - (nodes[3, panel[2]]-nodes[3, panel[1]])*(nodes[2, panel[3]]-nodes[2, panel[1]])
-_calc_n2aux(nodes, panel) = (nodes[3, panel[2]]-nodes[3, panel[1]])*(nodes[1, panel[3]]-nodes[1, panel[1]]) - (nodes[1, panel[2]]-nodes[1, panel[1]])*(nodes[3, panel[3]]-nodes[3, panel[1]])
-_calc_n3aux(nodes, panel) = (nodes[1, panel[2]]-nodes[1, panel[1]])*(nodes[2, panel[3]]-nodes[2, panel[1]]) - (nodes[2, panel[2]]-nodes[2, panel[1]])*(nodes[1, panel[3]]-nodes[1, panel[1]])
+_calc_n1aux(nodes::AbstractMatrix, panel) = (nodes[2, panel[2]]-nodes[2, panel[1]])*(nodes[3, panel[3]]-nodes[3, panel[1]]) - (nodes[3, panel[2]]-nodes[3, panel[1]])*(nodes[2, panel[3]]-nodes[2, panel[1]])
+_calc_n2aux(nodes::AbstractMatrix, panel) = (nodes[3, panel[2]]-nodes[3, panel[1]])*(nodes[1, panel[3]]-nodes[1, panel[1]]) - (nodes[1, panel[2]]-nodes[1, panel[1]])*(nodes[3, panel[3]]-nodes[3, panel[1]])
+_calc_n3aux(nodes::AbstractMatrix, panel) = (nodes[1, panel[2]]-nodes[1, panel[1]])*(nodes[2, panel[3]]-nodes[2, panel[1]]) - (nodes[2, panel[2]]-nodes[2, panel[1]])*(nodes[1, panel[3]]-nodes[1, panel[1]])
+
+# _calc_n1aux(nodes::AbstractVector, panel) = (nodes[panel[2]][2]-nodes[panel[1]][2])*(nodes[panel[3]][3]-nodes[panel[1]][3]) - (nodes[panel[2]][3]-nodes[panel[1]][3])*(nodes[panel[3]][2]-nodes[panel[1]][2])
+# _calc_n2aux(nodes::AbstractVector, panel) = (nodes[panel[2]][3]-nodes[panel[1]][3])*(nodes[panel[3]][1]-nodes[panel[1]][1]) - (nodes[panel[2]][1]-nodes[panel[1]][1])*(nodes[panel[3]][3]-nodes[panel[1]][3])
+# _calc_n3aux(nodes::AbstractVector, panel) = (nodes[panel[2]][1]-nodes[panel[1]][1])*(nodes[panel[3]][2]-nodes[panel[1]][2]) - (nodes[panel[2]][2]-nodes[panel[1]][2])*(nodes[panel[3]][1]-nodes[panel[1]][1])
+
 _calc_nnorm(nodes, panel) = sqrt(_calc_n1aux(nodes, panel)^2 + _calc_n2aux(nodes, panel)^2 + _calc_n3aux(nodes, panel)^2)
 _calc_n1(nodes, panel) = _calc_n1aux(nodes, panel) / _calc_nnorm(nodes, panel)
 _calc_n2(nodes, panel) = _calc_n2aux(nodes, panel) / _calc_nnorm(nodes, panel)

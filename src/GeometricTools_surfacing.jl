@@ -430,6 +430,7 @@ function surface_pathloft(sections::AbstractVector,
                             loop_dim=0,
                             # SECTION PARAMETERS
                             nperiodic=2,
+                            sort_rediscretization=false,   # Sort rediscretized sections to align starting points
                             redisc_optargs=[],
                             # OUTPUT PARAMETERS
                             verify_spline=true,
@@ -466,7 +467,7 @@ function surface_pathloft(sections::AbstractVector,
     # ----------------- DISCRETIZE SECTIONS ------------------------------------
 
     # Rediscretize each section unto a uniform grid of arc lengths wider than
-    # the physical arc length since later thye will be used to spline and
+    # the physical arc length since later they will be used to spline and
     # discretize again in 2D
     npoints_uniform = 3*maximum(size(points, size(points, 1)==2 ? 2 : 1) for (xpos, points) in sections)
 
@@ -474,16 +475,45 @@ function surface_pathloft(sections::AbstractVector,
     s_up = 1 + (nperiodic - 1)
 
     discretization = [(1.0, npoints_uniform, 1.0, true)]
+    pre_discretization = [(1.0, 10*npoints_uniform, 1.0, true)]
 
     outs = []
     for (xpos, points) in sections
-        new_points = rediscretize_concavecontour(points, discretization;
-                                                    s_lo=s_lo, s_up=s_up,
+
+        new_points = rediscretize_concavecontour(points,
+                                                    sort_rediscretization ? pre_discretization : discretization;
+                                                    s_lo=sort_rediscretization ? 0 : s_lo,
+                                                    s_up=sort_rediscretization ? 1 : s_up,
                                                     nperiodic=nperiodic,
                                                     verify_spline=verify_spline,
                                                     plot_title=plt.L"$x=$"*"$(xpos)",
-                                                    out=outs,
+                                                    out=sort_rediscretization ? nothing : outs,
                                                     redisc_optargs...)
+
+        # Sort rediscretized section to (hopefully) align starting points
+        if sort_rediscretization
+
+            # Force the rediscretized contour to be close if the original one was closed
+            if size(points, 1)==2
+                if points[1, 1]==points[1, end] && points[2, 1]==points[2, end]
+                    new_points[1, 1] = new_points[1, end]
+                    new_points[2, 1] = new_points[2, end]
+                end
+            else
+                if points[1, 1]==points[end, 1] && points[1, 2]==points[end, 2]
+                    new_points[1, 1] = new_points[end, 1]
+                    new_points[1, 2] = new_points[end, 2]
+                end
+            end
+
+            new_points = rediscretize_concavecontour(new_points, discretization;
+                                                        s_lo=s_lo, s_up=s_up,
+                                                        nperiodic=nperiodic,
+                                                        verify_spline=false,
+                                                        out=outs,
+                                                        redisc_optargs...)
+        end
+
     end
 
     # Fetch the x-position of each original section

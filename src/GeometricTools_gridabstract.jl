@@ -107,4 +107,43 @@ function get_cellcenter(self::GridTypes, args...)
   return C
 end
 
+"""
+    `identifyedge(nodes::AbstractMatrix, line::AbstractMatrix,
+tolerance::Number)`
+
+Calculates indices of the nodes in `nodes` that are sufficiently close to the
+line `line`, where `nodes` is an mxn matrix of n nodes, `line` is an mxl matrix
+of l points along the line, and `tolerance` is the maximum acceptable distance
+to any point along the line.
+
+Returns `indices = [(nodei, pointi), ...]` where `pointi` is the index of the
+corresponding point along the line that is the closest to the node of index
+`nodei`. The returned `indices` has been sorted in increasing value of `pointi`,
+such that if the line of points was originally sorted in any particular order,
+then return indices correspond to that exact edge.
+"""
+function identifyedge(nodes::AbstractMatrix, line::AbstractMatrix; tolerance::Number=1e2*eps())
+
+    points = eachcol(line)
+
+    # Calculate the index of the closed point in line to each node
+    indices = Tuple{Int, Int}[] # (index of node, index of line point)
+
+    for (nodei, node) in enumerate(eachcol(nodes))
+
+        # Find closest point
+        distance, pointi = findmin(X -> norm(node - X), points)
+
+        # Check if it is close enough
+        if distance <= tolerance
+            push!(indices, (nodei, pointi))
+        end
+    end
+
+    # Sort the indices by `pointi`
+    sort!(indices, by = x -> x[2] )
+
+    return indices
+end
+
 ##### END OF ABSTRACT GRID #####################################################
