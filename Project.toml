@@ -19,7 +19,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Meshes = "eacbb407-ea5a-433e-ab97-5258b1ca43fa"
 
 [compat]
-julia = "1.6"
+julia = "1"
 FLOWMath = "0.3"
 Dierckx = "0.5"
 PyCall = "1.94"
