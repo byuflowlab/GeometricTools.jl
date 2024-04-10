@@ -20,6 +20,7 @@ Meshes = "eacbb407-ea5a-433e-ab97-5258b1ca43fa"
 
 [compat]
 julia = "1"
+FLOWMath = "0.3"
 Dierckx = "0.5"
 PyCall = "1.94"
 QuadGK = "2"
@@ -28,3 +29,4 @@ Roots = "2"
 Statistics = "1"
 HDF5 = "0.16"
 PyPlot = "2"
+Meshes = "0.42"
