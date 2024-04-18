@@ -188,3 +188,55 @@ end
 function vertices2nodes(mesh::Meshes.SimpleMesh)
     return vertices2nodes(mesh.vertices, mesh.topology)
 end
+
+function lintransform!(mesh::Meshes.SimpleMesh,
+                        M::AbstractMatrix, T::AbstractVector;
+                        reset_fields=true)
+    invM = inv(M)
+
+    for (vi, vertex) in enumerate(mesh.vertices)
+
+        Vp = mesh.vertices[vi].coords
+        v1 = invM[1,1]*Vp[1] + invM[1,2]*Vp[2] + invM[1,3]*Vp[3] + T[1]
+        v2 = invM[2,1]*Vp[1] + invM[2,2]*Vp[2] + invM[2,3]*Vp[3] + T[2]
+        v3 = invM[3,1]*Vp[1] + invM[3,2]*Vp[2] + invM[3,3]*Vp[3] + T[3]
+
+        mesh.vertices[vi] = Meshes.Point(Meshes.Vec3(v1, v2, v3))
+
+    end
+end
+
+function transform!(mesh::Meshes.SimpleMesh, f; reset_fields=true)
+
+    for (vi, vertex) in enumerate(mesh.vertices)
+
+        Xold = mesh.vertices[vi].coords
+        Xnew = f(Xold)
+
+        mesh.vertices[vi] = Meshes.Point(Meshes.Vec3(Xnew...))
+
+    end
+end
+
+function transform2!(mesh::Meshes.SimpleMesh, f; reset_fields=true)
+
+    for (vi, vertex) in enumerate(mesh.vertices)
+
+        Xnew = f(vi)
+
+        mesh.vertices[vi] = Meshes.Point(Meshes.Vec3(Xnew...))
+
+    end
+end
+
+function transform3!(mesh::Meshes.SimpleMesh, f; reset_fields=true)
+
+    for (vi, vertex) in enumerate(mesh.vertices)
+
+        Xold = mesh.vertices[vi].coords
+        Xnew = f(Xold, vi)
+
+        mesh.vertices[vi] = Meshes.Point(Meshes.Vec3(Xnew...))
+
+    end
+end

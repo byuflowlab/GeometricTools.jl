@@ -262,6 +262,23 @@ function neighbor(grid::GridTriangleSurface{G}, ni, ci::Int, args...; optargs...
 
 end
 
+function lintransform!(self::GridTriangleSurface{G}, args...; optargs...) where {G <: Meshes.SimpleMesh}
+    lintransform!(self.orggrid, args...; optargs...)
+    vertices2nodes!(self.orggrid.vertices, self._nodes)
+end
+function transform!(self::GridTriangleSurface{G}, args...; optargs...) where {G <: Meshes.SimpleMesh}
+    transform!(self.orggrid, args...; optargs...)
+    vertices2nodes!(self.orggrid.vertices, self._nodes)
+end
+function transform2!(self::GridTriangleSurface{G}, args...; optargs...) where {G <: Meshes.SimpleMesh}
+    transform!(self.orggrid, args...; optargs...)
+    vertices2nodes!(self.orggrid.vertices, self._nodes)
+end
+function transform3!(self::GridTriangleSurface{G}, args...; optargs...) where {G <: Meshes.SimpleMesh}
+    transform!(self.orggrid, args...; optargs...)
+    vertices2nodes!(self.orggrid.vertices, self._nodes)
+end
+
 
 # ---------- Functions specialized for Grid ------------------------------------
 function get_node(self::GridTriangleSurface{G}, i::Int) where {G <: Grid}
@@ -623,6 +640,19 @@ function isedge(grid::GridTriangleSurface{G}, ci::Int;
     end
 
     return ret
+end
+
+function lintransform!(self::GridTriangleSurface{G}, args...; optargs...) where {G <: Grid}
+    lintransform!(self.orggrid, args...; optargs...)
+end
+function transform!(self::GridTriangleSurface{G}, args...; optargs...) where {G <: Grid}
+    transform!(self.orggrid, args...; optargs...)
+end
+function transform2!(self::GridTriangleSurface{G}, args...; optargs...) where {G <: Grid}
+    transform!(self.orggrid, args...; optargs...)
+end
+function transform3!(self::GridTriangleSurface{G}, args...; optargs...) where {G <: Grid}
+    transform!(self.orggrid, args...; optargs...)
 end
 
 # ---------- Common functions --------------------------------------------------
@@ -996,20 +1026,6 @@ function project_3d_2d!(t2, t3, ex, ey, p1, p2, p3)
     return
 end
 
-
-function lintransform!(self::GridTriangleSurface, args...; optargs...)
-  lintransform!(self.orggrid, args...; optargs...)
-end
-
-function transform!(self::GridTriangleSurface, args...; optargs...)
-  transform!(self.orggrid, args...; optargs...)
-end
-function transform2!(self::GridTriangleSurface, args...; optargs...)
-  transform!(self.orggrid, args...; optargs...)
-end
-function transform3!(self::GridTriangleSurface, args...; optargs...)
-  transform!(self.orggrid, args...; optargs...)
-end
 
 ##### INTERNAL FUNCTIONS  ######################################################
 function _checkGridTriangleSurface(orggrid::Grid, dimsplit::Int64)
