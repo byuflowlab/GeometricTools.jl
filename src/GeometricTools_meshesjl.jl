@@ -240,3 +240,73 @@ function transform3!(mesh::Meshes.SimpleMesh, f; reset_fields=true)
 
     end
 end
+
+"""
+    `mirror(mesh::Meshes.SimpleMesh, coordinate::Int)`
+
+Mirror a mesh about a given coordinate and return a new mesh concatenating
+the original mesh with the mirrored mesh.
+"""
+mirror(mesh::Meshes.SimpleMesh, args...; optargs...) = mirror(mesh.vertices, mesh.topology, args...; optargs...)
+
+mirror(vertices::AbstractVector{<:Meshes.Primitive},
+        topology::Meshes.SimpleTopology,
+        args...; optargs...) = mirror(vertices, topology.connec, args...; optargs...)
+
+function mirror(vertices::AbstractVector{<:Meshes.Primitive},
+                connectivity::AbstractVector{<:Meshes.Connectivity},
+                coordinate::Int; tol=1e1*eps())
+
+    nvertices = length(vertices)
+
+    if !isnothing(tol)
+
+        # Identify vertices at the symmetry plane
+        symmetryplane = [ i for (i, v) in enumerate(vertices) if abs(v.coords[coordinate]) <= tol ]
+
+        # Remove floating point error from vertices that are at the symmetry plane
+        for i in symmetryplane
+            coords = ( j==coordinate ? zero(coord) : coord for (j, coord) in enumerate(vertices[i].coords) )
+            vertices[i] = Meshes.Point(coords...)
+        end
+
+    else
+
+        symmetryplane = Int[]
+
+    end
+
+    # Mirror vertices about the given coordinate
+    mirrorvertices = [ Meshes.Point( ( (-1)^(j==coordinate)*coord
+                            for (j, coord) in enumerate(v.coords) )... )
+                            for v in vertices ]
+
+    # Define mirrored cells
+    mirrorconnectivity = [ Meshes.Connectivity{Meshes.Triangle, 3}(
+                                Tuple(j in symmetryplane ? j : j + nvertices for j in reverse(conn.indices))
+                            )
+                            for conn in connectivity ]
+
+    # Concatenate original and mirrored meshes
+    vertices = vcat(vertices, mirrorvertices)
+    connectivity = vcat(connectivity, mirrorconnectivity)
+    topology = Meshes.SimpleTopology(connectivity)
+
+    newmesh = Meshes.SimpleMesh(vertices, topology)
+
+    return newmesh
+end
+
+"""
+    `isclosed(mesh::Meshes.SimpleMesh)`
+
+Returns `true` if `mesh` has no open edges.
+"""
+isclosed(mesh::Meshes.SimpleMesh) = isclosed(mesh.topology)
+
+function isclosed(topology::Meshes.SimpleTopology)
+    hetopology = Meshes.HalfEdgeTopology(topology.connec)
+    return isclosed(hetopology)
+end
+
+isclosed(topology::Meshes.HalfEdgeTopology) = all(!isnothing(he.elem) for he in topology.halfedges)
