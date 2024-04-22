@@ -247,25 +247,43 @@ end
 Mirror a mesh about a given coordinate and return a new mesh concatenating
 the original mesh with the mirrored mesh.
 """
-mirror(mesh::Meshes.SimpleMesh, args...) = mirror(mesh.vertices, mesh.topology, args...)
+mirror(mesh::Meshes.SimpleMesh, args...; optargs...) = mirror(mesh.vertices, mesh.topology, args...; optargs...)
 
 mirror(vertices::AbstractVector{<:Meshes.Primitive},
-        topology::Meshes.SimpleTopology, args...) = mirror(vertices, topology.connec, args...)
+        topology::Meshes.SimpleTopology,
+        args...; optargs...) = mirror(vertices, topology.connec, args...; optargs...)
 
 function mirror(vertices::AbstractVector{<:Meshes.Primitive},
                 connectivity::AbstractVector{<:Meshes.Connectivity},
-                coordinate::Int)
+                coordinate::Int; tol=1e1*eps())
 
     nvertices = length(vertices)
 
-    # Mirror the vertices about the given coordinate
+    if !isnothing(tol)
+
+        # Identify vertices at the symmetry plane
+        symmetryplane = [ i for (i, v) in enumerate(vertices) if abs(v.coords[coordinate]) <= tol ]
+
+        # Remove floating point error from vertices that are at the symmetry plane
+        for i in symmetryplane
+            coords = ( j==coordinate ? zero(coord) : coord for (j, coord) in enumerate(vertices[i].coords) )
+            vertices[i] = Meshes.Point(coords...)
+        end
+
+    else
+
+        symmetryplane = Int[]
+
+    end
+
+    # Mirror vertices about the given coordinate
     mirrorvertices = [ Meshes.Point( ( (-1)^(j==coordinate)*coord
                             for (j, coord) in enumerate(v.coords) )... )
                             for v in vertices ]
 
-    # Define the mirrored cells
+    # Define mirrored cells
     mirrorconnectivity = [ Meshes.Connectivity{Meshes.Triangle, 3}(
-                                Tuple(j + nvertices for j in reverse(conn.indices))
+                                Tuple(j in symmetryplane ? j : j + nvertices for j in reverse(conn.indices))
                             )
                             for conn in connectivity ]
 
