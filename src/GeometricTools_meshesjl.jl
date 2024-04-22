@@ -278,3 +278,17 @@ function mirror(vertices::AbstractVector{<:Meshes.Primitive},
 
     return newmesh
 end
+
+"""
+    `isclosed(mesh::Meshes.SimpleMesh)`
+
+Returns `true` if `mesh` has no open edges.
+"""
+isclosed(mesh::Meshes.SimpleMesh) = isclosed(mesh.topology)
+
+function isclosed(topology::Meshes.SimpleTopology)
+    hetopology = Meshes.HalfEdgeTopology(topology.connec)
+    return isclosed(hetopology)
+end
+
+isclosed(topology::Meshes.HalfEdgeTopology) = all(!isnothing(he.elem) for he in topology.halfedges)
