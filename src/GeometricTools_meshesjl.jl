@@ -240,3 +240,41 @@ function transform3!(mesh::Meshes.SimpleMesh, f; reset_fields=true)
 
     end
 end
+
+"""
+    `mirror(mesh::Meshes.SimpleMesh, coordinate::Int)`
+
+Mirror a mesh about a given coordinate and return a new mesh concatenating
+the original mesh with the mirrored mesh.
+"""
+mirror(mesh::Meshes.SimpleMesh, args...) = mirror(mesh.vertices, mesh.topology, args...)
+
+mirror(vertices::AbstractVector{<:Meshes.Primitive},
+        topology::Meshes.SimpleTopology, args...) = mirror(vertices, topology.connec, args...)
+
+function mirror(vertices::AbstractVector{<:Meshes.Primitive},
+                connectivity::AbstractVector{<:Meshes.Connectivity},
+                coordinate::Int)
+
+    nvertices = length(vertices)
+
+    # Mirror the vertices about the given coordinate
+    mirrorvertices = [ Meshes.Point( ( (-1)^(j==coordinate)*coord
+                            for (j, coord) in enumerate(v.coords) )... )
+                            for v in vertices ]
+
+    # Define the mirrored cells
+    mirrorconnectivity = [ Meshes.Connectivity{Meshes.Triangle, 3}(
+                                Tuple(j + nvertices for j in reverse(conn.indices))
+                            )
+                            for conn in connectivity ]
+
+    # Concatenate original and mirrored meshes
+    vertices = vcat(vertices, mirrorvertices)
+    connectivity = vcat(connectivity, mirrorconnectivity)
+    topology = Meshes.SimpleTopology(connectivity)
+
+    newmesh = Meshes.SimpleMesh(vertices, topology)
+
+    return newmesh
+end
