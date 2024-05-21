@@ -436,6 +436,8 @@ function surface_pathloft(sections::AbstractVector,
                             verify_spline=true,
                             save_path=nothing, paraview=true,
                             output_path_normals=false,
+                            output_path_Xs=false,
+                            output_path_xpos=false,
                             file_pref="pathloft"
                             ) where {T<:Tuple{<:AbstractVector, <:AbstractVector, <:Number}}
 
@@ -751,6 +753,18 @@ function surface_pathloft(sections::AbstractVector,
     if output_path_normals
         pathnormals = [new_path[CartesianIndices(grid._ndivsnodes)[i][1]][2] for i in 1:grid.nnodes]
         add_field(grid, "pathnormal", "vector", pathnormals, "node")
+    end
+
+    # Store pointer to path from each point
+    if output_path_Xs
+        pathXpointers = [new_path[CartesianIndices(grid._ndivsnodes)[i][1]][1] - get_node(grid, i) for i in 1:grid.nnodes]
+        add_field(grid, "pathX", "vector", pathXpointers, "node")
+    end
+
+    # Store non-dimensional position along path for each point
+    if output_path_xpos
+        pathxpos = [xpositions[CartesianIndices(grid._ndivsnodes)[i][1]] for i in 1:grid.nnodes]
+        add_field(grid, "pathposition", "scalar", pathxpos, "node")
     end
 
     # Output VTK of the loft
