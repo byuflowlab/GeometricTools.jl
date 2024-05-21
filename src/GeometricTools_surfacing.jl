@@ -435,6 +435,7 @@ function surface_pathloft(sections::AbstractVector,
                             # OUTPUT PARAMETERS
                             verify_spline=true,
                             save_path=nothing, paraview=true,
+                            output_path_normals=false,
                             file_pref="pathloft"
                             ) where {T<:Tuple{<:AbstractVector, <:AbstractVector, <:Number}}
 
@@ -745,6 +746,12 @@ function surface_pathloft(sections::AbstractVector,
 
     # Transforms the quasi-two dimensional parametric grid into the wing surface
     transform2!(grid, my_space_transform)
+
+    # Store the path normal used for each point
+    if output_path_normals
+        pathnormals = [new_path[CartesianIndices(grid._ndivsnodes)[i][1]][2] for i in 1:grid.nnodes]
+        add_field(grid, "pathnormal", "vector", pathnormals, "node")
+    end
 
     # Output VTK of the loft
     if !isnothing(save_path)
