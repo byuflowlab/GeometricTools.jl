@@ -640,3 +640,53 @@ function conical3D(X; b=2, c=1)
             r/c*sqrt( (mu^2-c^2)*(nu^2-c^2) / (c^2-b^2) )]
 end
 ##### END OF SPACE TRANSFORMATIONS #############################################
+
+
+
+
+################################################################################
+# SECTIONAL PROPERTIES
+################################################################################
+"""
+Calculate the centroid of a 2D polygon given by the closed-contour
+of vertices `points` (`points[:, 1]` must be the same than `points[:, end]`).
+
+See https://en.wikipedia.org/wiki/Centroid#Of_a_polygon
+"""
+function centroid(points)
+
+    @assert size(points, 1) == 2 ""*
+        "Expected 2D contour; it got $(size(points, 1)) dimensions instead"
+
+    @assert prod(points[:, 1] .== points[:, end]) ""*
+        "Received an open contour! Make sure that `points[:, 1]==points[:, end]`"*
+    " is satisfied; it got $(points[:, 1]) and $(points[:, end]) instead"
+
+    npoints = size(points, 2)
+
+    # Calculate area through shoelace formula while building the centroid
+    A = 0
+    Cx = 0
+    Cy = 0
+
+    for i in 1:npoints-1
+
+        xi = points[1, i]
+        yi = points[2, i]
+        xip1 = points[1, i+1]
+        yip1 = points[2, i+1]
+
+        xiyip1mxip1yi = (xi*yip1 - xip1*yi)
+
+        A += 0.5 * xiyip1mxip1yi
+        Cx += (xi + xip1) * xiyip1mxip1yi
+        Cy += (yi + yip1) * xiyip1mxip1yi
+
+    end
+
+    Cx /= 6*A
+    Cy /= 6*A
+
+    return Cx, Cy
+end
+##### END OF SECTIONAL PROPERTIES ##############################################
