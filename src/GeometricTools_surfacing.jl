@@ -515,6 +515,8 @@ function surface_pathloft(sections::AbstractVector,
                                                         verify_spline=false,
                                                         out=outs,
                                                         redisc_optargs...)
+
+
         end
 
     end
@@ -712,7 +714,7 @@ function surface_pathloft(sections::AbstractVector,
     nodes = grid.nodes
 
     # Rotation matrix of each normal
-    angles = [ ( 0, 180/pi*acos(n[3]) - 90, 180/pi*sign(n[2])*acos( n[1]/sqrt(n[1]^2+n[2]^2) ) ) for (X, n, twist) in new_path]
+    angles = [ ( 0, 180/pi*acos(n[3]) - 90, 180/pi*sign(n[2] + 3*eps())*acos( n[1]/sqrt(n[1]^2+n[2]^2) ) ) for (X, n, twist) in new_path]
     rotationmatrix = [rotation_matrix2( angle... ) for angle in angles]
 
     # println([round.(n; digits=2) for (X, n, twist) in new_path])
