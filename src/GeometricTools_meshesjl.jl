@@ -276,16 +276,32 @@ function mirror(vertices::AbstractVector{<:Meshes.Primitive},
 
     end
 
-    # Mirror vertices about the given coordinate
+    # Mirror vertices about the given coordinate, without adding the vertices at
+    # the symmetry plane to avoid duplicates
     mirrorvertices = [ Meshes.Point( ( (-1)^(j==coordinate)*coord
                             for (j, coord) in enumerate(v.coords) )... )
-                            for v in vertices ]
+                            for (i, v) in enumerate(vertices) if !(i in symmetryplane)]
 
     # Define mirrored cells
-    mirrorconnectivity = [ Meshes.Connectivity{Meshes.Triangle, 3}(
-                                Tuple(j in symmetryplane ? j : j + nvertices for j in reverse(conn.indices))
-                            )
+    mirrorconnectivity = [  [j in symmetryplane ? j : j + nvertices for j in reverse(conn.indices)]
                             for conn in connectivity ]
+
+    # Redefine cell connectivity accounting for the fact that we didn't
+    # duplicate the nodes at the symmetry plane
+    for sni in reverse(symmetryplane)
+        for conn in mirrorconnectivity
+            for (i, ni) in enumerate(conn)
+
+                if ni > sni+nvertices
+                    conn[i] -= 1
+                end
+
+            end
+        end
+    end
+
+    # Convert connectivity to Meshes connectivity
+    mirrorconnectivity = [ Meshes.Connectivity{Meshes.Triangle, 3}(tuple(conn...)) for conn in mirrorconnectivity ]
 
     # Concatenate original and mirrored meshes
     vertices = vcat(vertices, mirrorvertices)
