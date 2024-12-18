@@ -689,4 +689,35 @@ function centroid(points)
 
     return Cx, Cy
 end
+
+function centroid3D(points::AbstractMatrix{R}) where {R}
+
+    @assert size(points, 1) == 3 ""*
+        "Expected 3D contour; it got $(size(points, 1)) dimensions instead"
+
+    npoints = size(points, 2)
+    nsegments = npoints-1
+
+    # Calculate midpoint of each segment
+    midpoints = zeros(R, 3, nsegments)
+    midpoints .= view(points, :, 1:npoints-1)
+    midpoints .+= view(points, :, 2:npoints)
+    midpoints /= 2
+
+    # Calculate length of each segment
+    lengths = [norm(view(points, :, i+1) - view(points, :, i)) for i in 1:nsegments]
+
+    centroid = zeros(R, 3)
+    sumweights = zero(R)
+
+    # Calculate centroid as the weighted average of midpoints
+    for (midpoint, length) in zip(eachcol(midpoints), lengths)
+        centroid += length*midpoint
+        sumweights += length
+    end
+
+    centroid /= sumweights
+
+    return centroid
+end
 ##### END OF SECTIONAL PROPERTIES ##############################################
