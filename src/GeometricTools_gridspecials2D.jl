@@ -4,7 +4,7 @@
 # AUTHORSHIP
   * Author    : Eduardo J Alvarez
   * Email     : Edo.AlvarezR@gmail.com
-  * Created   : Jan 2024
+  * Created   : Jan 2025
   * License   : MIT License
 =###############################################################################
 
@@ -61,9 +61,21 @@ end
 
 get_node(self::GridSurface2D, args...; optargs...) = get_node(self.orggrid, args...; optargs...)
 get_cell(self::GridSurface2D, args...; optargs...) = get_cell(self.orggrid, args...; optargs...)
-get_cell_t!(self::GridSurface2D, args...; optargs...) = get_cell_t!(self.orggrid, args...; optargs...)
-generate_getcellt_args!(self::GridSurface2D, args...; optargs...) = get_cell(self.orggrid, args...; optargs...)
+get_cell_t!(out, self::GridSurface2D, args...; optargs...) = get_cell_t!(out, self.orggrid, args...; optargs...)
 lintransform!(self::GridSurface2D, args...; optargs...) = lintransform!(self.orggrid, args...; optargs...)
+
+function generate_getcellt_args!(self::GridSurface2D)
+
+        # Pre-allocate memory for panel calculation
+        lin = LinearIndices(self._ndivsnodes)
+        ndivscells = vcat(self._ndivscells...)
+        cin = CartesianIndices(Tuple(collect( 1:(d != 0 ? d : 1) for d in self._ndivscells)))
+        coor = zeros(Int, 2)
+        out = zeros(Int, 2)
+
+        return out, coor, lin, ndivscells, cin
+end
+
 
 get_area(self::GridSurface2D, i) = get_area2D(self._nodes, get_cell(self, i))
 function _get_area2D(nodes, panel)
@@ -72,16 +84,13 @@ function _get_area2D(nodes, panel)
 end
 
 ##### INTERNAL FUNCTIONS  ######################################################
-_calc_t1_2D(args...) = _calc_t1(args...) / _calc_tnorm_2D(args...)
-_calc_t2_2D(args...) = _calc_t2(args...) / _calc_tnorm_2D(args...)
-_calc_tnorm_2D(nodes::AbstractMatrix, panel) = sqrt(
-                                                        (nodes[1, panel[2]] - nodes[1, panel[1]])^2
-                                                        + (nodes[2, panel[2]] - nodes[2, panel[1]])^2
-                                                    )
+_calc_t1_2D(nodes::AbstractMatrix, panel) = (nodes[1, panel[2]] - nodes[1, panel[1]]) / _calc_tnorm_2D(nodes, panel)
+_calc_t2_2D(nodes::AbstractMatrix, panel) = (nodes[2, panel[2]] - nodes[2, panel[1]]) / _calc_tnorm_2D(nodes, panel)
+_calc_tnorm_2D(nodes::AbstractMatrix, panel) = sqrt( (nodes[1, panel[2]] - nodes[1, panel[1]])^2 + (nodes[2, panel[2]] - nodes[2, panel[1]])^2 )
 
 _calc_n1aux_2D(nodes::AbstractMatrix, panel) = -(nodes[2, panel[2]] - nodes[2, panel[1]])
 _calc_n2aux_2D(nodes::AbstractMatrix, panel) = nodes[1, panel[2]] - nodes[1, panel[1]]
-_calc_nnorm_2D(args...) = sqrt(_calc_n1aux_2D(args...)^2 + _calc_n2aux_2D(args...)^2)
+_calc_nnorm_2D(args...) = sqrt( _calc_n1aux_2D(args...)^2 + _calc_n2aux_2D(args...)^2 )
 _calc_n1_2D(args...) = _calc_n1aux_2D(args...) / _calc_nnorm_2D(args...)
 _calc_n2_2D(args...) = _calc_n2aux_2D(args...) / _calc_nnorm_2D(args...)
 

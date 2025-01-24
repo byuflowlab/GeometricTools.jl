@@ -214,10 +214,15 @@ function get_cell_t!(out, self::Grid, coor_in, lin, ndivscells)
       c2::Int = length(coor_in) >= 2 ? coor_in[2]==0 && ndivscells[2]==0 ? 1 : coor_in[2] : -1
       c3::Int = length(coor_in) >= 3 ? coor_in[3]==0 && ndivscells[3]==0 ? 1 : coor_in[3] : -1
 
+      # Catch case of 2D quasi dimensional space
+      if c3==-1 && length(coor_in)<3 && length(ndivscells)<3
+          c3 -= c3 - 1
+      end
+
       # ERROR CASE: Coordinates out of bounds
       if (c1 > ndivscells[1] && !(c1==1 && ndivscells[1]==0)) ||
          (c2 > ndivscells[2] && !(c2==1 && ndivscells[2]==0)) ||
-         (c3 > ndivscells[3] && !(c3==1 && ndivscells[3]==0)) ||
+         (length(coor_in)>=3 && c3 > ndivscells[3] && !(c3==1 && ndivscells[3]==0)) ||
          c1<=0 || c2<=0 || c3<=0
             error("Requested cell $(coor_in) but max cell is $(ndivscells). $((c1, c2, c3))")
       end
@@ -308,7 +313,7 @@ function get_cell_t!(out, self::Grid, coor_in, lin, ndivscells)
         return out
 
       else
-        error("Definition of $(self.ndims)-dimensional cells not implemented yet!")
+        error("Definition of $(self.dims)-dimensional cells not implemented yet!")
       end
 
   # end
