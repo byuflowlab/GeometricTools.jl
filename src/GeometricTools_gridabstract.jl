@@ -80,17 +80,17 @@
 abstract type AbstractGrid end
 
 # Implementations
-for header_name in ["grid", "gridmulti", "gridspecials"]
+for header_name in ["grid", "gridmulti", "gridspecials", "gridspecials2D"]
   include("GeometricTools_"*header_name*".jl")
 end
 
 # Implementations of AbstractGrid
-GridTypes = Union{Grid, MultiGrid, GridTriangleSurface}
+const GridTypes = Union{Grid, MultiGrid, GridTriangleSurface, GridSurface2D}
 
 #= Extension of the Grid type
 (extensions are any type that have properties `_ndivsnodes` and `_ndivsnodes`)
 =#
-GridExtentions = Union{Grid, GridTriangleSurface}
+const GridExtentions = Union{Grid, GridTriangleSurface, GridSurface2D}
 
 # Extensions
 for header_name in ["gridextensions"]
