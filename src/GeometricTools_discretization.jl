@@ -156,8 +156,12 @@ function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
         ax.spines["top"].set_visible(false)
 
         ax.plot(ys, zs, ".-k", label="Raw", alpha=0.8, markersize=8)
+        ax.plot(ys[1:1], zs[1:1], "*k", markersize=16)
         ax.plot(new_ys, new_zs, "-r", label="Spline",
                                 alpha=1.0, markersize=4, linewidth=1)
+        ax.plot(new_ys[1:1], new_zs[1:1], "*r")
+        auxind = ceil(Int, 0.25*length(new_ys))
+        ax.plot(new_ys[auxind:auxind], new_zs[auxind:auxind], "sr")
 
         ax.legend(loc="best", frameon=true, fontsize=8)
     end

@@ -20,10 +20,10 @@ function cross!(out, A, B)
     out[1] = cross1(A, B)
     out[2] = cross2(A, B)
     out[3] = cross3(A, B)
+    return out
 end
 
-function cross(A, B)
-    out = zero(A)
-    cross!(out, A, B)
-    return out
+function cross(A::AbstractVector{T1}, B::AbstractVector{T2}) where {T1, T2}
+    out = zeros(promote_type(T1, T2), 3)
+    return cross!(out, A, B)
 end

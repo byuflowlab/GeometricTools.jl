@@ -435,6 +435,9 @@ function surface_pathloft(sections::AbstractVector,
                             # OUTPUT PARAMETERS
                             verify_spline=true,
                             save_path=nothing, paraview=true,
+                            output_path_normals=false,
+                            output_path_Xs=false,
+                            output_path_xpos=false,
                             file_pref="pathloft"
                             ) where {T<:Tuple{<:AbstractVector, <:AbstractVector, <:Number}}
 
@@ -512,6 +515,8 @@ function surface_pathloft(sections::AbstractVector,
                                                         verify_spline=false,
                                                         out=outs,
                                                         redisc_optargs...)
+
+
         end
 
     end
@@ -709,7 +714,7 @@ function surface_pathloft(sections::AbstractVector,
     nodes = grid.nodes
 
     # Rotation matrix of each normal
-    angles = [ ( 0, 180/pi*acos(n[3]) - 90, 180/pi*sign(n[2])*acos( n[1]/sqrt(n[1]^2+n[2]^2) ) ) for (X, n, twist) in new_path]
+    angles = [ ( 0, 180/pi*acos(n[3]) - 90, 180/pi*sign(n[2] + 3*eps())*acos( n[1]/sqrt(n[1]^2+n[2]^2) ) ) for (X, n, twist) in new_path]
     rotationmatrix = [rotation_matrix2( angle... ) for angle in angles]
 
     # println([round.(n; digits=2) for (X, n, twist) in new_path])
@@ -745,6 +750,24 @@ function surface_pathloft(sections::AbstractVector,
 
     # Transforms the quasi-two dimensional parametric grid into the wing surface
     transform2!(grid, my_space_transform)
+
+    # Store the path normal used for each point
+    if output_path_normals
+        pathnormals = [new_path[CartesianIndices(grid._ndivsnodes)[i][1]][2] for i in 1:grid.nnodes]
+        add_field(grid, "pathnormal", "vector", pathnormals, "node")
+    end
+
+    # Store pointer to path from each point
+    if output_path_Xs
+        pathXpointers = [new_path[CartesianIndices(grid._ndivsnodes)[i][1]][1] - get_node(grid, i) for i in 1:grid.nnodes]
+        add_field(grid, "pathX", "vector", pathXpointers, "node")
+    end
+
+    # Store non-dimensional position along path for each point
+    if output_path_xpos
+        pathxpos = [xpositions[CartesianIndices(grid._ndivsnodes)[i][1]] for i in 1:grid.nnodes]
+        add_field(grid, "pathposition", "scalar", pathxpos, "node")
+    end
 
     # Output VTK of the loft
     if !isnothing(save_path)

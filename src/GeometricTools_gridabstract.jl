@@ -146,4 +146,27 @@ function identifyedge(nodes::AbstractMatrix, line::AbstractMatrix; tolerance::Nu
     return indices
 end
 
+
+function identifyedge(nodes::AbstractMatrix, criterion::Function; tolerance::Number=1e2*eps())
+
+    # Calculate the index of the closed point in line to each node
+    indices = Tuple{Int, Float64}[] # (index of node, index of line point)
+
+    for (nodei, node) in enumerate(eachcol(nodes))
+
+        # Calculate distance criterion
+        distance, sortval = criterion(node)
+
+        # Check if it is close enough
+        if distance <= tolerance
+            push!(indices, (nodei, sortval))
+        end
+    end
+
+    # Sort the indices by `sortval`
+    sort!(indices, by = x -> x[2] )
+
+    return indices
+end
+
 ##### END OF ABSTRACT GRID #####################################################
