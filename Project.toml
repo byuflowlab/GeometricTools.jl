@@ -21,7 +21,7 @@ Meshes = "eacbb407-ea5a-433e-ab97-5258b1ca43fa"
 
 [compat]
 julia = "1"
-FLOWMath = "0.3 - 1.0"
+FLOWMath = "0.3, 0.4, 1.0"
 Dierckx = "0.5"
 OpenSSL_jll = "3"
 PyCall = "1.94"
