@@ -460,6 +460,26 @@ function axis_rotation(r::Array{T, 1}, angle_deg::Real) where{T<:Real}
   return M
 end
 
+function axis_rotation!(M::AbstractMatrix, r::AbstractVector, angle_deg::Number)
+  
+  ux, uy, uz = r
+  C = cos(angle_deg*pi/180)
+  S = sin(angle_deg*pi/180)
+  t = 1 - C
+
+  M[1, 1] = t*ux^2+C
+  M[1, 2] = t*ux*uy-S*uz
+  M[1, 3] = t*ux*uz+S*uy
+  M[2, 1] = t*ux*uy+S*uz
+  M[2, 2] = t*uy^2+C
+  M[2, 3] = t*uy*uz-S*ux
+  M[3, 1] = t*ux*uz-S*uy
+  M[3, 2] = t*uy*uz+S*ux
+  M[3, 3] = t*uz^2+C
+
+  return M
+end
+
 """
   `rotation_matrix(yaw::Real, pitch::Real, roll::Real)`
 
