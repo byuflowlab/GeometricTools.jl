@@ -17,7 +17,6 @@ using Printf
 using LinearAlgebra
 using Requires
 using Statistics
-import PyCall
 import Dierckx
 import FLOWMath
 import Roots
@@ -26,11 +25,10 @@ import HDF5
 
 import Meshes
 
-import PyPlot
-import PyPlot: @L_str
-const plt = PyPlot
-# import PyCall
-# @PyCall.pyimport matplotlib.patches as patch
+import LaTeXStrings: @L_str
+
+import Requires: @require
+
 
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
                                                 # Type of multidiscretize input
@@ -40,9 +38,35 @@ for header_name in ["vtk", "geometry", "misc", "gridabstract", "airfoil",
                     "discretization",
                     "surfacing", "plot3d", "vtk_shapes", "conics",
                     "statistics", "linearalgebra", "xdmf",
-                    "DEPRECATED", "plotting",
+                    "DEPRECATED", 
                     "meshesjl"]
     include("GeometricTools_"*header_name*".jl")
+end
+
+
+
+function __init__()
+
+    # Conditionally load monitors if PyPlot is available
+    try
+        @require PyPlot="d330b81b-6aea-500a-939a-2ce795aea3ee" begin
+
+            import .PyPlot
+            const plt = PyPlot
+
+          # import PyCall
+          # @PyCall.pyimport matplotlib.patches as patch
+
+            for header_name in ["plotting"]
+              include("GeometricTools_"*header_name*".jl")
+            end
+
+        end
+
+    catch e
+        @warn "PyPlot is not available; PyPlot (alias `plt`) will not be loaded"
+    end
+
 end
 
 end # END OF MODULE

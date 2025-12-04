@@ -489,7 +489,7 @@ function surface_pathloft(sections::AbstractVector,
                                                     s_up=sort_rediscretization ? 1 : s_up,
                                                     nperiodic=nperiodic,
                                                     verify_spline=verify_spline,
-                                                    plot_title=plt.L"$x=$"*"$(xpos)",
+                                                    plot_title=L"$x=$"*"$(xpos)",
                                                     out=sort_rediscretization ? nothing : outs,
                                                     redisc_optargs...)
 
