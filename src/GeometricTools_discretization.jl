@@ -26,6 +26,7 @@ function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
                                         discretization::multidisctype;
                                         closed_contour::Bool=false,
                                         nperiodic::Int=1,
+                                        start_i=nothing,
                                         s_lo=0.0, s_up=1.0,
                                         out=nothing,
                                         verify_spline::Bool=true,
@@ -58,6 +59,26 @@ function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
     # Calculate cylindrical coordinates (theta in range -+180deg)
     rhos = @. sqrt(ys^2 + zs^2)                 # radius
     thetas = @. atan(ys, zs)                    # (rad) azimuthal angle
+
+    # Shift angles around to define entry at `start_i` to be -180deg
+    theta_offset = 0.0
+
+    if !isnothing(start_i)
+
+        # Angular offset
+        theta_offset = thetas[start_i]
+
+        # Center all angles about `start_i`
+        thetas .-= theta_offset
+
+        # Redifine angles to go from 0 to 360 deg
+        for i in eachindex(thetas)
+            thetas[i] = (thetas[i] + 2*pi) % (2*pi)
+        end
+
+        # Shift them to go from -180 to +180 deg
+        thetas .-= pi
+    end
 
     # # Check that the section is monotonic and injective in theta
     # for i in 2:length(thetas)
@@ -125,10 +146,16 @@ function rediscretize_concavecontour(ys::AbstractVector, zs::AbstractVector,
     new_rhos = FLOWMath.akima(arclengths, rhos, new_arclengths)
     new_thetas = FLOWMath.akima(arclengths, thetas, new_arclengths)
 
+    # Undo angular offset
+    if !isnothing(start_i)
+        thetas .+= (theta_offset + 2*pi) % (2*pi) - pi
+        new_thetas .+= (theta_offset + 2*pi) % (2*pi) - pi
+    end
+
     # Output intermediate calculations
     if !isnothing(out)
         push!(out, (; arclengths, rhos, thetas,
-                        new_arclengths, new_rhos, new_thetas))
+                        new_arclengths, new_rhos, new_thetas, theta_offset))
     end
 
     # Error case: Akima spline returned a NaN point
