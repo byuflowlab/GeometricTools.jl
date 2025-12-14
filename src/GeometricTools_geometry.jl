@@ -163,10 +163,12 @@ end
   splitting up a closed contour into two sections that are injective in x, and
   that can be received by `parameterize()`.
 """
-function splitcontour(x,y)
+function splitcontour(x, y; start_TE=nothing)
 
   # Flag indicating whether the contour start at the trailing or leading edge
-  start_TE = x[1]==maximum(x)
+  if isnothing(start_TE)
+    start_TE = x[1]==maximum(x)
+  end
 
   # Find the opposite end of the contour
   end_i = -1
