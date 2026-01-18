@@ -595,6 +595,7 @@ function surface_pathloft(sections::AbstractVector,
     if verify_spline
         fig = plt.figure("Path discretization", figsize=[7*2, 5]*7/9)
         axs = fig.subplots(1, 2)
+        axs = pyconvert(Array, axs)
 
         fig2 = plt.figure("Path discretization - scalar", figsize=[7, 5]*1/2)
         ax2 = fig2.gca()

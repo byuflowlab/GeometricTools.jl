@@ -22,7 +22,7 @@ import HDF5
 import Meshes
 
 import PythonPlot as plt
-import PythonPlot: @L_str
+import PythonPlot: @L_str, pyconvert
 
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
                                                 # Type of multidiscretize input
