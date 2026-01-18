@@ -438,7 +438,7 @@ function get_cell_t(self::Grid, coor_in, nodei::Int, lin, ndivscells)
 end
 
 
-"Plots the grid on PyPlot"
+"Plots the grid"
 function plot(grid::Grid; fig_name="gridplot", fontsize=15,
                           xlims=nothing, ylims=nothing, zlims=nothing,
                           labelcells=true, labelnodes=false, labelndivs=true,
@@ -449,7 +449,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
     error("There is no plotting method for $(grid.dims)-dimensional grids")
   end
 
-  fig = PyPlot.figure(fig_name)
+  fig = plt.figure(fig_name)
   ax = nothing  # To extend scope of ax outside try-catch block
   try
       ax = fig.gca(projection="3d")
@@ -468,7 +468,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
 
     if labelcells
       center = vcat(get_cellcenter(grid, i), zeros(Float64, 3-grid.dims))
-      PyPlot.text3D(center[1], center[2], center[3], "$i", fontsize=fontsize, color="g")
+      plt.text3D(center[1], center[2], center[3], "$i", fontsize=fontsize, color="g")
     end
 
 
@@ -508,7 +508,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
         end
         p2 = get_node(grid, coor)
         center = vcat((p1+p2)/2, zeros(Float64, 3-grid.dims))
-        PyPlot.text3D(center[1], center[2], center[3], "$j", fontsize=fontsize,
+        plt.text3D(center[1], center[2], center[3], "$j", fontsize=fontsize,
                                                                       color="r")
       end
     end
@@ -531,15 +531,15 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
   if labelnodes
     for i in 1:grid.nnodes
       pos = vcat(get_node(grid, i), zeros(Float64, 3-grid.dims))
-      PyPlot.text3D(pos[1], pos[2], pos[3], "$i", fontsize=fontsize, color="k")
+      plt.text3D(pos[1], pos[2], pos[3], "$i", fontsize=fontsize, color="k")
     end
   end
 
 
   # Format axes
-  for (lim, lims, label, lbl) in [(PyPlot.xlim, xlims, PyPlot.xlabel, "x"),
-                                  (PyPlot.ylim, ylims, PyPlot.ylabel, "y"),
-                                  (PyPlot.zlim, zlims, PyPlot.zlabel, "z")]
+  for (lim, lims, label, lbl) in [(plt.xlim, xlims, plt.xlabel, "x"),
+                                  (plt.ylim, ylims, plt.ylabel, "y"),
+                                  (plt.zlim, zlims, plt.zlabel, "z")]
     if lims!=nothing; lim(lims); end;
     label(lbl)
 
