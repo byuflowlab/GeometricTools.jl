@@ -73,7 +73,7 @@
                             xlims=nothing, ylims=nothing, zlims=nothing,
                             labelcells=true, labelnodes=false, labelndivs=true,
                             title_str=nothing)
-    # Plots the grid on PyPlot
+    # Plots the grid
   end
   ```
 """
