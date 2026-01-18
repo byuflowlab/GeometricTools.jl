@@ -65,16 +65,17 @@ mutable struct Grid <: AbstractGrid
   _ndivscells::Tuple                  # Number of cells in each coordinate
   _override_vtkcelltype::Int64        # Option for overriding vtk outputs
 
-  Grid(P_min, P_max, NDIVS, loop_dim=0,
+  Grid(P_min, P_max, NDIVS; loop_dim=0,
               dims=_calc_dims(P_min),
                 nnodes=_calc_nnodes(NDIVS, loop_dim),
                 ncells=_calc_ncells(NDIVS),
-                nodes=_generate_grid(P_min, P_max, NDIVS, loop_dim),
+                numtype=Float64,
+                nodes=_generate_grid(P_min, P_max, NDIVS, loop_dim; numtype),
                 # bbox=_calc_ndivs(NDIVS),
                 field=Dict{String, Dict{String, Any}}(),
                 _ndivsnodes=Tuple(_calc_ndivsnodes(NDIVS, loop_dim)),
                 _ndivscells=Tuple(_calc_ndivs(NDIVS)),
-                _override_vtkcelltype=-1
+                _override_vtkcelltype=-1,
       ) = _check(P_min, P_max, NDIVS, loop_dim) ? new(P_min, P_max, NDIVS,
               loop_dim,
               dims,
@@ -713,14 +714,19 @@ function _calc_dims(P::Array{T,1} where {T<:Real})
   return length(P)
 end
 
-function _generate_grid(P_min::Array{T,1} where {T<:Real},
-                        P_max::Array{T,1} where {T<:Real},
+function _generate_grid(P_min::AbstractVector{T1},
+                        P_max::AbstractVector{T2},
                         NDIVS::Array{T,1} where {T<:Any},
-                        loop_dim::Int64)
+                        loop_dim::Int64;
+                        numtype=nothing) where {T1, T2}
+  
+  if isnothing(numtype)
+    numtype = promote_type(T1, T2)
+  end
 
   dims = _calc_dims(P_min)
   nnodes = _calc_nnodes(NDIVS, loop_dim)
-  nodes = Array{Float64}(undef, dims, nnodes)
+  nodes = Array{numtype}(undef, dims, nnodes)
   ndivs = Tuple(_calc_ndivs(NDIVS))
 
   # Discretizes each coordinate according to NDIVS

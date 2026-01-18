@@ -44,10 +44,10 @@ end
 
 function rediscretize_airfoil(x::AbstractVector{T}, y::AbstractVector{T},
     upperNDIVS::multidisctype, lowerNDIVS::multidisctype; spl_s::Real=0.00001,
-    spl_k::Integer=4, verify_spline::Bool=true, pltargs...) where{T<:Real}
+    spl_k::Integer=4, verify_spline::Bool=true, start_TE=nothing, pltargs...) where{T<:Real}
 
     # Separate upper and lower sides to make the contour injective in x
-    upper, lower = splitcontour(x, y)
+    upper, lower = splitcontour(x, y; start_TE)
 
     # Parameterize both sides independently
     fun_upper = parameterize(upper[1], upper[2], zeros(eltype(upper[1]), size(upper[1])); inj_var=1,
