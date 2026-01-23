@@ -46,8 +46,8 @@ NOTE2: `NDIVS` can either be an array of integers with NDIVS[i] indicating the
 mutable struct Grid <: AbstractGrid
 
   # User inputs
-  P_min::Array{T,1} where {T<:Real}   # Minimum point of the domain
-  P_max::Array{T,1} where {T<:Real}   # Maximum point of the domain
+  P_min::Array{T,1} where {T<:Number} # Minimum point of the domain
+  P_max::Array{T,1} where {T<:Number} # Maximum point of the domain
   NDIVS::Array{T,1} where {T<:Any}    # Number of divisions in each coordinate
   # Optional inputs
   loop_dim::Int64                     # Index of dimension to close in loop
@@ -56,7 +56,7 @@ mutable struct Grid <: AbstractGrid
   dims::Int64                         # Number of dimensions
   nnodes::Int64                       # Number of nodes
   ncells::Int64                       # Number of cells
-  nodes::Array{T,2} where{T<:Real}    # Position of each node
+  nodes::Array{T,2} where{T<:Number}  # Position of each node
   # bbox::Array{Int64, 1}               # Bounding box (cells in each dimension)
   field::Dict{String, Dict{String, Any}}  # Calculated fields
 
