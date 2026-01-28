@@ -65,7 +65,7 @@ mutable struct Grid <: AbstractGrid
   _ndivscells::Tuple                  # Number of cells in each coordinate
   _override_vtkcelltype::Int64        # Option for overriding vtk outputs
 
-  Grid(P_min, P_max, NDIVS; loop_dim=0,
+  Grid(P_min, P_max, NDIVS, loop_dim=0;
               dims=_calc_dims(P_min),
                 nnodes=_calc_nnodes(NDIVS, loop_dim),
                 ncells=_calc_ncells(NDIVS),
