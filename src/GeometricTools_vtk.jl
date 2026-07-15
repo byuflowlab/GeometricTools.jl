@@ -555,9 +555,8 @@ function generateVTK(filename::String, points;
                     path="", comments="", _griddims::Int64=-1,
                     keep_points::Bool=false,
                     override_cell_type::Int64=-1,
-                    rnd_d=32) where {N1, N2,
-                                     Arr1 <: Union{Vector{Int}, NTuple{N1, Int}},
-                                     Arr2 <: Union{Vector{Int}, NTuple{N2, Int}}}
+                    rnd_d=32) where {Arr1 <: Union{Vector{Int}, NTuple{<:Any, Int}},
+                                     Arr2 <: Union{Vector{Int}, NTuple{<:Any, Int}}}
 
   aux = num!=nothing ? ".$num" : ""
   ext = aux*".vtk"

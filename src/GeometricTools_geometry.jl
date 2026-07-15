@@ -163,10 +163,12 @@ end
   splitting up a closed contour into two sections that are injective in x, and
   that can be received by `parameterize()`.
 """
-function splitcontour(x,y)
+function splitcontour(x, y; start_TE=nothing)
 
   # Flag indicating whether the contour start at the trailing or leading edge
-  start_TE = x[1]==maximum(x)
+  if isnothing(start_TE)
+    start_TE = x[1]==maximum(x)
+  end
 
   # Find the opposite end of the contour
   end_i = -1
@@ -460,8 +462,28 @@ function axis_rotation(r::Array{T, 1}, angle_deg::Real) where{T<:Real}
   return M
 end
 
+function axis_rotation!(M::AbstractMatrix, r::AbstractVector, angle_deg::Number)
+  
+  ux, uy, uz = r
+  C = cos(angle_deg*pi/180)
+  S = sin(angle_deg*pi/180)
+  t = 1 - C
+
+  M[1, 1] = t*ux^2+C
+  M[1, 2] = t*ux*uy-S*uz
+  M[1, 3] = t*ux*uz+S*uy
+  M[2, 1] = t*ux*uy+S*uz
+  M[2, 2] = t*uy^2+C
+  M[2, 3] = t*uy*uz-S*ux
+  M[3, 1] = t*ux*uz-S*uy
+  M[3, 2] = t*uy*uz+S*ux
+  M[3, 3] = t*uz^2+C
+
+  return M
+end
+
 """
-  `rotation_matrix(yaw::Real, pitch::Real, roll::Real)`
+  `rotation_matrix(yaw::Number, pitch::Number, roll::Number)`
 
 Receives yaw, pitch, and roll angles (in degrees) and returns the rotation
 matrix corresponding to this rotation.
@@ -472,7 +494,7 @@ NOTE: Naming follows aircraft convention, with
 * pitch:  rotation about y-axis.
 * roll:   rotation about x-axis.
 """
-function rotation_matrix(yaw::Real, pitch::Real, roll::Real)
+function rotation_matrix(yaw::Number, pitch::Number, roll::Number)
   a, b, g = yaw*pi/180, pitch*pi/180, roll*pi/180
   Rz = [cos(a) -sin(a) 0; sin(a) cos(a) 0; 0 0 1]
   Ry = [cos(b) 0 sin(b); 0 1 0; -sin(b) 0 cos(b)]
@@ -481,7 +503,7 @@ function rotation_matrix(yaw::Real, pitch::Real, roll::Real)
 end
 
 """
-  `rotation_matrix2(roll::Real, pitch::Real, yaw::Real)`
+  `rotation_matrix2(roll::Number, pitch::Number, yaw::Number)`
 
 Receives yaw, pitch, and roll angles (in degrees) and returns the rotation
 matrix corresponding to this rotation.
@@ -569,7 +591,7 @@ julia> Xp = M*X
  -0.707
 ```
 """
-function rotation_matrix2(roll::Real, pitch::Real, yaw::Real)
+function rotation_matrix2(roll::Number, pitch::Number, yaw::Number)
   return rotation_matrix(yaw, pitch, roll)
 end
 ##### END OF ALGEBRA ###########################################################

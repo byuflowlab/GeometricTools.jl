@@ -91,7 +91,7 @@ mutable struct GridTriangleSurface{GType} <: AbstractGrid
                                     _ndivscells=(ncells, 0, 0),
                                     _ndivsnodes=(nnodes, 1, 1),
                                     optargs...
-                                    ) where {GType <: Meshes.SimpleMesh{3}}
+                                    ) where {GType <: Meshes.SimpleMesh}
 
         # Check that all elements are Triangle
         topology = orggrid.topology

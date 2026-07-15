@@ -9,7 +9,7 @@
 =###############################################################################
 # ------------ MODULE IMPORTS ------------------------------------------------
 import Statistics
-using PyPlot
+using PythonPlot
 
 module_path,_ = splitdir(@__FILE__);      # Path to this module
 data_path = module_path*"/../docs/data/"       # Path to data folder

@@ -46,8 +46,8 @@ NOTE2: `NDIVS` can either be an array of integers with NDIVS[i] indicating the
 mutable struct Grid <: AbstractGrid
 
   # User inputs
-  P_min::Array{T,1} where {T<:Real}   # Minimum point of the domain
-  P_max::Array{T,1} where {T<:Real}   # Maximum point of the domain
+  P_min::Array{T,1} where {T<:Number} # Minimum point of the domain
+  P_max::Array{T,1} where {T<:Number} # Maximum point of the domain
   NDIVS::Array{T,1} where {T<:Any}    # Number of divisions in each coordinate
   # Optional inputs
   loop_dim::Int64                     # Index of dimension to close in loop
@@ -56,7 +56,7 @@ mutable struct Grid <: AbstractGrid
   dims::Int64                         # Number of dimensions
   nnodes::Int64                       # Number of nodes
   ncells::Int64                       # Number of cells
-  nodes::Array{T,2} where{T<:Real}    # Position of each node
+  nodes::Array{T,2} where{T<:Number}  # Position of each node
   # bbox::Array{Int64, 1}               # Bounding box (cells in each dimension)
   field::Dict{String, Dict{String, Any}}  # Calculated fields
 
@@ -65,16 +65,17 @@ mutable struct Grid <: AbstractGrid
   _ndivscells::Tuple                  # Number of cells in each coordinate
   _override_vtkcelltype::Int64        # Option for overriding vtk outputs
 
-  Grid(P_min, P_max, NDIVS, loop_dim=0,
+  Grid(P_min, P_max, NDIVS, loop_dim=0;
               dims=_calc_dims(P_min),
                 nnodes=_calc_nnodes(NDIVS, loop_dim),
                 ncells=_calc_ncells(NDIVS),
-                nodes=_generate_grid(P_min, P_max, NDIVS, loop_dim),
+                numtype=Float64,
+                nodes=_generate_grid(P_min, P_max, NDIVS, loop_dim; numtype),
                 # bbox=_calc_ndivs(NDIVS),
                 field=Dict{String, Dict{String, Any}}(),
                 _ndivsnodes=Tuple(_calc_ndivsnodes(NDIVS, loop_dim)),
                 _ndivscells=Tuple(_calc_ndivs(NDIVS)),
-                _override_vtkcelltype=-1
+                _override_vtkcelltype=-1,
       ) = _check(P_min, P_max, NDIVS, loop_dim) ? new(P_min, P_max, NDIVS,
               loop_dim,
               dims,
@@ -437,7 +438,7 @@ function get_cell_t(self::Grid, coor_in, nodei::Int, lin, ndivscells)
 end
 
 
-"Plots the grid on PyPlot"
+"Plots the grid"
 function plot(grid::Grid; fig_name="gridplot", fontsize=15,
                           xlims=nothing, ylims=nothing, zlims=nothing,
                           labelcells=true, labelnodes=false, labelndivs=true,
@@ -448,7 +449,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
     error("There is no plotting method for $(grid.dims)-dimensional grids")
   end
 
-  fig = PyPlot.figure(fig_name)
+  fig = plt.figure(fig_name)
   ax = nothing  # To extend scope of ax outside try-catch block
   try
       ax = fig.gca(projection="3d")
@@ -467,7 +468,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
 
     if labelcells
       center = vcat(get_cellcenter(grid, i), zeros(Float64, 3-grid.dims))
-      PyPlot.text3D(center[1], center[2], center[3], "$i", fontsize=fontsize, color="g")
+      plt.text3D(center[1], center[2], center[3], "$i", fontsize=fontsize, color="g")
     end
 
 
@@ -507,7 +508,7 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
         end
         p2 = get_node(grid, coor)
         center = vcat((p1+p2)/2, zeros(Float64, 3-grid.dims))
-        PyPlot.text3D(center[1], center[2], center[3], "$j", fontsize=fontsize,
+        plt.text3D(center[1], center[2], center[3], "$j", fontsize=fontsize,
                                                                       color="r")
       end
     end
@@ -530,15 +531,15 @@ function plot(grid::Grid; fig_name="gridplot", fontsize=15,
   if labelnodes
     for i in 1:grid.nnodes
       pos = vcat(get_node(grid, i), zeros(Float64, 3-grid.dims))
-      PyPlot.text3D(pos[1], pos[2], pos[3], "$i", fontsize=fontsize, color="k")
+      plt.text3D(pos[1], pos[2], pos[3], "$i", fontsize=fontsize, color="k")
     end
   end
 
 
   # Format axes
-  for (lim, lims, label, lbl) in [(PyPlot.xlim, xlims, PyPlot.xlabel, "x"),
-                                  (PyPlot.ylim, ylims, PyPlot.ylabel, "y"),
-                                  (PyPlot.zlim, zlims, PyPlot.zlabel, "z")]
+  for (lim, lims, label, lbl) in [(plt.xlim, xlims, plt.xlabel, "x"),
+                                  (plt.ylim, ylims, plt.ylabel, "y"),
+                                  (plt.zlim, zlims, plt.zlabel, "z")]
     if lims!=nothing; lim(lims); end;
     label(lbl)
 
@@ -713,14 +714,19 @@ function _calc_dims(P::Array{T,1} where {T<:Real})
   return length(P)
 end
 
-function _generate_grid(P_min::Array{T,1} where {T<:Real},
-                        P_max::Array{T,1} where {T<:Real},
+function _generate_grid(P_min::AbstractVector{T1},
+                        P_max::AbstractVector{T2},
                         NDIVS::Array{T,1} where {T<:Any},
-                        loop_dim::Int64)
+                        loop_dim::Int64;
+                        numtype=nothing) where {T1, T2}
+  
+  if isnothing(numtype)
+    numtype = promote_type(T1, T2)
+  end
 
   dims = _calc_dims(P_min)
   nnodes = _calc_nnodes(NDIVS, loop_dim)
-  nodes = Array{Float64}(undef, dims, nnodes)
+  nodes = Array{numtype}(undef, dims, nnodes)
   ndivs = Tuple(_calc_ndivs(NDIVS))
 
   # Discretizes each coordinate according to NDIVS
