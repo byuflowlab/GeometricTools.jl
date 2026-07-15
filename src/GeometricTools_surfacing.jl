@@ -276,15 +276,8 @@ function generate_loft(crosssections::Array{Tuple{T,Array{T,2}}, 1},
 
   # ----------------- SPLINE VERIFICATION --------------------------------------
   if verify_spline
-    # if isdefined(Main, :PyPlot)
       plot_loft_splines(b_pos, LE_x, LE_z, new_LE_x, new_LE_z, twists, new_twists,
         tilt_z, new_tlt_z, chords, new_chords)
-    # else
-    #   @eval Main import PyPlot
-    #   Base.invokelatest(plot_loft_splines, b_pos, LE_x, LE_z, new_LE_x, new_LE_z, twists, new_twists,
-    #     tilt_z, new_tlt_z, chords, new_chords)
-    # end
-
   end
 
   # ----------------- LOFTING --------------------------------------------------
@@ -602,6 +595,7 @@ function surface_pathloft(sections::AbstractVector,
     if verify_spline
         fig = plt.figure("Path discretization", figsize=[7*2, 5]*7/9)
         axs = fig.subplots(1, 2)
+        axs = pyconvert(Array, axs)
 
         fig2 = plt.figure("Path discretization - scalar", figsize=[7, 5]*1/2)
         ax2 = fig2.gca()

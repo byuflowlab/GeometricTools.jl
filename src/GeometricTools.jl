@@ -9,15 +9,10 @@
 """
 module GeometricTools
 
-# Trick for avoiding OpenSSL compatibility issues with PyCall
-# https://discourse.julialang.org/t/error-loading-openssl-jll-version-openssl-3-3-0-not-found-when-precompiling-mldatasets/128977/3
-using OpenSSL_jll
-
 using Printf
 using LinearAlgebra
 using Requires
 using Statistics
-import PyCall
 import Dierckx
 import FLOWMath
 import Roots
@@ -26,11 +21,8 @@ import HDF5
 
 import Meshes
 
-import PyPlot
-import PyPlot: @L_str
-const plt = PyPlot
-# import PyCall
-# @PyCall.pyimport matplotlib.patches as patch
+import PythonPlot as plt
+import PythonPlot: @L_str, pyconvert
 
 const module_path = splitdir(@__FILE__)[1]      # Path to this module
                                                 # Type of multidiscretize input
